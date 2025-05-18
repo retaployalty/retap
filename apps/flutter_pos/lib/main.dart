@@ -60,7 +60,7 @@ class POSHomePage extends StatelessWidget {
       debugPrint('UUID generato: $cardId');
 
       // 3. Crea il link
-      final cardUrl = 'http://10.220.12.203:8080/c/$cardId';
+      final cardUrl = 'https://retapcard.com/c/$cardId';
       debugPrint('Link generato: $cardUrl');
 
       // 4. Scrivi il link sul chip in formato NDEF
@@ -72,7 +72,7 @@ class POSHomePage extends StatelessWidget {
       // 5. Manda la richiesta POST al backend
       debugPrint('Invio dati al backend...');
       final res = await http.post(
-        Uri.parse('http://10.220.12.203:4000/cards'),
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
         headers: {
           'Content-Type': 'application/json',
           'x-merchant-id': '11111111-1111-1111-1111-111111111111',
@@ -165,7 +165,7 @@ class POSHomePage extends StatelessWidget {
                   // Prima cerchiamo la carta nel database
                   debugPrint('Cercando la carta nel database...');
                   final cardRes = await http.get(
-                    Uri.parse('http://10.220.12.203:4000/cards'),
+                    Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag?.id}'),
                     headers: {
                       'x-merchant-id': '11111111-1111-1111-1111-111111111111',
                     },
@@ -174,20 +174,31 @@ class POSHomePage extends StatelessWidget {
                   debugPrint('Status code: ${cardRes.statusCode}');
                   debugPrint('Body: ${cardRes.body}');
 
-                  final cards = jsonDecode(cardRes.body) as List;
-                  final card = cards.firstWhere(
-                    (c) => c['uid'] == tag?.id,
-                    orElse: () => null,
-                  );
-
-                  if (card == null) {
+                  if (cardRes.statusCode != 200) {
                     debugPrint('Carta non trovata nel database');
                     await FlutterNfcKit.finish(iosAlertMessage: 'Carta non registrata');
                     return;
                   }
 
+                  final card = jsonDecode(cardRes.body);
+                  debugPrint('Carta trovata: $card');
+
                   // Mostra il saldo attuale
-                  final currentBalance = card['points'] ?? 0;
+                  final balanceRes = await http.get(
+                    Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=${card['id']}'),
+                    headers: {
+                      'x-merchant-id': '11111111-1111-1111-1111-111111111111',
+                    },
+                  );
+
+                  if (balanceRes.statusCode != 200) {
+                    debugPrint('Errore nel recupero del saldo');
+                    await FlutterNfcKit.finish(iosAlertMessage: 'Errore nel recupero del saldo');
+                    return;
+                  }
+
+                  final balanceData = jsonDecode(balanceRes.body);
+                  final currentBalance = balanceData['balance'] ?? 0;
                   debugPrint('Saldo attuale: $currentBalance punti');
                   
                   // Mostra un dialog con il saldo
@@ -222,7 +233,7 @@ class POSHomePage extends StatelessWidget {
                               // Creiamo la transazione
                               debugPrint('Creando transazione...');
                               final txRes = await http.post(
-                                Uri.parse('http://10.220.12.203:4000/tx'),
+                                Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/tx'),
                                 headers: {
                                   'Content-Type': 'application/json',
                                   'x-merchant-id': '11111111-1111-1111-1111-111111111111',

@@ -45,12 +45,12 @@ class ReTapWeb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ReTap',
+      title: 'ReTap Card',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const CardPage(),
+      home: CardPage(cardUrl: Uri.base.toString()),
     );
   }
 }
@@ -72,7 +72,9 @@ class HomePage extends StatelessWidget {
 }
 
 class CardPage extends StatefulWidget {
-  const CardPage({super.key});
+  final String cardUrl;
+
+  const CardPage({super.key, required this.cardUrl});
 
   @override
   State<CardPage> createState() => _CardPageState();
@@ -81,7 +83,7 @@ class CardPage extends StatefulWidget {
 class _CardPageState extends State<CardPage> {
   bool _isLoading = true;
   String? _error;
-  Map<String, dynamic>? _cardData;
+  int _balance = 0;
 
   @override
   void initState() {
@@ -91,40 +93,40 @@ class _CardPageState extends State<CardPage> {
 
   Future<void> _loadCardData() async {
     try {
-      // Estrai l'ID della carta dall'URL
-      final uri = Uri.base;
-      final cardId = uri.pathSegments.last;
-      
-      if (cardId.isEmpty) {
-        setState(() {
-          _error = 'ID carta non trovato nell\'URL';
-          _isLoading = false;
-        });
-        return;
-      }
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
 
-      // Chiedi il saldo al backend
+      // Estrai l'ID della carta dall'URL
+      final uri = Uri.parse(widget.cardUrl);
+      final cardId = uri.pathSegments.last;
+      debugPrint('Card ID from URL: $cardId');
+
+      // Recupera il saldo della carta
       final response = await http.get(
-        Uri.parse('http://10.220.12.203:4000/tx/balance/$cardId'),
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
         headers: {
           'x-merchant-id': '11111111-1111-1111-1111-111111111111',
         },
       );
 
+      debugPrint('Balance API response:');
+      debugPrint('Status code: ${response.statusCode}');
+      debugPrint('Body: ${response.body}');
+
       if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero del saldo');
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['error'] ?? 'Errore nel recupero del saldo');
       }
 
       final data = jsonDecode(response.body);
-      
       setState(() {
-        _cardData = {
-          'id': cardId,
-          'points': data['balance'],
-        };
+        _balance = data['balance'] ?? 0;
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint('Error loading card data: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -156,7 +158,7 @@ class _CardPageState extends State<CardPage> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        '${_cardData!['points']} punti',
+                        '$_balance punti',
                         style: const TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -164,7 +166,7 @@ class _CardPageState extends State<CardPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'ID: ${_cardData!['id']}',
+                        'ID: ${widget.cardUrl.split('/').last}',
                         style: const TextStyle(
                           color: Colors.grey,
                         ),
@@ -298,5 +300,29 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
         ),
       ),
     );
+  }
+}
+
+Future<Map<String, dynamic>> fetchCardBalance(String cardId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
+      headers: {
+        'x-merchant-id': '1', // TODO: gestire merchant ID
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Errore nel recupero del saldo');
+    }
+
+    final data = jsonDecode(response.body);
+    
+    return {
+      'id': cardId,
+      'points': data['balance'],
+    };
+  } catch (e) {
+    throw Exception('Errore nel recupero del saldo');
   }
 }
