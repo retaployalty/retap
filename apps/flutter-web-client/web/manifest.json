@@ -1,6 +1,6 @@
 {
-    "name": "retap_pos",
-    "short_name": "retap_pos",
+    "name": "flutter_web_client",
+    "short_name": "flutter_web_client",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

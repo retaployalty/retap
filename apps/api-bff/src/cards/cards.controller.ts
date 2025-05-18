@@ -14,11 +14,11 @@ import {
   
     @Post()
     async createCard(
-      @Body() body: { uid: string; customerId?: string },
+      @Body() body: { cardId: string; uid: string; customerId?: string },
       @Req() req: any,
     ) {
       const merchantId = req.headers['x-merchant-id'];
-      const { uid, customerId } = body;
+      const { cardId, uid, customerId } = body;
 
       // Se non viene fornito un customerId, creiamo un nuovo cliente
       let finalCustomerId = customerId;
@@ -39,7 +39,7 @@ import {
       const { data, error } = await this.supabase.client
         .from('cards')
         .insert({
-          id: crypto.randomUUID(),
+          id: cardId,
           uid,
           customer_id: finalCustomerId,
           merchant_id: merchantId,

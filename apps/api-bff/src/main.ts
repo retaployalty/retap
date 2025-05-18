@@ -9,13 +9,13 @@ async function bootstrap() {
   
   // Abilita CORS
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'], // Aggiungi qui gli URL delle tue app frontend
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-merchant-id'],
+    origin: '*', // In produzione, specificare i domini consentiti
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 4000);
-  console.log(`✅ API avviata su http://localhost:${process.env.PORT ?? 4000}`);
+  // Ascolta su tutte le interfacce
+  await app.listen(4000, '0.0.0.0');
+  console.log('✅ API avviata su http://localhost:4000');
 }
 bootstrap();

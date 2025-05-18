@@ -60,7 +60,7 @@ class POSHomePage extends StatelessWidget {
       debugPrint('UUID generato: $cardId');
 
       // 3. Crea il link
-      final cardUrl = 'https://app.retap.co/c/$cardId';
+      final cardUrl = 'http://10.220.12.203:8080/c/$cardId';
       debugPrint('Link generato: $cardUrl');
 
       // 4. Scrivi il link sul chip in formato NDEF
