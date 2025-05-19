@@ -27,7 +27,7 @@ Struttura del monorepo:
 retap/
 ├─ apps/                         # Runtime applications
 │   ├─ api-bff/                  # NestJS endpoints (/cards, /tx, /auth…)
-│   ├─ admin-dashboard/          # Next.js 15 + shadcn/ui
+│   ├─ website/                  # Next.js 15 + shadcn/ui
 │   ├─ flutter-pos/              # Flutter app per POS Z91
 │   └─ flutter-web-client/       # Flutter Web PWA (placeholder)
 │
