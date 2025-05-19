@@ -161,9 +161,9 @@ CREATE POLICY "Merchant can insert" ON "public"."customers" FOR INSERT WITH CHEC
 
 
 
-CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CHECK ((("auth"."role"() = 'service_role'::"text") OR ("customer_id" IN ( SELECT "customers"."id"
+CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CHECK ((("auth"."role"() = 'service_role'::"text") OR (("customer_id" IS NOT NULL) AND ("customer_id" IN ( SELECT "customers"."id"
    FROM "public"."customers"
-  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid")))));
+  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"))))));
 
 
 
@@ -199,18 +199,6 @@ CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (
 
 CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid")) WITH CHECK (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
 
-
-
-ALTER TABLE "public"."cards" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."merchants" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."transactions" ENABLE ROW LEVEL SECURITY;
 
 
 
