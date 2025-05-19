@@ -89,7 +89,8 @@ export default function AuthPage() {
 
       setMessage("Registrazione completata! Controlla la tua email per confermare l'account.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore durante la registrazione");
+      console.error('Errore dettagliato:', err);
+      setError(err instanceof Error ? err.message : JSON.stringify(err));
     } finally {
       setLoading(false);
     }
