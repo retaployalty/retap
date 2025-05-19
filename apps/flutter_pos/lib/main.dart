@@ -52,8 +52,8 @@ class POSHomePage extends StatelessWidget {
       // 1. Leggi il chip NFC
       final tag = await FlutterNfcKit.poll();
       debugPrint('Carta rilevata!');
-      debugPrint('Tipo di tag: ${tag?.type}');
-      debugPrint('UID: ${tag?.id}');
+      debugPrint('Tipo di tag: ${tag.type}');
+      debugPrint('UID: ${tag.id}');
 
       // 2. Genera UUID
       final cardId = const Uuid().v4();
@@ -79,7 +79,7 @@ class POSHomePage extends StatelessWidget {
         },
         body: jsonEncode({
           'cardId': cardId,
-          'uid': tag?.id,
+          'uid': tag.id,
           'customerId': null, // Opzionale, da implementare se necessario
         }),
       );
@@ -89,7 +89,7 @@ class POSHomePage extends StatelessWidget {
       debugPrint('Body: ${res.body}');
 
       // 6. Blocca il chip in sola lettura (se supportato)
-      if (tag?.type == NFCTagType.iso15693) {
+      if (tag.type == NFCTagType.iso15693) {
         try {
           await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
           debugPrint('Chip bloccato in sola lettura');
@@ -160,12 +160,12 @@ class POSHomePage extends StatelessWidget {
                   debugPrint('In attesa di una carta NFC...');
                     final tag = await FlutterNfcKit.poll();
                   debugPrint('Carta rilevata!');
-                  debugPrint('UID: ${tag?.id}');
+                  debugPrint('UID: ${tag.id}');
 
                   // Prima cerchiamo la carta nel database
                   debugPrint('Cercando la carta nel database...');
                   final cardRes = await http.get(
-                    Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag?.id}'),
+                    Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag.id}'),
                     headers: {
                       'x-merchant-id': '11111111-1111-1111-1111-111111111111',
                     },
