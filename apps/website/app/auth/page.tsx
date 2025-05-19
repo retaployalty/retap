@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -12,7 +12,19 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  
+  useEffect(() => {
+    // Verifica che le variabili d'ambiente siano state caricate
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setError("Le variabili d'ambiente di Supabase non sono state configurate correttamente");
+    }
+  }, []);
+
+  // Inizializza il client Supabase con le variabili d'ambiente
+  const supabase = createClientComponentClient({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,6 +94,7 @@ export default function AuthPage() {
             first_name: firstName,
             last_name: lastName,
             phone_number: phone,
+            email: email
           },
         ]);
 
