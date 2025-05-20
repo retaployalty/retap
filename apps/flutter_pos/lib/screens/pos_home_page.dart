@@ -27,21 +27,41 @@ class POSHomePage extends StatelessWidget {
       debugPrint('Tipo di tag: ${tag.type}');
       debugPrint('UID: ${tag.id}');
 
-      // 2. Genera UUID
+      // 2. Genera UUID per la carta
       final cardId = const Uuid().v4();
-      debugPrint('UUID generato: $cardId');
+      debugPrint('UUID carta generato: $cardId');
 
-      // 3. Crea il link
+      // 3. Crea un nuovo customer
+      debugPrint('Creazione nuovo customer...');
+      final customerRes = await http.post(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-merchant-id': merchantId,
+        },
+        body: jsonEncode({
+          'merchant_id': merchantId,
+        }),
+      );
+
+      if (customerRes.statusCode != 200) {
+        throw Exception('Errore nella creazione del customer: ${customerRes.body}');
+      }
+
+      final customer = jsonDecode(customerRes.body);
+      debugPrint('Customer creato: ${customer['id']}');
+
+      // 4. Crea il link
       final cardUrl = 'https://retapcard.com/c/$cardId';
       debugPrint('Link generato: $cardUrl');
 
-      // 4. Scrivi il link sul chip in formato NDEF
+      // 5. Scrivi il link sul chip in formato NDEF
       final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
 
       await FlutterNfcKit.writeNDEFRecords([uriRecord]);
       debugPrint('Link scritto sul chip con successo');
 
-      // 5. Manda la richiesta POST al backend
+      // 6. Manda la richiesta POST al backend per creare la carta
       debugPrint('Invio dati al backend...');
       final res = await http.post(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
@@ -52,7 +72,7 @@ class POSHomePage extends StatelessWidget {
         body: jsonEncode({
           'cardId': cardId,
           'uid': tag.id,
-          'customerId': null, // Opzionale, da implementare se necessario
+          'customerId': customer['id'],
         }),
       );
 
@@ -60,7 +80,7 @@ class POSHomePage extends StatelessWidget {
       debugPrint('Status code: ${res.statusCode}');
       debugPrint('Body: ${res.body}');
 
-      // 6. Blocca il chip in sola lettura (se supportato)
+      // 7. Blocca il chip in sola lettura (se supportato)
       if (tag.type == NFCTagType.iso15693) {
         try {
           await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
@@ -70,7 +90,7 @@ class POSHomePage extends StatelessWidget {
         }
       }
 
-      // 7. Mostra messaggio di successo
+      // 8. Mostra messaggio di successo
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

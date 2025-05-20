@@ -27,6 +27,29 @@ serve(async (req) => {
     const path = url.pathname.split('/').pop()
     const params = Object.fromEntries(url.searchParams)
 
+    // POST /customers
+    if (path === 'customers' && req.method === 'POST') {
+      const { data, error } = await supabaseClient
+        .from('customers')
+        .insert({
+          merchant_id: merchantId,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify(data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // GET /cards?uid=XXX
     if (path === 'cards' && req.method === 'GET') {
       const { data, error } = await supabaseClient
