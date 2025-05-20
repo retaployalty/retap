@@ -100,7 +100,8 @@ export default function AuthPage() {
             first_name: firstName,
             last_name: lastName,
             phone_number: phone
-          }
+          },
+          emailRedirectTo: undefined
         }
       });
 
@@ -115,49 +116,34 @@ export default function AuthPage() {
 
       console.log('Utente registrato:', authData.user);
 
-      // 2. Verifica che l'utente sia stato creato
-      console.log('2. Verifica utente...');
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('Errore verifica utente:', userError);
-        throw userError;
-      }
-      if (!userData.user) {
-        console.error('Utente non trovato dopo la registrazione');
-        throw new Error("Utente non trovato dopo la registrazione");
-      }
-
-      console.log('Utente verificato:', userData.user);
-
-      // 3. Crea il profilo dell'utente
+      // 2. Crea il profilo dell'utente
       console.log('3. Creazione profilo...');
-      const { data: profileData, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
-        .insert([
+        .upsert([
           {
-            id: userData.user.id,
+            id: authData.user.id,
             first_name: firstName,
             last_name: lastName,
             phone_number: phone,
             email: email
           }
-        ])
-        .select()
-        .single();
+        ]);
 
       if (profileError) {
         console.error('Errore creazione profilo:', profileError);
         throw new Error('Errore durante la creazione del profilo: ' + profileError.message);
       }
 
-      console.log('Profilo creato:', profileData);
-
       setMessage("Registrazione completata! Controlla la tua email per confermare l'account.");
       router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
     } catch (err) {
       console.error('Errore dettagliato:', err);
-      setError(err instanceof Error ? err.message : JSON.stringify(err));
+      if (err instanceof Error && err.message.includes('rate limit')) {
+        setError('Troppi tentativi di registrazione. Attendi qualche minuto prima di riprovare.');
+      } else {
+        setError(err instanceof Error ? err.message : JSON.stringify(err));
+      }
     } finally {
       setLoading(false);
     }

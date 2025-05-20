@@ -2,61 +2,76 @@
 
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+
+interface Merchant {
+  id: string;
+  name: string;
+  created_at: string;
+}
 
 interface Profile {
   id: string;
   first_name: string;
   last_name: string;
+  email: string;
   phone_number: string;
   created_at: string;
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClientComponentClient();
 
   useEffect(() => {
-    const checkUser = async () => {
+    const fetchData = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
-          router.push('/auth');
-          return;
-        }
+        // Fetch user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No user found");
 
-        // Recupera il profilo dell'utente
-        const { data: profile, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single();
 
         if (profileError) throw profileError;
-        setProfile(profile);
+        setProfile(profileData);
 
-        // Recupera tutti i profili
-        const { data: profiles, error: profilesError } = await supabase
+        // Fetch all profiles
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false });
 
         if (profilesError) throw profilesError;
-        setAllProfiles(profiles);
-      } catch (err) {
-        console.error('Errore:', err);
-        router.push('/auth');
+        setAllProfiles(profilesData || []);
+
+        // Fetch merchants
+        const { data: merchantsData, error: merchantsError } = await supabase
+          .from('merchants')
+          .select('*')
+          .eq('profile_id', user.id);
+
+        if (merchantsError) throw merchantsError;
+        setMerchants(merchantsData || []);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    checkUser();
-  }, [router, supabase]);
+    fetchData();
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -64,53 +79,82 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Caricamento...</p>
-      </div>
-    );
+    return <div className="p-8">Caricamento...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <button
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-            >
-              Esci
-            </button>
-          </div>
-
-          {profile && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900">Il tuo profilo</h2>
-                <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Nome</p>
-                    <p className="mt-1 text-sm text-gray-900">{profile.first_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Cognome</p>
-                    <p className="mt-1 text-sm text-gray-900">{profile.last_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Telefono</p>
-                    <p className="mt-1 text-sm text-gray-900">{profile.phone_number}</p>
-                  </div>
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Button variant="destructive" onClick={handleSignOut}>
+          Esci
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Profile Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Il tuo profilo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {profile && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Nome</p>
+                  <p>{profile.first_name} {profile.last_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p>{profile.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Telefono</p>
+                  <p>{profile.phone_number}</p>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Tabella di tutti i profili */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Tutti i profili</h2>
+        {/* Merchants Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>I tuoi negozi</CardTitle>
+            <Button variant="outline" size="sm">
+              Aggiungi negozio
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {merchants.length === 0 ? (
+              <p className="text-gray-500">Non hai ancora aggiunto nessun negozio</p>
+            ) : (
+              <div className="space-y-4">
+                {merchants.map((merchant) => (
+                  <div key={merchant.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{merchant.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Creato il {new Date(merchant.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      Gestisci
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* All Profiles Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tutti i profili</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -120,6 +164,9 @@ export default function Dashboard() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cognome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Telefono
@@ -139,6 +186,9 @@ export default function Dashboard() {
                       {profile.last_name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {profile.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {profile.phone_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -149,8 +199,8 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 } 

@@ -4,15 +4,7 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
-  
-  // Create Supabase client with explicit environment variables
-  const supabase = createMiddlewareClient(
-    { req, res },
-    {
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    }
-  )
+  const supabase = createMiddlewareClient({ req, res })
 
   // Refresh session if expired - required for Server Components
   await supabase.auth.getSession()

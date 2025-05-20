@@ -130,7 +130,9 @@ ALTER TABLE "public"."customers" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "profile_id" "uuid" NOT NULL,
+    CONSTRAINT "merchants_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE
 );
 
 
@@ -143,6 +145,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "last_name" "text",
     "phone_number" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     "email" "text"
 );
 
@@ -226,47 +229,62 @@ ALTER TABLE ONLY "public"."transactions"
 
 
 
-CREATE POLICY "Merchant can insert" ON "public"."customers" FOR INSERT WITH CHECK (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
+CREATE POLICY "Merchants are viewable by their profile owner" ON "public"."merchants"
+    FOR SELECT USING (auth.uid() = profile_id);
 
+CREATE POLICY "Merchants can be created by authenticated users" ON "public"."merchants"
+    FOR INSERT WITH CHECK (auth.uid() = profile_id);
 
+CREATE POLICY "Merchants can be updated by their profile owner" ON "public"."merchants"
+    FOR UPDATE USING (auth.uid() = profile_id);
 
-CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CHECK ((("auth"."role"() = 'service_role'::"text") OR (("customer_id" IS NOT NULL) AND ("customer_id" IN ( SELECT "customers"."id"
-   FROM "public"."customers"
-  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"))))));
+CREATE POLICY "Merchants can be deleted by their profile owner" ON "public"."merchants"
+    FOR DELETE USING (auth.uid() = profile_id);
 
+CREATE POLICY "Merchant can insert" ON "public"."customers" 
+    FOR INSERT WITH CHECK (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
+CREATE POLICY "Merchant can select" ON "public"."customers" 
+    FOR SELECT USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
-CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
+CREATE POLICY "Merchant can update" ON "public"."customers" 
+    FOR UPDATE USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
+CREATE POLICY "Merchant can insert cards" ON "public"."cards" 
+    FOR INSERT WITH CHECK (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
+CREATE POLICY "Merchant can select cards" ON "public"."cards" 
+    FOR SELECT USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
-CREATE POLICY "Merchant can select" ON "public"."customers" FOR SELECT USING (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
+CREATE POLICY "Merchant can update cards" ON "public"."cards" 
+    FOR UPDATE USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
+CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" 
+    FOR INSERT WITH CHECK (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
+CREATE POLICY "Merchant can select transactions" ON "public"."transactions" 
+    FOR SELECT USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
-CREATE POLICY "Merchant can select cards" ON "public"."cards" FOR SELECT USING (("customer_id" IN ( SELECT "customers"."id"
-   FROM "public"."customers"
-  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"))));
-
-
-
-CREATE POLICY "Merchant can select transactions" ON "public"."transactions" FOR SELECT USING (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
-
-
-
-CREATE POLICY "Merchant can update" ON "public"."customers" FOR UPDATE USING (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid")) WITH CHECK (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
-
-
-
-CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (("customer_id" IN ( SELECT "customers"."id"
-   FROM "public"."customers"
-  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid")))) WITH CHECK (("customer_id" IN ( SELECT "customers"."id"
-   FROM "public"."customers"
-  WHERE ("customers"."merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"))));
-
-
-
-CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid")) WITH CHECK (("merchant_id" = (("auth"."jwt"() ->> 'merchant_id'::"text"))::"uuid"));
+CREATE POLICY "Merchant can update transactions" ON "public"."transactions" 
+    FOR UPDATE USING (("merchant_id" IN (
+        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
+    )));
 
 
 
