@@ -58,6 +58,35 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."handle_email_update"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+begin
+  update public.profiles
+  set email = new.email
+  where id = new.id;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_email_update"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+begin
+  insert into public.profiles (id, email)
+  values (new.id, new.email);
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -113,9 +142,8 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "first_name" "text",
     "last_name" "text",
     "phone_number" "text",
-    "email" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+    "email" "text"
 );
 
 
@@ -431,6 +459,18 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_email_update"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_email_update"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_email_update"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 
