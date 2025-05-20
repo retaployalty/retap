@@ -135,8 +135,8 @@ export default function AuthPage() {
         throw new Error('Errore durante la creazione del profilo: ' + profileError.message);
       }
 
-      setMessage("Registrazione completata! Controlla la tua email per confermare l'account.");
-      router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
+      setMessage("Registrazione completata! Ora registra il tuo negozio.");
+      router.push('/onboarding');
     } catch (err) {
       console.error('Errore dettagliato:', err);
       if (err instanceof Error && err.message.includes('rate limit')) {

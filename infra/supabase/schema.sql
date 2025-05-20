@@ -130,6 +130,9 @@ ALTER TABLE "public"."customers" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
+    "country" "text" NOT NULL,
+    "industry" "text" NOT NULL,
+    "address" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "profile_id" "uuid" NOT NULL,
     CONSTRAINT "merchants_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE
