@@ -1,0 +1,143 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check } from "lucide-react";
+import Link from "next/link";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+
+const plans = {
+  base: {
+    name: "Base",
+    monthlyPrice: "€49",
+    annualPrice: "€470",
+    description: "Perfect for small businesses",
+    features: [
+      "100 carte/mese",
+      "Visibilità standard",
+      "Supporto email",
+      "Dashboard base"
+    ],
+    highlight: "€74 il primo mese (attivazione)",
+    buttonText: "Start with Base",
+    popular: false
+  },
+  premium: {
+    name: "Premium",
+    monthlyPrice: "€69",
+    annualPrice: "€662",
+    description: "Best for growing businesses",
+    features: [
+      "Fino a 400 carte/mese",
+      "Posizione più alta",
+      "Supporto prioritario",
+      "Dashboard avanzata",
+      "Statistiche dettagliate"
+    ],
+    highlight: null,
+    buttonText: "Get Premium",
+    popular: true
+  },
+  top: {
+    name: "Top",
+    monthlyPrice: "€99",
+    annualPrice: "€950",
+    description: "For established businesses",
+    features: [
+      "Fino a 1000 carte/mese",
+      "Primo nella lista nella zona",
+      "Supporto dedicato",
+      "Dashboard completa",
+      "Statistiche avanzate",
+      "API access"
+    ],
+    highlight: null,
+    buttonText: "Go Top",
+    popular: false
+  }
+};
+
+export default function PricingPage() {
+  const [isAnnual, setIsAnnual] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            Choose Your Plan
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Select the perfect plan for your business
+          </p>
+          
+          <div className="flex items-center justify-center gap-4">
+            <Label htmlFor="billing-toggle" className="text-sm font-medium">Monthly</Label>
+            <Switch
+              id="billing-toggle"
+              checked={isAnnual}
+              onCheckedChange={setIsAnnual}
+            />
+            <Label htmlFor="billing-toggle" className="text-sm font-medium">
+              Annual
+              <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                Save 20%
+              </span>
+            </Label>
+          </div>
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
+          {Object.entries(plans).map(([key, plan]) => (
+            <Card key={plan.name} className={plan.popular ? "border-primary shadow-lg" : ""}>
+              <CardHeader>
+                {plan.popular && (
+                  <div className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    Most Popular
+                  </div>
+                )}
+                <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                <CardDescription>{plan.description}</CardDescription>
+                <div className="mt-4">
+                  <span className="text-3xl font-bold">
+                    {isAnnual ? plan.annualPrice : plan.monthlyPrice}
+                  </span>
+                  <span className="text-muted-foreground">
+                    /{isAnnual ? "year" : "month"}
+                  </span>
+                </div>
+                {plan.highlight && !isAnnual && (
+                  <p className="text-sm text-muted-foreground mt-2">{plan.highlight}</p>
+                )}
+                {isAnnual && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {Math.round(parseFloat(plan.monthlyPrice.replace('€', '')) * 12 * 0.8)}€/year (20% off)
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Link href={`/checkout?plan=${key}&billing=${isAnnual ? 'annual' : 'monthly'}`} className="w-full">
+                  <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                    {plan.buttonText}
+                  </Button>
+                </Link>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+} 
