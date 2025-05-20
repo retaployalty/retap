@@ -9,6 +9,22 @@ export async function middleware(req: NextRequest) {
   // Refresh session if expired - required for Server Components
   await supabase.auth.getSession()
 
+  // Check if the request is for the admin panel
+  if (req.nextUrl.pathname.startsWith('/admin-panel')) {
+    // Skip middleware for login page
+    if (req.nextUrl.pathname === '/admin-panel/login') {
+      return res
+    }
+
+    // Check if admin is authenticated
+    const isAdminAuthenticated = req.cookies.get('adminAuthenticated')?.value === 'true'
+
+    // If not authenticated, redirect to login
+    if (!isAdminAuthenticated) {
+      return NextResponse.redirect(new URL('/admin-panel/login', req.url))
+    }
+  }
+
   return res
 }
 
@@ -23,5 +39,6 @@ export const config = {
      * - public folder
      */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/admin-panel/:path*',
   ],
 } 
