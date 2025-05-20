@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "first_name" "text",
     "last_name" "text",
     "phone_number" "text",
+    "email" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
