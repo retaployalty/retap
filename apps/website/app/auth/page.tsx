@@ -12,7 +12,19 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  
+  useEffect(() => {
+    // Verifica che le variabili d'ambiente siano state caricate
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setError("Le variabili d'ambiente di Supabase non sono state configurate correttamente");
+    }
+  }, []);
+
+  // Inizializza il client Supabase con le variabili d'ambiente
+  const supabase = createClientComponentClient({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
 
   useEffect(() => {
     // Check if user is already logged in
