@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -13,6 +13,17 @@ export default function AuthPage() {
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/dashboard');
+      }
+    };
+    checkUser();
+  }, [router, supabase.auth]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,6 +54,7 @@ export default function AuthPage() {
 
       setMessage("Login effettuato con successo!");
       router.push('/dashboard');
+      router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il login");
     } finally {
@@ -63,31 +75,74 @@ export default function AuthPage() {
     const lastName = formData.get("lastName") as string;
     const phone = formData.get("phone") as string;
 
+    console.log('Dati registrazione:', { email, firstName, lastName, phone });
+
     try {
       // 1. Registra l'utente
+      console.log('1. Inizio registrazione utente...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phone
+          }
+        }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Errore durante la registrazione");
+      if (authError) {
+        console.error('Errore registrazione:', authError);
+        throw authError;
+      }
+      if (!authData.user) {
+        console.error('Nessun utente restituito dalla registrazione');
+        throw new Error("Errore durante la registrazione");
+      }
 
-      // 2. Crea il profilo dell'utente
-      const { error: profileError } = await supabase
+      console.log('Utente registrato:', authData.user);
+
+      // 2. Verifica che l'utente sia stato creato
+      console.log('2. Verifica utente...');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Errore verifica utente:', userError);
+        throw userError;
+      }
+      if (!userData.user) {
+        console.error('Utente non trovato dopo la registrazione');
+        throw new Error("Utente non trovato dopo la registrazione");
+      }
+
+      console.log('Utente verificato:', userData.user);
+
+      // 3. Crea il profilo dell'utente
+      console.log('3. Creazione profilo...');
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert([
           {
-            id: authData.user.id,
+            id: userData.user.id,
             first_name: firstName,
             last_name: lastName,
             phone_number: phone,
-          },
-        ]);
+            email: email
+          }
+        ])
+        .select()
+        .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Errore creazione profilo:', profileError);
+        throw new Error('Errore durante la creazione del profilo: ' + profileError.message);
+      }
+
+      console.log('Profilo creato:', profileData);
 
       setMessage("Registrazione completata! Controlla la tua email per confermare l'account.");
+      router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
     } catch (err) {
       console.error('Errore dettagliato:', err);
       setError(err instanceof Error ? err.message : JSON.stringify(err));
