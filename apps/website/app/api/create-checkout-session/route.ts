@@ -14,10 +14,21 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { price, successUrl, cancelUrl } = body;
+    const { price, productId, successUrl, cancelUrl } = body;
 
-    if (!price || !successUrl || !cancelUrl) {
+    if (!productId || !successUrl || !cancelUrl) {
       return new NextResponse('Missing required fields', { status: 400 });
+    }
+
+    // Mappa productId a priceId (da configurare secondo Stripe Dashboard)
+    const priceMap: Record<string, string> = {
+      'prod_SJxYELX99AEp5I': 'price_49', // Sostituisci con il vero priceId
+      'prod_SJxZrZBJ9DXkb0': 'price_69', // Sostituisci con il vero priceId
+      'prod_SJxZH6Ejfd8myY': 'price_99', // Sostituisci con il vero priceId
+    };
+    const priceId = priceMap[productId];
+    if (!priceId) {
+      return new NextResponse('Invalid productId', { status: 400 });
     }
 
     // Crea la sessione di checkout
@@ -25,23 +36,18 @@ export async function POST(req: Request) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: 'Abbonamento ReTap',
-              description: 'Abbonamento mensile a ReTap',
-            },
-            unit_amount: price * 100, // Stripe usa i centesimi
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: 'subscription',
+      billing_address_collection: 'required',
       success_url: successUrl,
       cancel_url: cancelUrl,
       customer_email: session.user.email,
       metadata: {
         userId: session.user.id,
+        productId,
       },
     });
 
