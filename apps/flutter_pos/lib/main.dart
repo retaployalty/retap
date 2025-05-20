@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
+import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,8 +14,8 @@ void main() async {
   try {
     debugPrint('Initializing Supabase...');
     await Supabase.initialize(
-      url: 'https://retap.supabase.co',
-      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5NjQ5NzAsImV4cCI6MjA2MDU0MDk3MH0.2QwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQ',
+      url: 'https://egmizgydnmvpfpbzmbnj.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
       debug: true,
     );
     debugPrint('Supabase initialized successfully');
@@ -36,7 +37,7 @@ class ReTapPOS extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const POSHomePage(),
+      home: const LoginScreen(),
     );
   }
 }
