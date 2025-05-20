@@ -1,7 +1,7 @@
 -- Create subscriptions table
 CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "merchant_id" "uuid" NOT NULL,
+    "profile_id" "uuid" NOT NULL,
     "plan_type" "text" NOT NULL CHECK (plan_type IN ('base', 'premium', 'top')),
     "billing_type" "text" NOT NULL CHECK (billing_type IN ('monthly', 'annual')),
     "status" "text" NOT NULL CHECK (status IN ('active', 'cancelled', 'expired', 'pending')),
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "subscriptions_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE
+    CONSTRAINT "subscriptions_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE
 );
 
 -- Create payments table
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS "public"."payments" (
 -- Create payment_methods table
 CREATE TABLE IF NOT EXISTS "public"."payment_methods" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "merchant_id" "uuid" NOT NULL,
+    "profile_id" "uuid" NOT NULL,
     "type" "text" NOT NULL CHECK (type IN ('card', 'bank_transfer')),
     "stripe_payment_method_id" "text",
     "card_last4" "text",
@@ -45,60 +45,42 @@ CREATE TABLE IF NOT EXISTS "public"."payment_methods" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "payment_methods_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "payment_methods_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE
+    CONSTRAINT "payment_methods_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE
 );
 
 -- Add RLS policies for subscriptions
-CREATE POLICY "Merchants can view their own subscriptions" ON "public"."subscriptions"
-    FOR SELECT USING (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can view their own subscriptions" ON "public"."subscriptions"
+    FOR SELECT USING (auth.uid() = profile_id);
 
-CREATE POLICY "Merchants can create their own subscriptions" ON "public"."subscriptions"
-    FOR INSERT WITH CHECK (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can create their own subscriptions" ON "public"."subscriptions"
+    FOR INSERT WITH CHECK (auth.uid() = profile_id);
 
-CREATE POLICY "Merchants can update their own subscriptions" ON "public"."subscriptions"
-    FOR UPDATE USING (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can update their own subscriptions" ON "public"."subscriptions"
+    FOR UPDATE USING (auth.uid() = profile_id);
 
 -- Add RLS policies for payments
-CREATE POLICY "Merchants can view their own payments" ON "public"."payments"
+CREATE POLICY "Users can view their own payments" ON "public"."payments"
     FOR SELECT USING (("subscription_id" IN (
-        SELECT id FROM public.subscriptions WHERE merchant_id IN (
-            SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-        )
+        SELECT id FROM public.subscriptions WHERE profile_id = auth.uid()
     )));
 
-CREATE POLICY "Merchants can create their own payments" ON "public"."payments"
+CREATE POLICY "Users can create their own payments" ON "public"."payments"
     FOR INSERT WITH CHECK (("subscription_id" IN (
-        SELECT id FROM public.subscriptions WHERE merchant_id IN (
-            SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-        )
+        SELECT id FROM public.subscriptions WHERE profile_id = auth.uid()
     )));
 
 -- Add RLS policies for payment methods
-CREATE POLICY "Merchants can view their own payment methods" ON "public"."payment_methods"
-    FOR SELECT USING (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can view their own payment methods" ON "public"."payment_methods"
+    FOR SELECT USING (auth.uid() = profile_id);
 
-CREATE POLICY "Merchants can create their own payment methods" ON "public"."payment_methods"
-    FOR INSERT WITH CHECK (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can create their own payment methods" ON "public"."payment_methods"
+    FOR INSERT WITH CHECK (auth.uid() = profile_id);
 
-CREATE POLICY "Merchants can update their own payment methods" ON "public"."payment_methods"
-    FOR UPDATE USING (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can update their own payment methods" ON "public"."payment_methods"
+    FOR UPDATE USING (auth.uid() = profile_id);
 
-CREATE POLICY "Merchants can delete their own payment methods" ON "public"."payment_methods"
-    FOR DELETE USING (("merchant_id" IN (
-        SELECT id FROM public.merchants WHERE profile_id = auth.uid()
-    )));
+CREATE POLICY "Users can delete their own payment methods" ON "public"."payment_methods"
+    FOR DELETE USING (auth.uid() = profile_id);
 
 -- Add triggers for updated_at
 CREATE TRIGGER "on_subscriptions_updated" BEFORE UPDATE ON "public"."subscriptions" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
@@ -119,7 +101,7 @@ GRANT ALL ON TABLE "public"."payment_methods" TO "authenticated";
 GRANT ALL ON TABLE "public"."payment_methods" TO "service_role";
 
 -- Create helper functions
-CREATE OR REPLACE FUNCTION "public"."has_active_subscription"("merchant_id" uuid)
+CREATE OR REPLACE FUNCTION "public"."has_active_subscription"("profile_id" uuid)
 RETURNS boolean
 LANGUAGE "plpgsql"
 SECURITY DEFINER
@@ -128,14 +110,14 @@ BEGIN
   RETURN EXISTS (
     SELECT 1
     FROM public.subscriptions
-    WHERE merchant_id = $1
+    WHERE profile_id = $1
     AND status = 'active'
     AND (end_date IS NULL OR end_date > now())
   );
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION "public"."get_current_subscription"("merchant_id" uuid)
+CREATE OR REPLACE FUNCTION "public"."get_current_subscription"("profile_id" uuid)
 RETURNS TABLE (
   plan_type text,
   billing_type text,
@@ -160,7 +142,7 @@ BEGIN
       ELSE EXTRACT(DAY FROM (s.end_date - now()))
     END::integer as days_remaining
   FROM public.subscriptions s
-  WHERE s.merchant_id = $1
+  WHERE s.profile_id = $1
   AND s.status = 'active'
   AND (s.end_date IS NULL OR s.end_date > now())
   ORDER BY s.created_at DESC
@@ -168,7 +150,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION "public"."get_subscription_history"("merchant_id" uuid)
+CREATE OR REPLACE FUNCTION "public"."get_subscription_history"("profile_id" uuid)
 RETURNS TABLE (
   plan_type text,
   billing_type text,
@@ -195,12 +177,12 @@ BEGIN
     p.created_at as payment_date
   FROM public.subscriptions s
   LEFT JOIN public.payments p ON p.subscription_id = s.id
-  WHERE s.merchant_id = $1
+  WHERE s.profile_id = $1
   ORDER BY s.created_at DESC;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION "public"."get_subscription_usage"("merchant_id" uuid)
+CREATE OR REPLACE FUNCTION "public"."get_subscription_usage"("profile_id" uuid)
 RETURNS TABLE (
   total_cards integer,
   cards_this_month integer,
@@ -217,7 +199,7 @@ BEGIN
   -- Get current plan
   SELECT s.plan_type INTO current_plan
   FROM public.subscriptions s
-  WHERE s.merchant_id = $1
+  WHERE s.profile_id = $1
   AND s.status = 'active'
   AND (s.end_date IS NULL OR s.end_date > now())
   ORDER BY s.created_at DESC
@@ -236,8 +218,9 @@ BEGIN
     SELECT 
       COUNT(*) as total_cards,
       COUNT(*) FILTER (WHERE created_at >= date_trunc('month', now())) as cards_this_month
-    FROM public.cards
-    WHERE merchant_id = $1
+    FROM public.cards c
+    JOIN public.merchants m ON m.id = c.merchant_id
+    WHERE m.profile_id = $1
   )
   SELECT 
     cc.total_cards,
