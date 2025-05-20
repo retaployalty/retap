@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'pos_home_page.dart';
+import 'main_screen.dart';
+import '../services/merchant_service.dart';
 
 class MerchantSelectionScreen extends StatefulWidget {
   const MerchantSelectionScreen({super.key});
@@ -11,8 +12,8 @@ class MerchantSelectionScreen extends StatefulWidget {
 
 class _MerchantSelectionScreenState extends State<MerchantSelectionScreen> {
   bool _isLoading = true;
+  String? _error;
   List<Map<String, dynamic>> _merchants = [];
-  String? _errorMessage;
 
   @override
   void initState() {
@@ -22,13 +23,14 @@ class _MerchantSelectionScreenState extends State<MerchantSelectionScreen> {
 
   Future<void> _loadMerchants() async {
     try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        setState(() {
-          _errorMessage = 'User not logged in';
-          _isLoading = false;
-        });
-        return;
+        throw Exception('Utente non autenticato');
       }
 
       final response = await Supabase.instance.client
@@ -40,62 +42,57 @@ class _MerchantSelectionScreenState extends State<MerchantSelectionScreen> {
         _merchants = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
-    } catch (error) {
+    } catch (e) {
       setState(() {
-        _errorMessage = 'Error loading merchants';
+        _error = e.toString();
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _selectMerchant(String merchantId, String merchantName) async {
+    // Salva il merchant selezionato
+    await MerchantService.saveSelectedMerchant(merchantId, merchantName);
+    
+    if (!mounted) return;
+
+    // Naviga alla main screen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => MainScreen(
+          merchantId: merchantId,
+          merchantName: merchantName,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Business'),
+        title: const Text('Seleziona Negozio'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
-              : _merchants.isEmpty
-                  ? const Center(child: Text('No businesses found'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _merchants.length,
-                      itemBuilder: (context, index) {
-                        final merchant = _merchants[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text(merchant['name'] ?? 'Unnamed Business'),
-                            subtitle: Text(merchant['industry'] ?? ''),
-                            onTap: () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (context) => POSHomePage(
-                                    merchantId: merchant['id'],
-                                    merchantName: merchant['name'],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
+          : _error != null
+              ? Center(child: Text('Errore: $_error'))
+              : ListView.builder(
+                  itemCount: _merchants.length,
+                  itemBuilder: (context, index) {
+                    final merchant = _merchants[index];
+                    return ListTile(
+                      title: Text(merchant['name']),
+                      subtitle: Text(merchant['address']),
+                      onTap: () => _selectMerchant(
+                        merchant['id'],
+                        merchant['name'],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 } 
