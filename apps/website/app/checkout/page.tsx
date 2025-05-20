@@ -14,20 +14,27 @@ import Link from "next/link";
 const plans = {
   base: {
     name: "Base",
-    price: "€74",
+    monthlyPrice: "€74",
+    monthlyPriceAfter: "€49",
+    annualPrice: "€470",
     description: "First month (activation), then €49/month",
+    annualDescription: "Annual subscription with 20% discount",
     features: ["100 carte/mese", "Visibilità standard"]
   },
   premium: {
     name: "Premium",
-    price: "€69",
+    monthlyPrice: "€69",
+    annualPrice: "€662",
     description: "Monthly subscription",
+    annualDescription: "Annual subscription with 20% discount",
     features: ["Fino a 400 carte/mese", "Posizione più alta"]
   },
   top: {
     name: "Top",
-    price: "€99",
+    monthlyPrice: "€99",
+    annualPrice: "€950",
     description: "Monthly subscription",
+    annualDescription: "Annual subscription with 20% discount",
     features: ["Fino a 1000 carte/mese", "Primo nella lista nella zona"]
   }
 };
@@ -35,9 +42,33 @@ const plans = {
 export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") || "base";
+  const billing = searchParams.get("billing") || "monthly";
   const selectedPlan = plans[plan as keyof typeof plans];
+  const isAnnual = billing === "annual";
 
   const [paymentMethod, setPaymentMethod] = useState("card");
+
+  const getPrice = () => {
+    if (isAnnual) {
+      return selectedPlan.annualPrice;
+    }
+    return selectedPlan.monthlyPrice;
+  };
+
+  const getDescription = () => {
+    if (isAnnual) {
+      return selectedPlan.annualDescription;
+    }
+    return selectedPlan.description;
+  };
+
+  const calculateVAT = (price: string) => {
+    return (parseFloat(price.replace('€', '')) * 0.22).toFixed(2);
+  };
+
+  const getTotal = (price: string) => {
+    return (parseFloat(price.replace('€', '')) * 1.22).toFixed(2);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -209,9 +240,9 @@ export default function CheckoutPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{selectedPlan.name} Plan</p>
-                        <p className="text-sm text-muted-foreground">{selectedPlan.description}</p>
+                        <p className="text-sm text-muted-foreground">{getDescription()}</p>
                       </div>
-                      <p className="font-bold text-lg">{selectedPlan.price}</p>
+                      <p className="font-bold text-lg">{getPrice()}</p>
                     </div>
                     <div className="space-y-2">
                       {selectedPlan.features.map((feature) => (
@@ -225,15 +256,15 @@ export default function CheckoutPage() {
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <p className="text-muted-foreground">Subtotal</p>
-                      <p>{selectedPlan.price}</p>
+                      <p>{getPrice()}</p>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <p className="text-muted-foreground">VAT (22%)</p>
-                      <p>{(parseFloat(selectedPlan.price.replace('€', '')) * 0.22).toFixed(2)}€</p>
+                      <p>{calculateVAT(getPrice())}€</p>
                     </div>
                     <div className="flex justify-between items-center font-bold text-lg pt-2 border-t">
                       <p>Total</p>
-                      <p>{(parseFloat(selectedPlan.price.replace('€', '')) * 1.22).toFixed(2)}€</p>
+                      <p>{getTotal(getPrice())}€</p>
                     </div>
                   </div>
                   <Button className="w-full" size="lg">

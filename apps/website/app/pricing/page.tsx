@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import Link from "next/link";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
-const plans = [
-  {
+const plans = {
+  base: {
     name: "Base",
-    price: "€49",
+    monthlyPrice: "€49",
+    annualPrice: "€470",
     description: "Perfect for small businesses",
     features: [
       "100 carte/mese",
@@ -20,9 +24,10 @@ const plans = [
     buttonText: "Start with Base",
     popular: false
   },
-  {
+  premium: {
     name: "Premium",
-    price: "€69",
+    monthlyPrice: "€69",
+    annualPrice: "€662",
     description: "Best for growing businesses",
     features: [
       "Fino a 400 carte/mese",
@@ -35,9 +40,10 @@ const plans = [
     buttonText: "Get Premium",
     popular: true
   },
-  {
+  top: {
     name: "Top",
-    price: "€99",
+    monthlyPrice: "€99",
+    annualPrice: "€950",
     description: "For established businesses",
     features: [
       "Fino a 1000 carte/mese",
@@ -51,21 +57,40 @@ const plans = [
     buttonText: "Go Top",
     popular: false
   }
-];
+};
 
 export default function PricingPage() {
+  const [isAnnual, setIsAnnual] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-muted-foreground">
+          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            Choose Your Plan
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
             Select the perfect plan for your business
           </p>
+          
+          <div className="flex items-center justify-center gap-4">
+            <Label htmlFor="billing-toggle" className="text-sm font-medium">Monthly</Label>
+            <Switch
+              id="billing-toggle"
+              checked={isAnnual}
+              onCheckedChange={setIsAnnual}
+            />
+            <Label htmlFor="billing-toggle" className="text-sm font-medium">
+              Annual
+              <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                Save 20%
+              </span>
+            </Label>
+          </div>
         </div>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
-          {plans.map((plan) => (
+          {Object.entries(plans).map(([key, plan]) => (
             <Card key={plan.name} className={plan.popular ? "border-primary shadow-lg" : ""}>
               <CardHeader>
                 {plan.popular && (
@@ -76,11 +101,20 @@ export default function PricingPage() {
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground">/mese</span>
+                  <span className="text-3xl font-bold">
+                    {isAnnual ? plan.annualPrice : plan.monthlyPrice}
+                  </span>
+                  <span className="text-muted-foreground">
+                    /{isAnnual ? "year" : "month"}
+                  </span>
                 </div>
-                {plan.highlight && (
+                {plan.highlight && !isAnnual && (
                   <p className="text-sm text-muted-foreground mt-2">{plan.highlight}</p>
+                )}
+                {isAnnual && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {Math.round(parseFloat(plan.monthlyPrice.replace('€', '')) * 12 * 0.8)}€/year (20% off)
+                  </p>
                 )}
               </CardHeader>
               <CardContent>
@@ -94,7 +128,7 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Link href={`/checkout?plan=${plan.name.toLowerCase()}`} className="w-full">
+                <Link href={`/checkout?plan=${key}&billing=${isAnnual ? 'annual' : 'monthly'}`} className="w-full">
                   <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
                     {plan.buttonText}
                   </Button>
