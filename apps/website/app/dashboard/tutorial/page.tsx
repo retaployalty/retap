@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function TutorialPage() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="space-y-6">
@@ -42,7 +44,7 @@ export default function TutorialPage() {
         {!isPlaying && (
           <Button
             size="lg"
-            onClick={() => setIsPlaying(true)}
+            onClick={() => router.push('/pricing')}
             className="flex items-center gap-2"
           >
             <Play className="w-4 h-4" />
