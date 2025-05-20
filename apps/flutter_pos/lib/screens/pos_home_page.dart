@@ -27,60 +27,104 @@ class POSHomePage extends StatelessWidget {
       debugPrint('Tipo di tag: ${tag.type}');
       debugPrint('UID: ${tag.id}');
 
-      // 2. Genera UUID per la carta
-      final cardId = const Uuid().v4();
-      debugPrint('UUID carta generato: $cardId');
-
-      // 3. Crea un nuovo customer
-      debugPrint('Creazione nuovo customer...');
-      final customerRes = await http.post(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
+      // 2. Controlla se la carta esiste già
+      debugPrint('Controllo se la carta esiste già...');
+      final cardRes = await http.get(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag.id}'),
         headers: {
-          'Content-Type': 'application/json',
           'x-merchant-id': merchantId,
         },
-        body: jsonEncode({
-          'merchant_id': merchantId,
-        }),
       );
 
-      if (customerRes.statusCode != 200) {
-        throw Exception('Errore nella creazione del customer: ${customerRes.body}');
+      String? customerId;
+      String cardId;
+      bool isExistingCard = false;
+
+      if (cardRes.statusCode == 200) {
+        // La carta esiste già
+        final existingCard = jsonDecode(cardRes.body);
+        debugPrint('Carta trovata: ${existingCard['id']}');
+        cardId = existingCard['id'];
+        customerId = existingCard['customer_id'];
+        isExistingCard = true;
+      } else {
+        // Genera un nuovo ID per la carta
+        cardId = const Uuid().v4();
       }
 
-      final customer = jsonDecode(customerRes.body);
-      debugPrint('Customer creato: ${customer['id']}');
-
-      // 4. Crea il link
+      // 3. Crea il link
       final cardUrl = 'https://retapcard.com/c/$cardId';
       debugPrint('Link generato: $cardUrl');
 
-      // 5. Scrivi il link sul chip in formato NDEF
-      final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
+      // 4. Scrivi il link sul chip in base al tipo di tag
+      try {
+        switch (tag.type) {
+          case NFCTagType.iso15693:
+            // Per ISO15693 usiamo NDEF
+            final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
+            await FlutterNfcKit.writeNDEFRecords([uriRecord]);
+            debugPrint('Link scritto sul chip in formato NDEF');
+            break;
+            
+          case NFCTagType.mifare_classic:
+            // Per Mifare Classic scriviamo direttamente nel blocco 4
+            final bytes = utf8.encode(cardUrl);
+            final data = Uint8List.fromList(bytes);
+            await FlutterNfcKit.writeBlock(4, data);
+            debugPrint('Link scritto sul chip Mifare Classic');
+            break;
+            
+          default:
+            throw Exception('Tipo di tag non supportato: ${tag.type}');
+        }
+      } catch (e) {
+        debugPrint('Errore durante la scrittura sul chip: $e');
+        throw Exception('Impossibile scrivere sul chip: $e');
+      }
 
-      await FlutterNfcKit.writeNDEFRecords([uriRecord]);
-      debugPrint('Link scritto sul chip con successo');
+      // 5. Se la carta non esisteva, crea il customer e la carta nel database
+      if (!isExistingCard) {
+        debugPrint('Creo un nuovo customer...');
+        final customerRes = await http.post(
+          Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-merchant-id': merchantId,
+          },
+          body: jsonEncode({
+            'merchant_id': merchantId,
+          }),
+        );
 
-      // 6. Manda la richiesta POST al backend per creare la carta
-      debugPrint('Invio dati al backend...');
-      final res = await http.post(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-merchant-id': merchantId,
-        },
-        body: jsonEncode({
-          'cardId': cardId,
-          'uid': tag.id,
-          'customerId': customer['id'],
-        }),
-      );
+        if (customerRes.statusCode != 200) {
+          throw Exception('Errore nella creazione del customer: ${customerRes.body}');
+        }
 
-      debugPrint('Risposta API ricevuta:');
-      debugPrint('Status code: ${res.statusCode}');
-      debugPrint('Body: ${res.body}');
+        final customer = jsonDecode(customerRes.body);
+        debugPrint('Customer creato: ${customer['id']}');
+        customerId = customer['id'];
 
-      // 7. Blocca il chip in sola lettura (se supportato)
+        debugPrint('Creo la carta nel database...');
+        final res = await http.post(
+          Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-merchant-id': merchantId,
+          },
+          body: jsonEncode({
+            'cardId': cardId,
+            'uid': tag.id,
+            'customerId': customerId,
+          }),
+        );
+
+        if (res.statusCode != 200) {
+          throw Exception('Errore nella creazione della carta: ${res.body}');
+        }
+        debugPrint('Carta creata nel database');
+      }
+
+      // 6. Blocca il chip in sola lettura (se supportato)
       if (tag.type == NFCTagType.iso15693) {
         try {
           await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
@@ -90,17 +134,17 @@ class POSHomePage extends StatelessWidget {
         }
       }
 
-      // 8. Mostra messaggio di successo
+      // 7. Mostra messaggio appropriato
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Carta programmata con successo'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(isExistingCard ? 'Carta già associata' : 'Carta programmata con successo'),
+            backgroundColor: isExistingCard ? Colors.orange : Colors.green,
           ),
         );
       }
 
-      await FlutterNfcKit.finish(iosAlertMessage: 'Fatto!');
+      await FlutterNfcKit.finish(iosAlertMessage: isExistingCard ? 'Carta già associata' : 'Fatto!');
       debugPrint('Operazione completata con successo!');
     } catch (e) {
       debugPrint('ERRORE durante l\'operazione:');
