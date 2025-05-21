@@ -106,9 +106,6 @@ class _CardPageState extends State<CardPage> {
       // Recupera il saldo della carta
       final response = await http.get(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
-        headers: {
-          'x-merchant-id': '11111111-1111-1111-1111-111111111111',
-        },
       );
 
       debugPrint('Balance API response:');
@@ -307,9 +304,6 @@ Future<Map<String, dynamic>> fetchCardBalance(String cardId) async {
   try {
     final response = await http.get(
       Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
-      headers: {
-        'x-merchant-id': '1', // TODO: gestire merchant ID
-      },
     );
 
     if (response.statusCode != 200) {

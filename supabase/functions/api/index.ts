@@ -122,7 +122,6 @@ serve(async (req) => {
         .from('cards')
         .select('id')
         .eq('id', params.cardId)
-        .eq('merchant_id', merchantId)
         .single()
 
       if (cardError) {
