@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/business_list_screen.dart';
 import 'screens/settings_screen.dart';
@@ -32,25 +33,8 @@ class _ReTapWebState extends State<ReTapWeb> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ReTap Card',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
-          primary: Colors.red,
-          secondary: Colors.white,
-          background: Colors.white,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.red,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white70,
-        ),
-      ),
+      theme: appTheme,
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: _screens[_selectedIndex],
         bottomNavigationBar: BottomNavigationBar(
