@@ -56,7 +56,7 @@ serve(async (req) => {
         .from('cards')
         .select('*')
         .eq('uid', params.uid)
-        .eq('merchant_id', merchantId)
+        .eq('issuing_merchant_id', merchantId)
         .single()
 
       if (error) {
@@ -92,16 +92,51 @@ serve(async (req) => {
       }
 
       // Se non esiste, crea una nuova carta
-      const { data, error } = await supabaseClient
+      const { data: card, error: cardError } = await supabaseClient
         .from('cards')
         .insert({
           id: cardId,
           uid,
           customer_id: customerId,
-          merchant_id: merchantId,
+          issuing_merchant_id: merchantId,
         })
         .select()
         .single()
+
+      if (cardError) {
+        return new Response(
+          JSON.stringify({ error: cardError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crea la relazione card_merchants
+      const { error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .insert({
+          card_id: card.id,
+          merchant_id: merchantId,
+        })
+
+      if (cmError) {
+        return new Response(
+          JSON.stringify({ error: cmError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify(card),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // GET /balance?cardId=XXX
+    if (path === 'balance' && req.method === 'GET') {
+      const { data: balances, error } = await supabaseClient
+        .rpc('get_card_balance', {
+          card_id: params.cardId
+        })
 
       if (error) {
         return new Response(
@@ -110,40 +145,9 @@ serve(async (req) => {
         )
       }
 
-      return new Response(
-        JSON.stringify(data),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // GET /balance?cardId=XXX
-    if (path === 'balance' && req.method === 'GET') {
-      const { data: card, error: cardError } = await supabaseClient
-        .from('cards')
-        .select('id')
-        .eq('id', params.cardId)
-        .single()
-
-      if (cardError) {
-        return new Response(
-          JSON.stringify({ error: 'Card not found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const { data: transactions, error: txError } = await supabaseClient
-        .from('transactions')
-        .select('points')
-        .eq('card_id', params.cardId)
-
-      if (txError) {
-        return new Response(
-          JSON.stringify({ error: txError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const balance = transactions.reduce((sum, tx) => sum + tx.points, 0)
+      // Find the balance for the current merchant
+      const merchantBalance = balances.find((b: any) => b.merchant_id === merchantId)
+      const balance = merchantBalance?.balance ?? 0
 
       return new Response(
         JSON.stringify({ balance }),
