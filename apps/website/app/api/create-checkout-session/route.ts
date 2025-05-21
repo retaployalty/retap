@@ -1,59 +1,66 @@
-import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-04-30.basil",
+});
 
 export async function POST(req: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
-    
-    // Verifica che l'utente sia autenticato
     const { data: { session } } = await supabase.auth.getSession();
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const body = await req.json();
-    const { price, productId, successUrl, cancelUrl } = body;
-
-    if (!productId || !successUrl || !cancelUrl) {
-      return new NextResponse('Missing required fields', { status: 400 });
-    }
-
-    // Mappa productId a priceId (da configurare secondo Stripe Dashboard)
-    const priceMap: Record<string, string> = {
-      'prod_SJxYELX99AEp5I': 'price_49', // Sostituisci con il vero priceId
-      'prod_SJxZrZBJ9DXkb0': 'price_69', // Sostituisci con il vero priceId
-      'prod_SJxZH6Ejfd8myY': 'price_99', // Sostituisci con il vero priceId
-    };
-    const priceId = priceMap[productId];
-    if (!priceId) {
-      return new NextResponse('Invalid productId', { status: 400 });
-    }
+    const {
+      name,
+      email,
+      address,
+      city,
+      country,
+      postalCode,
+      vatNumber,
+      priceId,
+      activationPriceId,
+    } = body;
 
     // Crea la sessione di checkout
-    const stripeSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer_email: email,
+      billing_address_collection: "required",
       line_items: [
+        ...(priceId === "price_1RRGYVEC4VcVVLOnNYVe4B0K" ? [{
+          price: activationPriceId,
+          quantity: 1,
+        }] : []),
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      mode: 'subscription',
-      billing_address_collection: 'required',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: session.user.email,
+      mode: "subscription",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true`,
       metadata: {
         userId: session.user.id,
-        productId,
+        name,
+        email,
+        address,
+        city,
+        country,
+        postalCode,
+        vatNumber,
       },
     });
 
-    return NextResponse.json({ sessionId: stripeSession.id });
+    return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    return new NextResponse('Internal error', { status: 500 });
+    console.error("Errore durante la creazione della sessione di checkout:", error);
+    return new NextResponse("Internal error", { status: 500 });
   }
 } 

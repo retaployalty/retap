@@ -31,7 +31,7 @@ export default function AuthPage() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/dashboard');
+        router.push('/dashboard/tutorial');
       }
     };
     checkUser();
@@ -65,7 +65,7 @@ export default function AuthPage() {
       if (profileError) throw profileError;
 
       setMessage("Login effettuato con successo!");
-      router.push('/dashboard');
+      router.push('/dashboard/tutorial');
       router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il login");
