@@ -9,6 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Check, CreditCard, Shield, Zap } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
+import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 
 const features = [
   {
@@ -28,7 +30,17 @@ const features = [
   },
 ];
 
-export default function CheckoutPage() {
+const stripePromise = loadStripe("pk_test_51RPJZdEC4VcVVLOnvP3lEJv7sJke8cBF9qatNbaqJ7Yk6aAtEZsoADbY95wjbzCvEpsCNhT2Yn3Vynrvy4Ojlh7700sUGw3cj7"); // <-- la tua chiave reale
+
+export default function CheckoutWrapper() {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutPage />
+    </Elements>
+  );
+}
+
+function CheckoutPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -37,6 +49,8 @@ export default function CheckoutPage() {
   const [cardCvc, setCardCvc] = useState("");
   const router = useRouter();
   const supabase = createClientComponentClient();
+  const stripe = useStripe();
+  const elements = useElements();
 
   // Aggiungo stato per i dati di fatturazione
   const [billingForm, setBillingForm] = useState({
@@ -96,37 +110,67 @@ export default function CheckoutPage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const formData = new FormData(e.currentTarget);
-      const data = {
-        name: formData.get("name"),
-        email: formData.get("email"),
-        address: formData.get("address"),
-        city: formData.get("city"),
-        country: formData.get("country"),
-        postalCode: formData.get("postalCode"),
-        vatNumber: formData.get("vatNumber"),
-      };
+    if (!stripe || !elements) {
+      alert("Stripe non è pronto, riprova tra qualche secondo.");
+      setLoading(false);
+      return;
+    }
 
-      // Chiamata API per creare la sessione di checkout
-      const response = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      alert("Errore nel caricamento del campo carta.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { paymentMethod, error: stripeError } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement as any,
+        billing_details: {
+          name: billingForm.name,
+          email: billingForm.email,
         },
-        body: JSON.stringify({
-          ...data,
-          priceId: billingCycle === "monthly" 
-            ? "price_1RRGYVEC4VcVVLOnNYVe4B0K" 
-            : "price_1RRGZZEC4VcVVLOn6MWL9IGZ",
-          activationPriceId: "price_1RRGXfEC4VcVVLOnSUSakLR1",
-        }),
       });
 
-      const { url } = await response.json();
-      window.location.href = url;
+      if (stripeError) {
+        alert(stripeError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Verifica che paymentMethod.card esista
+      if (!paymentMethod.card) {
+        alert("Errore nel recupero dati carta.");
+        setLoading(false);
+        return;
+      }
+
+      const { last4, brand, exp_month, exp_year } = paymentMethod.card;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utente non autenticato");
+
+      const { error } = await supabase.from('payment_methods').insert({
+        profile_id: user.id,
+        stripe_payment_method_id: paymentMethod.id,
+        card_last4: last4,
+        card_brand: brand,
+        card_exp_month: exp_month,
+        card_exp_year: exp_year,
+        is_default: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      alert('Metodo di pagamento salvato con successo!');
+      // ... eventuale redirect o step successivo
+
     } catch (error) {
-      console.error("Errore durante il checkout:", error);
+      alert('Errore nel salvataggio del metodo di pagamento');
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -333,43 +377,8 @@ export default function CheckoutPage() {
               <form onSubmit={handleCheckout} className="space-y-8">
                 <div className="space-y-4">
                   <Label className="text-base">Dati carta di credito</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="cardNumber">Numero carta</Label>
-                      <Input
-                        id="cardNumber"
-                        name="cardNumber"
-                        required
-                        maxLength={19}
-                        placeholder="1234 5678 9012 3456"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cardExpiry">Scadenza</Label>
-                      <Input
-                        id="cardExpiry"
-                        name="cardExpiry"
-                        required
-                        maxLength={5}
-                        placeholder="MM/AA"
-                        value={cardExpiry}
-                        onChange={handleCardExpiryChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cardCvc">CVC</Label>
-                      <Input
-                        id="cardCvc"
-                        name="cardCvc"
-                        required
-                        maxLength={4}
-                        placeholder="CVC"
-                        value={cardCvc}
-                        onChange={e => setCardCvc(e.target.value)}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <CardElement options={{ hidePostalCode: true }} />
                   </div>
                 </div>
                 <div className="space-y-3 rounded-lg border bg-muted/50 p-4">

@@ -15,6 +15,9 @@
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
     "turbo": "^2.5.3"
+  },
+  "dependencies": {
+    "@stripe/react-stripe-js": "^3.7.0",
+    "@stripe/stripe-js": "^7.3.0"
   }
 }
-
