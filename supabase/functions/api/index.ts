@@ -159,26 +159,62 @@ serve(async (req) => {
     if (path === 'tx' && req.method === 'POST') {
       const { cardId, points } = await req.json()
 
-      const { data: card, error: cardError } = await supabaseClient
-        .from('cards')
+      // 1. Get the card_merchants relationship
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
         .select('id')
-        .eq('id', cardId)
+        .eq('card_id', cardId)
         .eq('merchant_id', merchantId)
         .single()
 
-      if (cardError) {
+      if (cmError) {
+        // If relationship doesn't exist, create it
+        const { data: newCardMerchant, error: createError } = await supabaseClient
+          .from('card_merchants')
+          .insert({
+            card_id: cardId,
+            merchant_id: merchantId,
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          return new Response(
+            JSON.stringify({ error: createError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Create transaction with new relationship
+        const { data, error } = await supabaseClient
+          .from('transactions')
+          .insert({
+            id: crypto.randomUUID(),
+            card_merchant_id: newCardMerchant.id,
+            points,
+          })
+          .select()
+          .single()
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
         return new Response(
-          JSON.stringify({ error: 'Card not found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify(data),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
+      // Create transaction with existing relationship
       const { data, error } = await supabaseClient
         .from('transactions')
         .insert({
           id: crypto.randomUUID(),
-          card_id: cardId,
-          merchant_id: merchantId,
+          card_merchant_id: cardMerchant.id,
           points,
         })
         .select()
