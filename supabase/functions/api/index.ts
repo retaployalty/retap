@@ -249,6 +249,26 @@ serve(async (req) => {
       )
     }
 
+    // GET /merchants
+    if (path === 'merchants' && req.method === 'GET') {
+      const { data, error } = await supabaseClient
+        .from('merchants')
+        .select('id, name, industry, address, country, created_at')
+        .order('name', { ascending: true })
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ merchants: data }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
