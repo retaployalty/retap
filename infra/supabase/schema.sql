@@ -58,6 +58,29 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" integer, "is_issuer" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $_$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        m.id as merchant_id,
+        m.name as merchant_name,
+        COALESCE(SUM(t.points), 0)::integer as balance,
+        (c.issuing_merchant_id = m.id) as is_issuer
+    FROM public.cards c
+    JOIN public.card_merchants cm ON cm.card_id = c.id
+    JOIN public.merchants m ON m.id = cm.merchant_id
+    LEFT JOIN public.transactions t ON t.card_merchant_id = cm.id
+    WHERE c.id = $1
+    GROUP BY m.id, m.name, c.issuing_merchant_id;
+END;
+$_$;
+
+
+ALTER FUNCTION "public"."get_card_balance"("card_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_current_subscription"("profile_id" "uuid") RETURNS TABLE("plan_type" "text", "billing_type" "text", "status" "text", "start_date" timestamp with time zone, "end_date" timestamp with time zone, "days_remaining" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
@@ -224,12 +247,23 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."card_merchants" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "card_id" "uuid" NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."card_merchants" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."cards" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "customer_id" "uuid",
     "uid" "text",
-    "merchant_id" "uuid" NOT NULL
+    "issuing_merchant_id" "uuid" NOT NULL
 );
 
 
@@ -336,14 +370,28 @@ ALTER TABLE "public"."subscriptions" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."transactions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "merchant_id" "uuid" NOT NULL,
-    "card_id" "uuid" NOT NULL,
     "points" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "card_merchant_id" "uuid"
 );
 
 
 ALTER TABLE "public"."transactions" OWNER TO "postgres";
+
+
+ALTER TABLE ONLY "public"."card_merchants"
+    ADD CONSTRAINT "card_merchants_card_id_merchant_id_key" UNIQUE ("card_id", "merchant_id");
+
+
+
+ALTER TABLE ONLY "public"."card_merchants"
+    ADD CONSTRAINT "card_merchants_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."cards"
+    ADD CONSTRAINT "cards_customer_id_key" UNIQUE ("customer_id");
+
 
 
 ALTER TABLE ONLY "public"."cards"
@@ -407,13 +455,23 @@ CREATE OR REPLACE TRIGGER "on_subscriptions_updated" BEFORE UPDATE ON "public"."
 
 
 
+ALTER TABLE ONLY "public"."card_merchants"
+    ADD CONSTRAINT "card_merchants_card_id_fkey" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."card_merchants"
+    ADD CONSTRAINT "card_merchants_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."cards"
     ADD CONSTRAINT "cards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id");
 
 
 
 ALTER TABLE ONLY "public"."cards"
-    ADD CONSTRAINT "cards_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id");
+    ADD CONSTRAINT "cards_issuing_merchant_id_fkey" FOREIGN KEY ("issuing_merchant_id") REFERENCES "public"."merchants"("id");
 
 
 
@@ -448,12 +506,7 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 
 ALTER TABLE ONLY "public"."transactions"
-    ADD CONSTRAINT "transactions_card_id_fkey" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id");
-
-
-
-ALTER TABLE ONLY "public"."transactions"
-    ADD CONSTRAINT "transactions_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id");
+    ADD CONSTRAINT "transactions_card_merchant_id_fkey" FOREIGN KEY ("card_merchant_id") REFERENCES "public"."card_merchants"("id") ON DELETE CASCADE;
 
 
 
@@ -463,15 +516,23 @@ CREATE POLICY "Merchant can insert" ON "public"."customers" FOR INSERT WITH CHEC
 
 
 
-CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can insert card_merchants" ON "public"."card_merchants" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
 
-CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CHECK (("issuing_merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+   FROM "public"."card_merchants"
+  WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
 
 
 
@@ -481,15 +542,23 @@ CREATE POLICY "Merchant can select" ON "public"."customers" FOR SELECT USING (("
 
 
 
-CREATE POLICY "Merchant can select cards" ON "public"."cards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can select card_merchants" ON "public"."card_merchants" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
 
-CREATE POLICY "Merchant can select transactions" ON "public"."transactions" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can select cards" ON "public"."cards" FOR SELECT USING (("issuing_merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can select transactions" ON "public"."transactions" FOR SELECT USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+   FROM "public"."card_merchants"
+  WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
 
 
 
@@ -499,15 +568,23 @@ CREATE POLICY "Merchant can update" ON "public"."customers" FOR UPDATE USING (("
 
 
 
-CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can update card_merchants" ON "public"."card_merchants" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
 
-CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (("issuing_merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+   FROM "public"."card_merchants"
+  WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
 
 
 
@@ -759,6 +836,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") TO "service_role";
@@ -813,6 +896,12 @@ GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO
 
 
 
+
+
+
+GRANT ALL ON TABLE "public"."card_merchants" TO "anon";
+GRANT ALL ON TABLE "public"."card_merchants" TO "authenticated";
+GRANT ALL ON TABLE "public"."card_merchants" TO "service_role";
 
 
 
