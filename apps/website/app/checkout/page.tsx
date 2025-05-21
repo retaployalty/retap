@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, CreditCard, Building2, MapPin, Mail, User, Banknote } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { createClient } from '@supabase/supabase-js';
 
 const plans = {
   BASIC: {
     name: "BASIC",
-    monthlyPrice: "€74",
+    monthlyPrice: "€49",
     monthlyPriceAfter: "€49",
     annualPrice: "€470",
     description: "First month (activation), then €49/month",
@@ -41,6 +42,59 @@ const plans = {
 } as const;
 
 type PlanType = keyof typeof plans;
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const countries = [
+  { code: 'it', name: 'Italy', flag: '🇮🇹' },
+  { code: 'nl', name: 'Netherlands', flag: '🇳🇱' },
+  { code: 'ch', name: 'Switzerland', flag: '🇨🇭' },
+  { code: 'at', name: 'Austria', flag: '🇦🇹' },
+  { code: 'fr', name: 'France', flag: '🇫🇷' },
+  { code: 'de', name: 'Germany', flag: '🇩🇪' },
+  { code: 'es', name: 'Spain', flag: '🇪🇸' },
+  { code: 'be', name: 'Belgium', flag: '🇧🇪' },
+  { code: 'uk', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'us', name: 'United States', flag: '🇺🇸' },
+  { code: 'pl', name: 'Poland', flag: '🇵🇱' },
+  { code: 'cz', name: 'Czech Republic', flag: '🇨🇿' },
+  { code: 'pt', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'ie', name: 'Ireland', flag: '🇮🇪' },
+  { code: 'se', name: 'Sweden', flag: '🇸🇪' },
+  { code: 'fi', name: 'Finland', flag: '🇫🇮' },
+  { code: 'no', name: 'Norway', flag: '🇳🇴' },
+  { code: 'dk', name: 'Denmark', flag: '🇩🇰' },
+  { code: 'gr', name: 'Greece', flag: '🇬🇷' },
+  { code: 'hu', name: 'Hungary', flag: '🇭🇺' },
+  { code: 'ro', name: 'Romania', flag: '🇷🇴' },
+  { code: 'bg', name: 'Bulgaria', flag: '🇧🇬' },
+  { code: 'sk', name: 'Slovakia', flag: '🇸🇰' },
+  { code: 'si', name: 'Slovenia', flag: '🇸🇮' },
+  { code: 'hr', name: 'Croatia', flag: '🇭🇷' },
+  { code: 'ee', name: 'Estonia', flag: '🇪🇪' },
+  { code: 'lv', name: 'Latvia', flag: '🇱🇻' },
+  { code: 'lt', name: 'Lithuania', flag: '🇱🇹' },
+  { code: 'lu', name: 'Luxembourg', flag: '🇱🇺' },
+  { code: 'mt', name: 'Malta', flag: '🇲🇹' },
+  { code: 'cy', name: 'Cyprus', flag: '🇨🇾' },
+  { code: 'tr', name: 'Turkey', flag: '🇹🇷' },
+  { code: 'ua', name: 'Ukraine', flag: '🇺🇦' },
+  { code: 'ru', name: 'Russia', flag: '🇷🇺' },
+  { code: 'md', name: 'Moldova', flag: '🇲🇩' },
+  { code: 'al', name: 'Albania', flag: '🇦🇱' },
+  { code: 'rs', name: 'Serbia', flag: '🇷🇸' },
+  { code: 'ba', name: 'Bosnia & Herzegovina', flag: '🇧🇦' },
+  { code: 'me', name: 'Montenegro', flag: '🇲🇪' },
+  { code: 'mk', name: 'North Macedonia', flag: '🇲🇰' },
+  { code: 'li', name: 'Liechtenstein', flag: '🇱🇮' },
+  { code: 'is', name: 'Iceland', flag: '🇮🇸' },
+  { code: 'mc', name: 'Monaco', flag: '🇲🇨' },
+  { code: 'sm', name: 'San Marino', flag: '🇸🇲' },
+  { code: 'va', name: 'Vatican City', flag: '🇻🇦' },
+];
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -73,7 +127,8 @@ export default function CheckoutPage() {
     address: "",
     city: "",
     postalCode: "",
-    country: "it"
+    country: "it",
+    vatId: ""
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +139,27 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Validazione VAT
+    if (!validateVat()) {
+      toast.error("VAT non valido");
+      setIsLoading(false);
+      return;
+    }
+
+    // Salva su Supabase
+    const { error } = await supabase
+      .from('checkout_leads')
+      .insert([{
+        ...formData,
+        plan,
+        billing: isAnnual ? "annual" : "monthly"
+      }]);
+    if (error) {
+      toast.error("Errore nel salvataggio dati");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api', {
@@ -130,12 +206,29 @@ export default function CheckoutPage() {
     return selectedPlan.description;
   };
 
-  const calculateVAT = (price: string) => {
-    return (parseFloat(price.replace('€', '')) * 0.22).toFixed(2);
+  const showActivationFee = plan === 'BASIC' && !isAnnual;
+  const activationFee = 25;
+
+  const getVatLabel = () => {
+    if (formData.country === "nl") return "BTW Number";
+    if (formData.country === "it") return "Partita IVA";
+    return "VAT ID";
   };
 
-  const getTotal = (price: string) => {
-    return (parseFloat(price.replace('€', '')) * 1.22).toFixed(2);
+  const getVatPlaceholder = () => {
+    if (formData.country === "nl") return "NL123456789B01";
+    if (formData.country === "it") return "IT12345678901";
+    return "";
+  };
+
+  const validateVat = () => {
+    const { vatId, country } = formData;
+    if (!vatId || vatId.length < 8) return false;
+    if (!/^[a-zA-Z0-9]+$/.test(vatId)) return false;
+    if (country === "nl" && vatId) {
+      return /^NL[0-9]{9}B[0-9]{2}$/.test(vatId);
+    }
+    return true;
   };
 
   return (
@@ -258,64 +351,40 @@ export default function CheckoutPage() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="text-sm font-medium">Paese</Label>
-                      <Select 
-                        value={formData.country}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona un paese" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="it">Italia</SelectItem>
-                          <SelectItem value="ch">Svizzera</SelectItem>
-                          <SelectItem value="at">Austria</SelectItem>
-                          <SelectItem value="fr">Francia</SelectItem>
-                          <SelectItem value="de">Germania</SelectItem>
-                          <SelectItem value="es">Spagna</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="country" className="text-sm font-medium">Paese</Label>
+                        <Select 
+                          value={formData.country}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un paese" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map(c => (
+                              <SelectItem key={c.code} value={c.code}>
+                                <span className="mr-2">{c.flag}</span>{c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vatId" className="text-sm font-medium">{getVatLabel()}</Label>
+                        <Input
+                          id="vatId"
+                          placeholder={getVatPlaceholder()}
+                          value={formData.vatId}
+                          onChange={e => setFormData(prev => ({ ...prev, vatId: e.target.value.toUpperCase() }))}
+                          className="pl-4"
+                          required
+                        />
+                        {formData.vatId && !validateVat() && (
+                          <p className="text-xs text-red-500">Inserisci un VAT valido ({getVatLabel()})</p>
+                        )}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Payment Method */}
-                <Card className="border-none shadow-lg">
-                  <CardHeader className="border-b bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      <CardTitle>Metodo di Pagamento</CardTitle>
-                    </div>
-                    <CardDescription>Scegli come vuoi pagare</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-6">
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid gap-4">
-                      <div className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="card" id="card" />
-                        <div className="flex-1">
-                          <Label htmlFor="card" className="text-base font-medium">Carta di Credito</Label>
-                          <p className="text-sm text-muted-foreground">Paga con Visa, Mastercard o American Express</p>
-                        </div>
-                        <CreditCard className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <div className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="bank" id="bank" />
-                        <div className="flex-1">
-                          <Label htmlFor="bank" className="text-base font-medium">Bonifico Bancario</Label>
-                          <p className="text-sm text-muted-foreground">Paga tramite bonifico bancario</p>
-                        </div>
-                        <Banknote className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    </RadioGroup>
-
-                    {paymentMethod === "bank" && (
-                      <div className="rounded-lg bg-muted/50 p-4">
-                        <p className="text-sm text-muted-foreground">
-                          Riceverai i nostri dati bancari dopo la conferma dell'ordine.
-                        </p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -344,18 +413,22 @@ export default function CheckoutPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <p className="text-muted-foreground">Subtotale</p>
-                        <p>{getPrice()}</p>
+                    {showActivationFee && (
+                      <div className="flex justify-between items-center text-sm border-t pt-4">
+                        <p className="text-muted-foreground">Fee di attivazione</p>
+                        <p>€{activationFee}</p>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <p className="text-muted-foreground">IVA (22%)</p>
-                        <p>{calculateVAT(getPrice())}€</p>
-                      </div>
-                      <div className="flex justify-between items-center font-bold text-lg pt-2 border-t">
+                    )}
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between items-center font-bold text-lg">
                         <p>Totale</p>
-                        <p>{getTotal(getPrice())}€</p>
+                        <p>
+                          {showActivationFee
+                            ? `€${(
+                                parseFloat(getPrice().replace('€', '')) + activationFee
+                              ).toFixed(2)}`
+                            : getPrice()}
+                        </p>
                       </div>
                     </div>
                     <Button 

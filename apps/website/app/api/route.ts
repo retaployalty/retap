@@ -12,10 +12,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Price IDs per gli abbonamenti
 const STRIPE_SUBSCRIPTIONS = {
-  PRO: 'price_1RPJeJEC4VcVVLOnDOdFbrxK',
-  INTERMEDIATE: 'price_1RPJe6EC4VcVVLOndEYQSEQu',
-  BASIC: 'price_1RPJdaEC4VcVVLOnFYvpxWQY'
+  PRO: {
+    monthly: 'price_1RPJeJEC4VcVVLOnDOdFbrxK',
+    annual: 'price_1RR8T5EC4VcVVLOn32edKy7m'
+  },
+  INTERMEDIATE: {
+    monthly: 'price_1RPJe6EC4VcVVLOndEYQSEQu',
+    annual: 'price_1RR8SKEC4VcVVLOnfLMM3pLQ'
+  },
+  BASIC: {
+    monthly: 'price_1RPJdaEC4VcVVLOnFYvpxWQY',
+    annual: 'price_1RR8SkEC4VcVVLOnK4edYnFG'
+  }
 } as const
+
+const STRIPE_ACTIVATION_FEE = 'price_1RR8LJEC4VcVVLOnvY7t6X6o';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,11 +40,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const priceId = STRIPE_SUBSCRIPTIONS[plan as keyof typeof STRIPE_SUBSCRIPTIONS]
+    const priceId = STRIPE_SUBSCRIPTIONS[plan as keyof typeof STRIPE_SUBSCRIPTIONS][isAnnual ? 'annual' : 'monthly'];
+
+    // Costruisco la lista degli items
+    const line_items = [
+      { price: priceId, quantity: 1 },
+      ...(plan === 'BASIC' && !isAnnual ? [{ price: STRIPE_ACTIVATION_FEE, quantity: 1 }] : [])
+    ];
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items,
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout?canceled=true`,
       automatic_tax: { enabled: true },
