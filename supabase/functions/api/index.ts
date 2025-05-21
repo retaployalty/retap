@@ -13,11 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    const merchantId = req.headers.get('x-merchant-id')
-    if (!merchantId) {
-      throw new Error('Missing merchant ID')
-    }
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -26,9 +21,16 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.split('/').pop()
     const params = Object.fromEntries(url.searchParams)
+    const merchantId = req.headers.get('x-merchant-id')
 
     // POST /customers
     if (path === 'customers' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { data, error } = await supabaseClient
         .from('customers')
         .insert({
@@ -52,6 +54,12 @@ serve(async (req) => {
 
     // GET /cards?uid=XXX
     if (path === 'cards' && req.method === 'GET') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { data, error } = await supabaseClient
         .from('cards')
         .select('*')
@@ -74,6 +82,12 @@ serve(async (req) => {
 
     // POST /cards
     if (path === 'cards' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { cardId, uid, customerId } = await req.json()
 
       // Verifica se esiste già una carta con questo UID
@@ -145,18 +159,20 @@ serve(async (req) => {
         )
       }
 
-      // Find the balance for the current merchant
-      const merchantBalance = balances.find((b: any) => b.merchant_id === merchantId)
-      const balance = merchantBalance?.balance ?? 0
-
       return new Response(
-        JSON.stringify({ balance }),
+        JSON.stringify({ balances }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // POST /tx
     if (path === 'tx' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { cardId, points } = await req.json()
 
       // 1. Get the card_merchants relationship

@@ -15,8 +15,8 @@ void main() async {
   
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://retap.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5NjQ5NzAsImV4cCI6MjA2MDU0MDk3MH0.2QwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQwQ',
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
   
   runApp(const ReTapWeb());
@@ -83,7 +83,8 @@ class CardPage extends StatefulWidget {
 class _CardPageState extends State<CardPage> {
   bool _isLoading = true;
   String? _error;
-  int _balance = 0;
+  Map<String, dynamic>? _cardData;
+  List<Map<String, dynamic>> _merchantBalances = [];
 
   @override
   void initState() {
@@ -100,26 +101,43 @@ class _CardPageState extends State<CardPage> {
 
       // Estrai l'ID della carta dall'URL
       final uri = Uri.parse(widget.cardUrl);
-      final cardId = uri.pathSegments.last;
+      final cardId = uri.pathSegments.lastWhere((segment) => segment.isNotEmpty);
       debugPrint('Card ID from URL: $cardId');
 
-      // Recupera il saldo della carta
-      final response = await http.get(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
+      // Recupera i dati della carta
+      final cardResponse = await Supabase.instance.client
+          .from('cards')
+          .select('*, customers(*)')
+          .eq('id', cardId)
+          .single();
+
+      // Recupera i saldi per tutti i merchant
+      final apiUrl = dotenv.env['SUPABASE_URL'] ?? 'https://retap.supabase.co';
+      final balanceResponse = await http.get(
+        Uri.parse('$apiUrl/functions/v1/api/balance?cardId=$cardId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${dotenv.env['SUPABASE_ANON_KEY']}',
+        },
       );
 
       debugPrint('Balance API response:');
-      debugPrint('Status code: ${response.statusCode}');
-      debugPrint('Body: ${response.body}');
+      debugPrint('Status code: ${balanceResponse.statusCode}');
+      debugPrint('Body: ${balanceResponse.body}');
 
-      if (response.statusCode != 200) {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['error'] ?? 'Errore nel recupero del saldo');
+      if (balanceResponse.statusCode != 200) {
+        final errorData = jsonDecode(balanceResponse.body);
+        throw Exception(errorData['error'] ?? 'Errore nel recupero del saldo (${balanceResponse.statusCode})');
       }
 
-      final data = jsonDecode(response.body);
+      final balanceData = jsonDecode(balanceResponse.body);
+      if (balanceData['balances'] == null) {
+        throw Exception('Formato risposta non valido');
+      }
+
       setState(() {
-        _balance = data['balance'] ?? 0;
+        _cardData = cardResponse;
+        _merchantBalances = List<Map<String, dynamic>>.from(balanceData['balances']);
         _isLoading = false;
       });
     } catch (e) {
@@ -143,31 +161,118 @@ class _CardPageState extends State<CardPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-              : Padding(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.all(32),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.credit_card,
-                        size: 64,
-                        color: Colors.blue,
+                      // Card Owner Section
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Proprietario',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _cardData?['customers']?['email'] ?? 'N/A',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      Text(
-                        '$_balance punti',
-                        style: const TextStyle(
-                          fontSize: 48,
+
+                      // Points Section
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Punti Totali',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${_merchantBalances.fold<int>(0, (sum, merchant) => sum + (merchant['balance'] as int))} punti',
+                                style: const TextStyle(
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Merchants Section
+                      const Text(
+                        'Negozi',
+                        style: TextStyle(
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'ID: ${widget.cardUrl.split('/').last}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                        ),
-                      ),
+                      const SizedBox(height: 16),
+                      ..._merchantBalances.map((merchant) => Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          merchant['merchant_name'] ?? 'N/A',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (merchant['is_issuer'] == true)
+                                          const Text(
+                                            'Emittente',
+                                            style: TextStyle(
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '${merchant['balance']} punti',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
                     ],
                   ),
                 ),
@@ -302,21 +407,30 @@ class _CardDetailsPageState extends ConsumerState<CardDetailsPage> {
 
 Future<Map<String, dynamic>> fetchCardBalance(String cardId) async {
   try {
+    final apiUrl = dotenv.env['SUPABASE_URL'] ?? 'https://retap.supabase.co';
     final response = await http.get(
-      Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
+      Uri.parse('$apiUrl/functions/v1/api/balance?cardId=$cardId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${dotenv.env['SUPABASE_ANON_KEY']}',
+      },
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Errore nel recupero del saldo');
+      throw Exception('Errore nel recupero del saldo (${response.statusCode})');
     }
 
     final data = jsonDecode(response.body);
+    if (data['balances'] == null) {
+      throw Exception('Formato risposta non valido');
+    }
     
     return {
       'id': cardId,
-      'points': data['balance'],
+      'points': data['balances'].fold<int>(0, (sum, merchant) => sum + (merchant['balance'] as int)),
     };
   } catch (e) {
-    throw Exception('Errore nel recupero del saldo');
+    debugPrint('Error fetching card balance: $e');
+    throw Exception('Errore nel recupero del saldo: ${e.toString()}');
   }
 }
