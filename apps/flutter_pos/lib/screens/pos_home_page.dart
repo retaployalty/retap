@@ -48,43 +48,8 @@ class POSHomePage extends StatelessWidget {
         customerId = existingCard['customer_id'];
         isExistingCard = true;
       } else {
-        // Genera un nuovo ID per la carta
-        cardId = const Uuid().v4();
-      }
-
-      // 3. Crea il link
-      final cardUrl = 'https://retapcard.com/c/$cardId';
-      debugPrint('Link generato: $cardUrl');
-
-      // 4. Scrivi il link sul chip in base al tipo di tag
-      try {
-        switch (tag.type) {
-          case NFCTagType.iso15693:
-            // Per ISO15693 usiamo NDEF
-            final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
-            await FlutterNfcKit.writeNDEFRecords([uriRecord]);
-            debugPrint('Link scritto sul chip in formato NDEF');
-            break;
-            
-          case NFCTagType.mifare_classic:
-            // Per Mifare Classic scriviamo direttamente nel blocco 4
-            final bytes = utf8.encode(cardUrl);
-            final data = Uint8List.fromList(bytes);
-            await FlutterNfcKit.writeBlock(4, data);
-            debugPrint('Link scritto sul chip Mifare Classic');
-            break;
-            
-          default:
-            throw Exception('Tipo di tag non supportato: ${tag.type}');
-        }
-      } catch (e) {
-        debugPrint('Errore durante la scrittura sul chip: $e');
-        throw Exception('Impossibile scrivere sul chip: $e');
-      }
-
-      // 5. Se la carta non esisteva, crea il customer e la carta nel database
-      if (!isExistingCard) {
-        debugPrint('Creo un nuovo customer...');
+        // La carta non esiste, crea un nuovo customer
+        debugPrint('Carta non trovata, creo un nuovo customer...');
         final customerRes = await http.post(
           Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
           headers: {
@@ -103,8 +68,11 @@ class POSHomePage extends StatelessWidget {
         final customer = jsonDecode(customerRes.body);
         debugPrint('Customer creato: ${customer['id']}');
         customerId = customer['id'];
+        cardId = const Uuid().v4();
 
-        debugPrint('Creo la carta nel database...');
+        // TEMPORANEO PER SVILUPPO: Creiamo la carta nel database prima di scrivere sul chip
+        // In produzione, la carta dovrebbe essere creata solo dopo la scrittura riuscita sul chip
+        debugPrint('TEMPORANEO PER SVILUPPO: Creo la carta nel database prima della scrittura NFC');
         final res = await http.post(
           Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
           headers: {
@@ -124,7 +92,16 @@ class POSHomePage extends StatelessWidget {
         debugPrint('Carta creata nel database');
       }
 
-      // 6. Blocca il chip in sola lettura (se supportato)
+      // 3. Crea il link
+      final cardUrl = 'https://retapcard.com/c/$cardId';
+      debugPrint('Link generato: $cardUrl');
+
+      // 4. Scrivi il link sul chip in formato NDEF
+      final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
+      await FlutterNfcKit.writeNDEFRecords([uriRecord]);
+      debugPrint('Link scritto sul chip con successo');
+
+      // 5. Blocca il chip in sola lettura (se supportato)
       if (tag.type == NFCTagType.iso15693) {
         try {
           await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
@@ -134,7 +111,7 @@ class POSHomePage extends StatelessWidget {
         }
       }
 
-      // 7. Mostra messaggio appropriato
+      // 6. Mostra messaggio appropriato
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
