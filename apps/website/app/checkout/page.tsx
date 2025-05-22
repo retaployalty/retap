@@ -52,6 +52,7 @@ function CheckoutPage() {
   const supabase = createClientComponentClient();
   const stripe = useStripe();
   const elements = useElements();
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank'>('card');
 
   // Aggiungo stato per i dati di fatturazione
   const [billingForm, setBillingForm] = useState({
@@ -74,168 +75,28 @@ function CheckoutPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Ottieni utente loggato
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utente non autenticato");
-      // Calcola le date
-      const startDate = new Date();
-      const trialEndDate = new Date(startDate);
-      trialEndDate.setDate(trialEndDate.getDate() + 30);
-      const endDate = new Date(startDate);
-      if (billingCycle === "monthly") {
-        endDate.setMonth(endDate.getMonth() + 1);
-      } else {
-        endDate.setFullYear(endDate.getFullYear() + 1);
-      }
-      // Inserisci nella tabella subscriptions
-      const { error } = await supabase.from("subscriptions").insert({
-        profile_id: user.id,
-        plan_type: "base",
-        billing_type: billingCycle === "monthly" ? "monthly" : "annual",
-        status: "pending",
-        start_date: startDate.toISOString(),
-        trial_end_date: trialEndDate.toISOString(),
-        end_date: endDate.toISOString(),
-      });
-      if (error) throw error;
-      setStep(3);
-    } catch (err) {
-      alert("Errore nel salvataggio della sottoscrizione");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
-    if (!stripe || !elements) {
-      alert("Stripe non è pronto, riprova tra qualche secondo.");
-      setLoading(false);
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      alert("Errore nel caricamento del campo carta.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      console.log('1. Creazione payment method...');
-      const { paymentMethod, error: stripeError } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement as any,
-        billing_details: {
-          name: billingForm.name,
-          email: billingForm.email,
-        },
-      });
-      console.log('Payment method creato:', paymentMethod);
-
-      if (stripeError) {
-        alert(stripeError.message);
-        setLoading(false);
-        return;
-      }
-
-      console.log('2. Chiamata API create-subscription...');
-      console.log('billingCycle:', billingCycle);
-      console.log('email:', billingForm.email);
+      // Chiamata API per creare la sessione Stripe Checkout
       const response = await fetch('/api/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId: billingCycle === 'monthly'
             ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
             : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
           customerEmail: billingForm.email,
-          successUrl: 'http://localhost:3000/success',
-          cancelUrl: 'http://localhost:3000/checkout',
+          successUrl: window.location.origin + '/success',
+          cancelUrl: window.location.origin + '/checkout',
         }),
       });
-      console.log('status', response.status);
-      const data = await response.json();
-      console.log('data', data);
-      if (response.status === 200 && data.url) {
-        window.location.href = data.url;
+      const { url, error } = await response.json();
+      if (error) throw new Error(error);
+      if (url) {
+        window.location.href = url;
         return;
       }
-
-      const { subscriptionId, clientSecret, error } = data;
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      // 3. Conferma il pagamento
-      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
-
-      if (confirmError) {
-        throw new Error(confirmError.message);
-      }
-
-      // 4. Aggiorna la subscription su Supabase
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utente non autenticato");
-
-      const { data: subscription, error: subError } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("profile_id", user.id)
-        .eq("status", "pending")
-        .single();
-
-      if (subError || !subscription) throw subError || new Error("Subscription non trovata");
-
-      // Calcola la nuova data di fine
-      const newEndDate = new Date();
-      if (billingCycle === "monthly") {
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-      } else {
-        newEndDate.setFullYear(newEndDate.getFullYear() + 1);
-      }
-
-      // Aggiorna la subscription
-      const { error: updateError } = await supabase
-        .from("subscriptions")
-        .update({
-          status: "active",
-          end_date: newEndDate.toISOString(),
-          stripe_subscription_id: subscriptionId,
-        })
-        .eq("id", subscription.id);
-
-      if (updateError) throw updateError;
-
-      // 5. Crea il record di pagamento
-      const { error: paymentError } = await supabase
-        .from("payments")
-        .insert({
-          subscription_id: subscription.id,
-          amount: billingCycle === "monthly" ? 148 : 530,
-          currency: "EUR",
-          status: "paid",
-          stripe_customer_id: user.id,
-          stripe_subscription_id: subscriptionId,
-          payment_method_id: paymentMethod.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-      if (paymentError) throw paymentError;
-
-      // 6. Redirect alla dashboard
-      router.push('/dashboard');
-      
-    } catch (error) {
-      console.error('Errore dettagliato:', error);
-      alert(error instanceof Error ? error.message : 'Errore nel processare il pagamento');
+    } catch (err) {
+      alert('Errore durante la creazione della sessione di pagamento');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -307,7 +168,6 @@ function CheckoutPage() {
             <p className="text-sm text-muted-foreground">
               {step === 1 && "Scegli il piano e procedi"}
               {step === 2 && "Inserisci i dati di fatturazione"}
-              {step === 3 && "Inserisci i dati della carta di credito"}
             </p>
           </CardHeader>
           <CardContent>
@@ -413,62 +273,55 @@ function CheckoutPage() {
                     <Input id="vatNumber" name="vatNumber" required value={billingForm.vatNumber} onChange={handleBillingChange} />
                   </div>
                 </div>
-                <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
-                  {billingCycle === "monthly" && (
-                    <div className="flex justify-between text-sm">
-                      <span>Fee di attivazione (solo il primo mese)</span>
-                      <span className="font-medium">$99</span>
+                {/* Metodo di pagamento solo per annuale */}
+                {billingCycle === 'yearly' && (
+                  <div className="space-y-4">
+                    <Label className="text-base">Metodo di pagamento</Label>
+                    <div className="flex gap-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="card"
+                          checked={paymentMethod === 'card'}
+                          onChange={() => setPaymentMethod('card')}
+                        />
+                        <span>Carta</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="bank"
+                          checked={paymentMethod === 'bank'}
+                          onChange={() => setPaymentMethod('bank')}
+                        />
+                        <span>Bonifico</span>
+                      </label>
                     </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span>Abbonamento {billingCycle === "monthly" ? "mensile" : "annuale"}</span>
-                    <span className="font-medium">${billingCycle === "monthly" ? "49" : "530"}</span>
                   </div>
-                  <div className="border-t pt-3 flex justify-between text-base font-semibold">
-                    <span>Totale</span>
-                    <span>${billingCycle === "monthly" ? "148" : "530"}</span>
+                )}
+                {/* Se bonifico, mostra dati beneficiario */}
+                {billingCycle === 'yearly' && paymentMethod === 'bank' && (
+                  <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                    <div className="font-semibold">Dati per bonifico bancario</div>
+                    <div><span className="font-medium">Beneficiario:</span> ReTap Srl</div>
+                    <div><span className="font-medium">IBAN:</span> IT00A0000000000000000000000</div>
+                    <div><span className="font-medium">Banca:</span> Nome Banca</div>
+                    <div><span className="font-medium">Causale:</span> Abbonamento annuale ReTap - [Tua email]</div>
+                    <div className="text-xs text-muted-foreground mt-2">Dopo aver effettuato il bonifico, invia la ricevuta a <a href="mailto:info@retap.it" className="underline">info@retap.it</a> per attivare l'abbonamento.</div>
                   </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base"
-                  disabled={loading}
-                >
-                  {loading ? "Salvataggio..." : "Continua"}
-                </Button>
-              </form>
-            )}
-            {step === 3 && (
-              <form onSubmit={handleCheckout} className="space-y-8">
-                <div className="space-y-4">
-                  <Label className="text-base">Dati carta di credito</Label>
-                  <div className="space-y-2">
-                    <CardElement options={{ hidePostalCode: true }} />
-                  </div>
-                </div>
-                <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
-                  {billingCycle === "monthly" && (
-                    <div className="flex justify-between text-sm">
-                      <span>Fee di attivazione (solo il primo mese)</span>
-                      <span className="font-medium">$99</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span>Abbonamento {billingCycle === "monthly" ? "mensile" : "annuale"}</span>
-                    <span className="font-medium">${billingCycle === "monthly" ? "49" : "530"}</span>
-                  </div>
-                  <div className="border-t pt-3 flex justify-between text-base font-semibold">
-                    <span>Totale</span>
-                    <span>${billingCycle === "monthly" ? "148" : "530"}</span>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base"
-                  disabled={loading}
-                >
-                  {loading ? "Elaborazione..." : "Conferma e paga"}
-                </Button>
+                )}
+                {/* Bottone continua solo se carta o mensile */}
+                {(billingCycle === 'monthly' || paymentMethod === 'card') && (
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base"
+                    disabled={loading}
+                  >
+                    {loading ? "Elaborazione..." : "Continua"}
+                  </Button>
+                )}
               </form>
             )}
           </CardContent>
