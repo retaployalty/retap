@@ -13,11 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    const merchantId = req.headers.get('x-merchant-id')
-    if (!merchantId) {
-      throw new Error('Missing merchant ID')
-    }
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -26,9 +21,16 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.split('/').pop()
     const params = Object.fromEntries(url.searchParams)
+    const merchantId = req.headers.get('x-merchant-id')
 
     // POST /customers
     if (path === 'customers' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { data, error } = await supabaseClient
         .from('customers')
         .insert({
@@ -52,11 +54,17 @@ serve(async (req) => {
 
     // GET /cards?uid=XXX
     if (path === 'cards' && req.method === 'GET') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { data, error } = await supabaseClient
         .from('cards')
         .select('*')
         .eq('uid', params.uid)
-        .eq('merchant_id', merchantId)
+        .eq('issuing_merchant_id', merchantId)
         .single()
 
       if (error) {
@@ -74,6 +82,12 @@ serve(async (req) => {
 
     // POST /cards
     if (path === 'cards' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       const { cardId, uid, customerId } = await req.json()
 
       // Verifica se esiste già una carta con questo UID
@@ -92,16 +106,51 @@ serve(async (req) => {
       }
 
       // Se non esiste, crea una nuova carta
-      const { data, error } = await supabaseClient
+      const { data: card, error: cardError } = await supabaseClient
         .from('cards')
         .insert({
           id: cardId,
           uid,
           customer_id: customerId,
-          merchant_id: merchantId,
+          issuing_merchant_id: merchantId,
         })
         .select()
         .single()
+
+      if (cardError) {
+        return new Response(
+          JSON.stringify({ error: cardError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crea la relazione card_merchants
+      const { error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .insert({
+          card_id: card.id,
+          merchant_id: merchantId,
+        })
+
+      if (cmError) {
+        return new Response(
+          JSON.stringify({ error: cmError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify(card),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // GET /balance?cardId=XXX
+    if (path === 'balance' && req.method === 'GET') {
+      const { data: balances, error } = await supabaseClient
+        .rpc('get_card_balance', {
+          card_id: params.cardId
+        })
 
       if (error) {
         return new Response(
@@ -111,70 +160,77 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify(data),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // GET /balance?cardId=XXX
-    if (path === 'balance' && req.method === 'GET') {
-      const { data: card, error: cardError } = await supabaseClient
-        .from('cards')
-        .select('id')
-        .eq('id', params.cardId)
-        .single()
-
-      if (cardError) {
-        return new Response(
-          JSON.stringify({ error: 'Card not found' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const { data: transactions, error: txError } = await supabaseClient
-        .from('transactions')
-        .select('points')
-        .eq('card_id', params.cardId)
-
-      if (txError) {
-        return new Response(
-          JSON.stringify({ error: txError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const balance = transactions.reduce((sum, tx) => sum + tx.points, 0)
-
-      return new Response(
-        JSON.stringify({ balance }),
+        JSON.stringify({ balances }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // POST /tx
     if (path === 'tx' && req.method === 'POST') {
-      const { cardId, points } = await req.json()
-
-      const { data: card, error: cardError } = await supabaseClient
-        .from('cards')
-        .select('id')
-        .eq('id', cardId)
-        .eq('merchant_id', merchantId)
-        .single()
-
-      if (cardError) {
+      if (!merchantId) {
         return new Response(
-          JSON.stringify({ error: 'Card not found' }),
+          JSON.stringify({ error: 'Missing merchant ID' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      const { cardId, points } = await req.json()
 
+      // 1. Get the card_merchants relationship
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .select('id')
+        .eq('card_id', cardId)
+        .eq('merchant_id', merchantId)
+        .single()
+
+      if (cmError) {
+        // If relationship doesn't exist, create it
+        const { data: newCardMerchant, error: createError } = await supabaseClient
+          .from('card_merchants')
+          .insert({
+            card_id: cardId,
+            merchant_id: merchantId,
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          return new Response(
+            JSON.stringify({ error: createError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Create transaction with new relationship
+        const { data, error } = await supabaseClient
+          .from('transactions')
+          .insert({
+            id: crypto.randomUUID(),
+            card_merchant_id: newCardMerchant.id,
+            points,
+          })
+          .select()
+          .single()
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        return new Response(
+          JSON.stringify(data),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Create transaction with existing relationship
       const { data, error } = await supabaseClient
         .from('transactions')
         .insert({
           id: crypto.randomUUID(),
-          card_id: cardId,
-          merchant_id: merchantId,
+          card_merchant_id: cardMerchant.id,
           points,
         })
         .select()
@@ -189,6 +245,26 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify(data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // GET /merchants
+    if (path === 'merchants' && req.method === 'GET') {
+      const { data, error } = await supabaseClient
+        .from('merchants')
+        .select('id, name, industry, address, country, created_at')
+        .order('name', { ascending: true })
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ merchants: data }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

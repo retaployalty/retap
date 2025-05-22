@@ -97,32 +97,50 @@ class POSHomePage extends StatelessWidget {
       debugPrint('Link generato: $cardUrl');
 
       // 4. Scrivi il link sul chip in formato NDEF
-      final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
-      await FlutterNfcKit.writeNDEFRecords([uriRecord]);
-      debugPrint('Link scritto sul chip con successo');
+      try {
+        final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
+        await FlutterNfcKit.writeNDEFRecords([uriRecord]);
+        debugPrint('Link scritto sul chip con successo');
 
-      // 5. Blocca il chip in sola lettura (se supportato)
-      if (tag.type == NFCTagType.iso15693) {
-        try {
-          await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
-          debugPrint('Chip bloccato in sola lettura');
-        } catch (e) {
-          debugPrint('Impossibile bloccare il chip: $e');
+        // 5. Blocca il chip in sola lettura (se supportato)
+        if (tag.type == NFCTagType.iso15693) {
+          try {
+            await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
+            debugPrint('Chip bloccato in sola lettura');
+          } catch (e) {
+            debugPrint('Impossibile bloccare il chip: $e');
+          }
         }
-      }
 
-      // 6. Mostra messaggio appropriato
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isExistingCard ? 'Carta già associata' : 'Carta programmata con successo'),
-            backgroundColor: isExistingCard ? Colors.orange : Colors.green,
-          ),
-        );
-      }
+        // 6. Mostra messaggio appropriato
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isExistingCard ? 'Carta già associata' : 'Carta programmata con successo'),
+              backgroundColor: isExistingCard ? Colors.orange : Colors.green,
+            ),
+          );
+        }
 
-      await FlutterNfcKit.finish(iosAlertMessage: isExistingCard ? 'Carta già associata' : 'Fatto!');
-      debugPrint('Operazione completata con successo!');
+        await FlutterNfcKit.finish(iosAlertMessage: isExistingCard ? 'Carta già associata' : 'Fatto!');
+        debugPrint('Operazione completata con successo!');
+      } catch (e) {
+        debugPrint('ERRORE durante la scrittura NFC:');
+        debugPrint('Tipo di errore: ${e.runtimeType}');
+        debugPrint('Messaggio: $e');
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Errore nella scrittura NFC: $e\nLa carta è stata comunque creata nel database (TEMPORANEO PER SVILUPPO)'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        
+        await FlutterNfcKit.finish(iosAlertMessage: 'Errore nella scrittura NFC');
+      }
     } catch (e) {
       debugPrint('ERRORE durante l\'operazione:');
       debugPrint('Tipo di errore: ${e.runtimeType}');
