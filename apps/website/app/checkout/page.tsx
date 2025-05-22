@@ -30,7 +30,8 @@ const features = [
   },
 ];
 
-const stripePromise = loadStripe("pk_test_51RPJZdEC4VcVVLOnvP3lEJv7sJke8cBF9qatNbaqJ7Yk6aAtEZsoADbY95wjbzCvEpsCNhT2Yn3Vynrvy4Ojlh7700sUGw3cj7"); // <-- la tua chiave reale
+// Inizializza Stripe con la tua chiave pubblica
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function CheckoutWrapper() {
   return (
@@ -124,6 +125,7 @@ function CheckoutPage() {
     }
 
     try {
+      console.log('1. Creazione payment method...');
       const { paymentMethod, error: stripeError } = await stripe.createPaymentMethod({
         type: 'card',
         card: cardElement as any,
@@ -132,6 +134,7 @@ function CheckoutPage() {
           email: billingForm.email,
         },
       });
+      console.log('Payment method creato:', paymentMethod);
 
       if (stripeError) {
         alert(stripeError.message);
@@ -139,38 +142,100 @@ function CheckoutPage() {
         return;
       }
 
-      // Verifica che paymentMethod.card esista
-      if (!paymentMethod.card) {
-        alert("Errore nel recupero dati carta.");
-        setLoading(false);
+      console.log('2. Chiamata API create-subscription...');
+      console.log('billingCycle:', billingCycle);
+      console.log('email:', billingForm.email);
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: billingCycle === 'monthly'
+            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
+            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+          customerEmail: billingForm.email,
+          successUrl: 'http://localhost:3000/success',
+          cancelUrl: 'http://localhost:3000/checkout',
+        }),
+      });
+      console.log('status', response.status);
+      const data = await response.json();
+      console.log('data', data);
+      if (response.status === 200 && data.url) {
+        window.location.href = data.url;
         return;
       }
 
-      const { last4, brand, exp_month, exp_year } = paymentMethod.card;
+      const { subscriptionId, clientSecret, error } = data;
 
+      if (error) {
+        throw new Error(error);
+      }
+
+      // 3. Conferma il pagamento
+      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
+
+      if (confirmError) {
+        throw new Error(confirmError.message);
+      }
+
+      // 4. Aggiorna la subscription su Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utente non autenticato");
 
-      const { error } = await supabase.from('payment_methods').insert({
-        profile_id: user.id,
-        stripe_payment_method_id: paymentMethod.id,
-        card_last4: last4,
-        card_brand: brand,
-        card_exp_month: exp_month,
-        card_exp_year: exp_year,
-        is_default: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { data: subscription, error: subError } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("profile_id", user.id)
+        .eq("status", "pending")
+        .single();
 
-      if (error) throw error;
+      if (subError || !subscription) throw subError || new Error("Subscription non trovata");
 
-      alert('Metodo di pagamento salvato con successo!');
-      // ... eventuale redirect o step successivo
+      // Calcola la nuova data di fine
+      const newEndDate = new Date();
+      if (billingCycle === "monthly") {
+        newEndDate.setMonth(newEndDate.getMonth() + 1);
+      } else {
+        newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+      }
 
+      // Aggiorna la subscription
+      const { error: updateError } = await supabase
+        .from("subscriptions")
+        .update({
+          status: "active",
+          end_date: newEndDate.toISOString(),
+          stripe_subscription_id: subscriptionId,
+        })
+        .eq("id", subscription.id);
+
+      if (updateError) throw updateError;
+
+      // 5. Crea il record di pagamento
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          subscription_id: subscription.id,
+          amount: billingCycle === "monthly" ? 148 : 530,
+          currency: "EUR",
+          status: "paid",
+          stripe_customer_id: user.id,
+          stripe_subscription_id: subscriptionId,
+          payment_method_id: paymentMethod.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (paymentError) throw paymentError;
+
+      // 6. Redirect alla dashboard
+      router.push('/dashboard');
+      
     } catch (error) {
-      alert('Errore nel salvataggio del metodo di pagamento');
-      console.error(error);
+      console.error('Errore dettagliato:', error);
+      alert(error instanceof Error ? error.message : 'Errore nel processare il pagamento');
     } finally {
       setLoading(false);
     }
