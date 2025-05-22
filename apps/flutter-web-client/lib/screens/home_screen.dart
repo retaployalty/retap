@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -16,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   List<dynamic> _merchantBalances = [];
   String? cardId;
+  static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
   final List<String> _imageUrls = [
@@ -32,14 +34,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _extractCardIdAndLoad();
   }
 
-  void _extractCardIdAndLoad() {
+  Future<void> _extractCardIdAndLoad() async {
+    // Prima prova a estrarre l'ID dall'URL
     final uri = Uri.base;
     final segments = uri.pathSegments;
+    String? urlCardId;
+    
     if (segments.isNotEmpty && segments.first == 'c' && segments.length > 1) {
-      cardId = segments[1];
+      urlCardId = segments[1];
     } else if (segments.isNotEmpty && segments.last.isNotEmpty) {
-      cardId = segments.last;
+      urlCardId = segments.last;
     }
+    
+    // Ottieni le SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Se abbiamo trovato un ID nell'URL, lo salviamo nelle preferences
+    if (urlCardId != null && urlCardId.isNotEmpty) {
+      cardId = urlCardId;
+      await prefs.setString(_cardIdKey, urlCardId);
+    } 
+    // Altrimenti, proviamo a recuperarlo dalle preferences
+    else {
+      cardId = prefs.getString(_cardIdKey);
+    }
+    
+    // Se abbiamo un cardId valido, carichiamo i bilanci
     if (cardId != null && cardId!.isNotEmpty) {
       _loadBalances(cardId!);
     } else {
