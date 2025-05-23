@@ -11,6 +11,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { supabase } from '../lib/supabaseClient';
 
 const features = [
   {
@@ -65,9 +66,24 @@ function CheckoutPage() {
     vatNumber: "",
   });
 
+  const [form, setForm] = useState({
+    full_name: '',
+    email: '',
+    address: '',
+    city: '',
+    zip_code: '',
+    country: '',
+    vat_number: '',
+  });
+  const [success, setSuccess] = useState(false);
+
   // Gestore per il form di fatturazione
   const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
+  };
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // Salva su Supabase e passa allo step 3
@@ -108,6 +124,51 @@ function CheckoutPage() {
       value = value.slice(0, 2) + "/" + value.slice(2, 4);
     }
     setCardExpiry(value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
+
+    // 1. Salva i dati su Supabase
+    const { error } = await supabase.from('checkout_billing').insert([form]);
+
+    if (error) {
+      setLoading(false);
+      alert('Errore nel salvataggio: ' + error.message);
+      return;
+    }
+
+    // 2. Crea la sessione di pagamento Stripe tramite la tua API
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Qui puoi passare eventuali dati necessari per Stripe
+          priceId: billingCycle === 'monthly'
+            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
+            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+          customerEmail: form.email,
+          successUrl: window.location.origin + '/success',
+          cancelUrl: window.location.origin + '/checkout',
+        }),
+      });
+      const { url, error: stripeError } = await response.json();
+      if (stripeError) throw new Error(stripeError);
+
+      // 3. Reindirizza a Stripe
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+    } catch (err) {
+      alert('Errore durante la creazione della sessione di pagamento');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -238,39 +299,46 @@ function CheckoutPage() {
               </div>
             )}
             {step === 2 && (
-              <form onSubmit={handleBillingSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nome completo</Label>
-                      <Input id="name" name="name" required value={billingForm.name} onChange={handleBillingChange} />
+                      <Label htmlFor="full_name">Nome completo</Label>
+                      <Input
+                        id="full_name"
+                        name="full_name"
+                        value={form.full_name}
+                        onChange={handleChange}
+                        placeholder="Mario Rossi"
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" name="email" type="email" required value={billingForm.email} onChange={handleBillingChange} />
+                      <Input id="email" name="email" type="email" required value={form.email} onChange={handleChange} placeholder="mariorossi@gmail.com"/>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address">Indirizzo</Label>
-                    <Input id="address" name="address" required value={billingForm.address} onChange={handleBillingChange} />
+                    <Input id="address" name="address" required value={form.address} onChange={handleChange} placeholder="Via Nuova 123"/>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">Città</Label>
-                      <Input id="city" name="city" required value={billingForm.city} onChange={handleBillingChange} />
+                      <Input id="city" name="city" required value={form.city} onChange={handleChange} placeholder="Milano"/>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="postalCode">CAP</Label>
-                      <Input id="postalCode" name="postalCode" required value={billingForm.postalCode} onChange={handleBillingChange} />
+                      <Input id="postalCode" name="zip_code" required value={form.zip_code} onChange={handleChange} placeholder="303454"/>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="country">Paese</Label>
-                      <Input id="country" name="country" required value={billingForm.country} onChange={handleBillingChange} />
+                      <Input id="country" name="country" required value={form.country} onChange={handleChange} placeholder="Italy"/>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="vatNumber">Partita IVA</Label>
-                    <Input id="vatNumber" name="vatNumber" required value={billingForm.vatNumber} onChange={handleBillingChange} />
+                    <Input id="vatNumber" name="vat_number" required value={form.vat_number} onChange={handleChange} placeholder="IT12345678901"/>
                   </div>
                 </div>
                 {/* Metodo di pagamento solo per annuale */}
@@ -327,6 +395,7 @@ function CheckoutPage() {
           </CardContent>
         </Card>
       </div>
+      {success && <p>Dati salvati con successo!</p>}
     </div>
   );
 } 
