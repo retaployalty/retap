@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -110,17 +111,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Ciao 👋',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontSize: 26,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    'Hi Alberto',
+                    style: AppTextStyles.displaySmall,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ecco i tuoi punti nei business visitati:',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontSize: 18, color: Colors.black87),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'good',
+                        style: AppTextStyles.displaySmall.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'morning!',
+                        style: AppTextStyles.displaySmall,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -180,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               height: 90,
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: AppColors.accent,
+                                                color: AppColors.primary.withOpacity(0.08),
                                                 border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 2),
                                               ),
                                               child: ClipOval(

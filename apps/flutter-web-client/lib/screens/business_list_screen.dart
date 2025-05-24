@@ -96,7 +96,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) => Container(
                                   height: 160,
-                                  color: AppColors.accent,
+                                  color: AppColors.primary.withOpacity(0.08),
                                   child: const Center(child: Icon(Icons.store, color: AppColors.primary, size: 48)),
                                 ),
                               ),
@@ -120,7 +120,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: AppColors.badge,
+                                            color: AppColors.primary.withOpacity(0.08),
                                             borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Text(
