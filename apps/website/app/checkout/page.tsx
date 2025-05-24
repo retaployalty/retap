@@ -103,39 +103,31 @@ function CheckoutPage() {
     reason: `Abbonamento ReTap Business ${billingCycle === 'monthly' ? 'Mensile' : 'Annuale'}`,
   };
 
-  // Funzione per salvare i dati del form
-  const saveFormToStorage = (formData: typeof form) => {
-    try {
-      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
-    } catch (error) {
-      console.error('Errore nel salvataggio dei dati:', error);
-    }
-  };
-
-  // Funzione per caricare i dati del form
-  const loadFormFromStorage = () => {
-    try {
-      const savedData = localStorage.getItem(FORM_STORAGE_KEY);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        setForm(parsedData);
-      }
-    } catch (error) {
-      console.error('Errore nel caricamento dei dati:', error);
-    }
-  };
-
-  // Carica i dati salvati al mount del componente
+  // Salvataggio e ripristino dati form in localStorage
   useEffect(() => {
-    loadFormFromStorage();
+    // Carica dati form da localStorage all'avvio
+    const savedForm = localStorage.getItem('retap_checkout_form');
+    if (savedForm) setForm(JSON.parse(savedForm));
+    
+    const savedBilling = localStorage.getItem('retap_checkout_billing');
+    if (savedBilling) setBillingForm(JSON.parse(savedBilling));
   }, []);
 
-  // Salva i dati quando il form cambia
+  // Salva i dati del form principale ad ogni modifica
   useEffect(() => {
-    saveFormToStorage(form);
+    localStorage.setItem('retap_checkout_form', JSON.stringify(form));
   }, [form]);
 
-  // Modifica handleChange per includere il salvataggio
+  // Salva i dati di fatturazione ad ogni modifica
+  useEffect(() => {
+    localStorage.setItem('retap_checkout_billing', JSON.stringify(billingForm));
+  }, [billingForm]);
+
+  // Gestore per il form di fatturazione
+  const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const newForm = {
@@ -143,12 +135,6 @@ function CheckoutPage() {
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     };
     setForm(newForm);
-    saveFormToStorage(newForm);
-  };
-
-  // Gestore per il form di fatturazione
-  const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
   };
 
   // Salva su Supabase e passa allo step 3
