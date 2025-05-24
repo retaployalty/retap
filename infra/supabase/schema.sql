@@ -364,7 +364,6 @@ CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
     CONSTRAINT "subscriptions_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'cancelled'::"text", 'expired'::"text", 'pending'::"text"])))
 );
 
-
 ALTER TABLE "public"."subscriptions" OWNER TO "postgres";
 
 
@@ -378,6 +377,47 @@ CREATE TABLE IF NOT EXISTS "public"."transactions" (
 
 ALTER TABLE "public"."transactions" OWNER TO "postgres";
 
+
+CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
+    "id" "uuid" PRIMARY KEY DEFAULT "gen_random_uuid"(),
+    "full_name" "text" NOT NULL,
+    "email" "text" NOT NULL,
+    "address" "text" NOT NULL,
+    "city" "text" NOT NULL,
+    "zip_code" "text" NOT NULL,
+    "country" "text" NOT NULL,
+    "vat_number" "text",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."checkout_billing" OWNER TO "postgres";
+
+
+ALTER TABLE public.checkout_billing
+  ADD COLUMN title text,
+  ADD COLUMN first_name text,
+  ADD COLUMN last_name text,
+  ADD COLUMN street_address text,
+  ADD COLUMN address_extra text,
+  ADD COLUMN address_info text,
+  ADD COLUMN is_company boolean,
+  ADD COLUMN company_name text,
+  ADD COLUMN phone text;
+
+
+ALTER TABLE "public"."subscriptions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."transactions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "points" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "card_merchant_id" "uuid"
+);
+
+
+ALTER TABLE "public"."transactions" OWNER TO "postgres";
 
 ALTER TABLE ONLY "public"."card_merchants"
     ADD CONSTRAINT "card_merchants_card_id_merchant_id_key" UNIQUE ("card_id", "merchant_id");
@@ -527,6 +567,61 @@ CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CH
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
+CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+   FROM "public"."card_merchants"
+  WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Merchant can select" ON "public"."customers" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can select card_merchants" ON "public"."card_merchants" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can select cards" ON "public"."cards" FOR SELECT USING (("issuing_merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can select transactions" ON "public"."transactions" FOR SELECT USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+   FROM "public"."card_merchants"
+  WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Merchant can update" ON "public"."customers" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can update card_merchants" ON "public"."card_merchants" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (("issuing_merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
+
+
 
 CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("card_merchant_id" IN ( SELECT "card_merchants"."id"
    FROM "public"."card_merchants"
@@ -534,6 +629,16 @@ CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR 
            FROM "public"."merchants"
           WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
 
+
+CREATE POLICY "Merchants are viewable by their profile owner" ON "public"."merchants" FOR SELECT USING (("auth"."uid"() = "profile_id"));
+
+
+
+CREATE POLICY "Merchants can be created by authenticated users" ON "public"."merchants" FOR INSERT WITH CHECK (("auth"."uid"() = "profile_id"));
+
+
+
+CREATE POLICY "Merchants can be deleted by their profile owner" ON "public"."merchants" FOR DELETE USING (("auth"."uid"() = "profile_id"));
 
 
 CREATE POLICY "Merchant can select" ON "public"."customers" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
@@ -597,7 +702,6 @@ CREATE POLICY "Merchants can be created by authenticated users" ON "public"."mer
 
 
 CREATE POLICY "Merchants can be deleted by their profile owner" ON "public"."merchants" FOR DELETE USING (("auth"."uid"() = "profile_id"));
-
 
 
 CREATE POLICY "Merchants can be updated by their profile owner" ON "public"."merchants" FOR UPDATE USING (("auth"."uid"() = "profile_id"));
@@ -895,7 +999,9 @@ GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO
 
 
 
-
+GRANT ALL ON TABLE "public"."card_merchants" TO "anon";
+GRANT ALL ON TABLE "public"."card_merchants" TO "authenticated";
+GRANT ALL ON TABLE "public"."card_merchants" TO "service_role";
 
 
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function TutorialPage() {
@@ -33,9 +33,9 @@ export default function TutorialPage() {
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                  <Play className="w-10 h-10 text-primary" />
+                  <CreditCard className="w-10 h-10 text-primary" />
                 </div>
-                <p className="text-white text-lg">Watch our tutorial video</p>
+                <p className="text-white text-lg">Scopri i nostri piani</p>
               </div>
             </div>
           )}
@@ -44,11 +44,11 @@ export default function TutorialPage() {
         {!isPlaying && (
           <Button
             size="lg"
-            onClick={() => router.push('/pricing')}
+            onClick={() => router.push('/checkout')}
             className="flex items-center gap-2"
           >
-            <Play className="w-4 h-4" />
-            Start Tutorial
+            <CreditCard className="w-4 h-4" />
+            Abbonati ora
           </Button>
         )}
       </div>

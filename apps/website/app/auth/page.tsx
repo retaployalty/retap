@@ -31,7 +31,7 @@ export default function AuthPage() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/dashboard');
+        router.push('/dashboard/tutorial');
       }
     };
     checkUser();
@@ -53,7 +53,12 @@ export default function AuthPage() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Errore Supabase:", error);
+        alert("Errore Supabase: " + JSON.stringify(error, null, 2));
+        setLoading(false);
+        return;
+      }
 
       // Recupera il profilo dell'utente
       const { data: profile, error: profileError } = await supabase
@@ -65,7 +70,7 @@ export default function AuthPage() {
       if (profileError) throw profileError;
 
       setMessage("Login effettuato con successo!");
-      router.push('/dashboard');
+      router.push('/dashboard/tutorial');
       router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il login");
@@ -144,6 +149,110 @@ export default function AuthPage() {
       } else {
         setError(err instanceof Error ? err.message : JSON.stringify(err));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubscription = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    const formData = new FormData(e.currentTarget);
+    const stripeSubscriptionId = formData.get("stripeSubscriptionId") as string;
+    const billingCycle = formData.get("billingCycle") as string;
+
+    try {
+      // Recupera la subscription "pending" dell'utente
+      const { data: subscription, error: subError } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("profile_id", authData.user.id)
+        .eq("status", "pending")
+        .single();
+
+      if (subError || !subscription) throw subError || new Error("Subscription non trovata");
+
+      // Calcola la nuova data di fine
+      const newEndDate = new Date();
+      if (billingCycle === "monthly") {
+        newEndDate.setMonth(newEndDate.getMonth() + 1);
+      } else {
+        newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+      }
+
+      // Aggiorna la subscription
+      const { error: updateError } = await supabase
+        .from("subscriptions")
+        .update({
+          status: "active",
+          end_date: newEndDate.toISOString(),
+          stripe_subscription_id: stripeSubscriptionId,
+        })
+        .eq("id", subscription.id);
+
+      if (updateError) throw updateError;
+
+      setMessage("Abbonamento attivato con successo!");
+      router.push('/dashboard/tutorial');
+
+      // Aggiorna la tabella payments
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          subscription_id: subscription.id,
+          amount: billingCycle === "monthly" ? 148 : 530, // totale
+          currency: "EUR",
+          status: "paid",
+          stripe_customer_id: stripeCustomerId, // <-- da Stripe
+          stripe_subscription_id: stripeSubscriptionId, // <-- da Stripe
+          payment_method_id: paymentMethod.id, // <-- da Stripe
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (paymentError) throw paymentError;
+    } catch (err) {
+      console.error('Errore dettagliato:', err);
+      if (err instanceof Error && err.message.includes('rate limit')) {
+        setError('Troppi tentativi di attivazione. Attendi qualche minuto prima di riprovare.');
+      } else {
+        setError(err instanceof Error ? err.message : JSON.stringify(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Chiamata API per creare la sessione Stripe Checkout
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: billingCycle === 'monthly'
+            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
+            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+          customerEmail: billingForm.email, // oppure user.email se preferisci
+          successUrl: window.location.origin + '/success',
+          cancelUrl: window.location.origin + '/checkout',
+        }),
+      });
+
+      const { url, error } = await response.json();
+      if (error) throw new Error(error);
+
+      // Redirect a Stripe Checkout
+      window.location.href = url;
+    } catch (error) {
+      console.error('Errore:', error);
+      alert(error instanceof Error ? error.message : 'Errore nel processare il pagamento');
     } finally {
       setLoading(false);
     }
