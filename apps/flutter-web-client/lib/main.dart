@@ -3,6 +3,7 @@ import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/business_list_screen.dart';
 import 'screens/settings_screen.dart';
+import 'components/custom_bottom_nav_bar.dart';
 
 void main() {
   runApp(const ReTapWeb());
@@ -37,23 +38,9 @@ class _ReTapWebState extends State<ReTapWeb> {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: _screens[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: CustomBottomNavBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.store),
-              label: 'Business',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: 'Impostazioni',
-            ),
-          ],
         ),
       ),
     );
