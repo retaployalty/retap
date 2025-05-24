@@ -8,14 +8,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
-    }
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
+  }
 
-    const { paymentMethodId, billingCycle } = await request.json();
+  const { paymentMethodId, billingCycle } = await request.json();
 
     // 1. Recupera il profilo utente da Supabase
     const { data: profile, error: profileError } = await supabase
@@ -50,16 +50,16 @@ export async function POST(request: Request) {
     });
 
     // 3. Crea la subscription SOLO con il prezzo mensile/annuale
-    const subscription = await stripe.subscriptions.create({
+  const subscription = await stripe.subscriptions.create({
       customer: customerId,
-      items: [{
-        price: billingCycle === 'monthly'
+    items: [{ 
+      price: billingCycle === 'monthly' 
           ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
           : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ'
-      }],
+    }],
       default_payment_method: paymentMethodId,
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
+    payment_behavior: 'default_incomplete',
+    payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice'],
     });
 
@@ -73,10 +73,10 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({
-      subscriptionId: subscription.id,
+  return NextResponse.json({
+    subscriptionId: subscription.id,
       clientSecret: paymentIntent.client_secret,
-    });
+  });
   } catch (error: any) {
     console.error('Errore API create-subscription:', error);
     return new Response(JSON.stringify({ error: error.message || String(error) }), {

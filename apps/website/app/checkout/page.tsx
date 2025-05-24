@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, CreditCard, Shield, Zap } from "lucide-react";
+import { Check, CreditCard, Shield, Zap, Mail, MessageCircle } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import dynamic from 'next/dynamic';
 
 const features = [
   {
@@ -32,6 +33,16 @@ const features = [
 
 // Inizializza Stripe con la tua chiave pubblica
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+// Lazy load dei componenti non essenziali
+const Dialog = dynamic(() => import('@/components/ui/dialog').then(mod => mod.Dialog), { ssr: false });
+const DialogContent = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogContent), { ssr: false });
+const DialogHeader = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogHeader), { ssr: false });
+const DialogTitle = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogTitle), { ssr: false });
+const DialogDescription = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogDescription), { ssr: false });
+
+// Chiave per il localStorage
+const FORM_STORAGE_KEY = 'retap_checkout_form';
 
 export default function CheckoutWrapper() {
   return (
@@ -81,25 +92,63 @@ function CheckoutPage() {
     phone: '',
   });
   const [success, setSuccess] = useState(false);
+  const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+
+  // Dati per il bonifico bancario
+  const bankDetails = {
+    iban: 'IT60X0542811101000000123456',
+    swift: 'UNCRITM1XXX',
+    beneficiary: 'ReTap S.r.l.',
+    amount: billingCycle === 'monthly' ? '148.00' : '530.00',
+    reason: `Abbonamento ReTap Business ${billingCycle === 'monthly' ? 'Mensile' : 'Annuale'}`,
+  };
+
+  // Funzione per salvare i dati del form
+  const saveFormToStorage = (formData: typeof form) => {
+    try {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
+    } catch (error) {
+      console.error('Errore nel salvataggio dei dati:', error);
+    }
+  };
+
+  // Funzione per caricare i dati del form
+  const loadFormFromStorage = () => {
+    try {
+      const savedData = localStorage.getItem(FORM_STORAGE_KEY);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setForm(parsedData);
+      }
+    } catch (error) {
+      console.error('Errore nel caricamento dei dati:', error);
+    }
+  };
+
+  // Carica i dati salvati al mount del componente
+  useEffect(() => {
+    loadFormFromStorage();
+  }, []);
+
+  // Salva i dati quando il form cambia
+  useEffect(() => {
+    saveFormToStorage(form);
+  }, [form]);
+
+  // Modifica handleChange per includere il salvataggio
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const newForm = {
+      ...form,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    };
+    setForm(newForm);
+    saveFormToStorage(newForm);
+  };
 
   // Gestore per il form di fatturazione
   const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      setForm((prev) => ({
-        ...prev,
-        [name]: (e.target as HTMLInputElement).checked,
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
   };
 
   // Salva su Supabase e passa allo step 3
@@ -142,46 +191,61 @@ function CheckoutPage() {
     setCardExpiry(value);
   };
 
+  // Modifica handleSubmit per pulire il localStorage dopo il successo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
 
-    // 1. Salva i dati su Supabase
-    const { error } = await supabase.from('checkout_billing').insert([form]);
-
-    if (error) {
-      setLoading(false);
-      alert('Errore nel salvataggio: ' + error.message);
-      return;
-    }
-
-    // 2. Crea la sessione di pagamento Stripe tramite la tua API
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Qui puoi passare eventuali dati necessari per Stripe
-          priceId: billingCycle === 'monthly'
-            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
-            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
-          customerEmail: form.email,
-          successUrl: window.location.origin + '/success',
-          cancelUrl: window.location.origin + '/checkout',
-        }),
-      });
-      const { url, error: stripeError } = await response.json();
-      if (stripeError) throw new Error(stripeError);
+      // 1. Salva i dati su Supabase
+      const { error } = await supabase.from('checkout_billing').insert([{
+        ...form,
+        payment_method: paymentMethod === 'card' ? 'card' : 'bank_transfer'
+      }]);
 
-      // 3. Reindirizza a Stripe
-      if (url) {
-        window.location.href = url;
+      if (error) {
+        setLoading(false);
+        alert('Errore nel salvataggio: ' + error.message);
         return;
       }
-    } catch (err) {
-      alert('Errore durante la creazione della sessione di pagamento');
-      console.error(err);
+
+      // 2. Se il metodo di pagamento è carta, procedi con Stripe
+      if (paymentMethod === 'card') {
+        try {
+          const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              priceId: billingCycle === 'monthly'
+                ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
+                : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+              customerEmail: form.email,
+              successUrl: window.location.origin + '/success',
+              cancelUrl: window.location.origin + '/checkout',
+            }),
+          });
+          const { url, error: stripeError } = await response.json();
+          if (stripeError) throw new Error(stripeError);
+
+          if (url) {
+            window.location.href = url;
+            return;
+          }
+        } catch (err) {
+          alert('Errore durante la creazione della sessione di pagamento');
+          console.error(err);
+        }
+      } else {
+        // 3. Se il metodo è bonifico, mostra il dialog di ringraziamento
+        setShowThankYouDialog(true);
+      }
+
+      // Se tutto va bene, pulisci il localStorage
+      localStorage.removeItem(FORM_STORAGE_KEY);
+    } catch (error) {
+      console.error('Errore durante il submit:', error);
+      alert('Si è verificato un errore durante l\'elaborazione della richiesta');
     } finally {
       setLoading(false);
     }
@@ -244,7 +308,7 @@ function CheckoutPage() {
             <CardTitle className="text-2xl">Completa il tuo abbonamento</CardTitle>
             <p className="text-sm text-muted-foreground">
               {step === 1 && "Scegli il piano e procedi"}
-              {step === 2 && "Inserisci i dati di fatturazione"}
+              {step === 2 && "Inserisci i dati di spedizione"}
             </p>
           </CardHeader>
           <CardContent>
@@ -403,13 +467,87 @@ function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* Sezione Metodo di Pagamento */}
+                {billingCycle === 'yearly' && (
+                  <div className="space-y-4">
+                    <Label className="font-semibold">Metodo di pagamento</Label>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => setPaymentMethod(value as 'card' | 'bank')}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div>
+                        <RadioGroupItem
+                          value="card"
+                          id="card"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="card"
+                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
+                        >
+                          <CreditCard className="w-6 h-6 mb-2" />
+                          <div className="text-sm font-medium">Carta di credito</div>
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem
+                          value="bank"
+                          id="bank"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="bank"
+                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
+                        >
+                          <svg className="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3" />
+                          </svg>
+                          <div className="text-sm font-medium">Bonifico bancario</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {paymentMethod === 'bank' && (
+                      <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                        <h4 className="font-semibold">Dettagli per il bonifico bancario</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Intestatario:</span>
+                            <span className="font-medium">{bankDetails.beneficiary}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">IBAN:</span>
+                            <span className="font-medium">{bankDetails.iban}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">SWIFT/BIC:</span>
+                            <span className="font-medium">{bankDetails.swift}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Importo:</span>
+                            <span className="font-medium">€{bankDetails.amount}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Causale:</span>
+                            <span className="font-medium">{bankDetails.reason}</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-4">
+                          Una volta effettuato il bonifico, riceverai una email di conferma con le credenziali di accesso.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Bottone submit */}
                 <Button
                   type="submit"
                   className="w-full h-12 text-base"
                   disabled={loading}
                 >
-                  {loading ? "Elaborazione..." : "Continua"}
+                  {loading ? "Elaborazione..." : paymentMethod === 'bank' ? "Conferma e procedi" : "Continua"}
                 </Button>
               </form>
             )}
@@ -417,6 +555,55 @@ function CheckoutPage() {
         </Card>
       </div>
       {success && <p>Dati salvati con successo!</p>}
+
+      {/* Dialog di ringraziamento per bonifico */}
+      <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-center mb-1">Grazie per il tuo ordine!</DialogTitle>
+            <DialogDescription className="text-center text-base mb-4">
+              Abbiamo ricevuto la tua richiesta di abbonamento con pagamento tramite bonifico bancario.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div>
+              <h4 className="font-semibold text-lg mb-2">Prossimi passi</h4>
+              <ol className="list-decimal list-inside space-y-1 text-base text-muted-foreground">
+                <li>Effettua il bonifico bancario utilizzando i dati forniti</li>
+                <li>Invia la ricevuta del bonifico a <span className='font-medium text-primary'>payments@retap.com</span> oppure su WhatsApp</li>
+              </ol>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-5 flex flex-col items-center shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircle className="w-7 h-7 text-green-600" />
+                <span className="font-semibold text-green-700 text-lg">Configura il tuo business</span>
+              </div>
+              <p className="text-center text-green-900 mb-4 text-base">Prenota la call iniziale di 30 minuti su WhatsApp: ti aiutiamo a configurare e usare ReTap senza pensieri.</p>
+              <a 
+                href="https://wa.me/390212345678?text=Ciao,%20vorrei%20prenotare%20la%20call%20di%20setup%20per%20ReTap" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg shadow-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 mb-2"
+              >
+                <MessageCircle className="w-6 h-6" />
+                Scrivici su WhatsApp
+              </a>
+              <span className="text-green-700 font-bold text-base select-all mb-1">+39 02 12345678</span>
+            </div>
+            <div className="text-center text-sm text-muted-foreground mt-2">
+              Il tuo account sarà attivato entro 24 ore lavorative dalla ricezione del pagamento.
+        </div>
+      </div>
+          <div className="flex justify-center mt-5">
+            <Button
+              onClick={() => router.push('/dashboard')}
+              className="w-full h-12 text-base"
+            >
+              Vai alla Dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -9,11 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const plans = {
-  base: {
-    name: "Base",
+  BASIC: {
+    name: "BASIC",
     monthlyPrice: "€49",
     annualPrice: "€470",
-    description: "Perfect for small businesses",
+    description: "Perfetto per piccole attività",
     features: [
       "100 carte/mese",
       "Visibilità standard",
@@ -21,14 +21,14 @@ const plans = {
       "Dashboard base"
     ],
     highlight: "€74 il primo mese (attivazione)",
-    buttonText: "Start with Base",
+    buttonText: "Scegli BASIC",
     popular: false
   },
-  premium: {
-    name: "Premium",
+  INTERMEDIATE: {
+    name: "INTERMEDIATE",
     monthlyPrice: "€69",
     annualPrice: "€662",
-    description: "Best for growing businesses",
+    description: "Ideale per attività in crescita",
     features: [
       "Fino a 400 carte/mese",
       "Posizione più alta",
@@ -37,14 +37,14 @@ const plans = {
       "Statistiche dettagliate"
     ],
     highlight: null,
-    buttonText: "Get Premium",
+    buttonText: "Scegli INTERMEDIATE",
     popular: true
   },
-  top: {
-    name: "Top",
+  PRO: {
+    name: "PRO",
     monthlyPrice: "€99",
     annualPrice: "€950",
-    description: "For established businesses",
+    description: "Per attività consolidate",
     features: [
       "Fino a 1000 carte/mese",
       "Primo nella lista nella zona",
@@ -54,7 +54,7 @@ const plans = {
       "API access"
     ],
     highlight: null,
-    buttonText: "Go Top",
+    buttonText: "Scegli PRO",
     popular: false
   }
 };
@@ -95,7 +95,7 @@ export default function PricingPage() {
               <CardHeader>
                 {plan.popular && (
                   <div className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    Most Popular
+                    Più Popolare
                   </div>
                 )}
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
@@ -105,7 +105,7 @@ export default function PricingPage() {
                     {isAnnual ? plan.annualPrice : plan.monthlyPrice}
                   </span>
                   <span className="text-muted-foreground">
-                    /{isAnnual ? "year" : "month"}
+                    /{isAnnual ? "anno" : "mese"}
                   </span>
                 </div>
                 {plan.highlight && !isAnnual && (
@@ -113,7 +113,7 @@ export default function PricingPage() {
                 )}
                 {isAnnual && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    {Math.round(parseFloat(plan.monthlyPrice.replace('€', '')) * 12 * 0.8)}€/year (20% off)
+                    {Math.round(parseFloat(plan.monthlyPrice.replace('€', '')) * 12 * 0.8)}€/anno (20% sconto)
                   </p>
                 )}
               </CardHeader>

@@ -1,4 +1,5 @@
 {
+  "buildCommand": "chmod +x build.sh && ./build.sh",
   "outputDirectory": "apps/flutter-web-client/build/web",
   "rewrites": [
     {
