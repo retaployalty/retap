@@ -46,7 +46,7 @@ interface CheckpointStep {
     id: string
     name: string
     description: string
-    image_path: string
+    icon: string
   } | null
   offer_id: string
 }
@@ -170,6 +170,12 @@ export function CheckpointsList() {
     } catch (error) {
       console.error("Error loading steps:", error)
       toast.error("Errore durante il caricamento dei checkpoint")
+    }
+  }
+
+  const refreshData = async () => {
+    if (selectedOffer) {
+      await loadSteps(selectedOffer.id)
     }
   }
 
@@ -311,7 +317,7 @@ export function CheckpointsList() {
   console.log("Rendering with state:", { offers, selectedOffer, steps })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-medium">Offerte Checkpoint</h3>
@@ -321,8 +327,8 @@ export function CheckpointsList() {
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
               Nuova Offerta
             </Button>
           </DialogTrigger>
@@ -390,9 +396,9 @@ export function CheckpointsList() {
       </div>
 
       {offers.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Label>Seleziona Offerta:</Label>
+            <Label className="whitespace-nowrap">Seleziona Offerta:</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={selectedOffer?.id}
@@ -413,84 +419,100 @@ export function CheckpointsList() {
           </div>
 
           {selectedOffer && (
-            <div className="space-y-4">
-              <div className="rounded-lg border p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-medium">{selectedOffer.name}</h4>
-                    <p className="text-sm text-muted-foreground">{selectedOffer.description}</p>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{selectedOffer.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">{selectedOffer.description}</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={handleEditClick}>
+                          Modifica
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive"
+                          onClick={deleteOffer}
+                        >
+                          Elimina
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={handleEditClick}>
-                        Modifica
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive"
-                        onClick={deleteOffer}
-                      >
-                        Elimina
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from({ length: selectedOffer.total_steps }, (_, i) => {
-                  const stepNumber = i + 1;
-                  const step = steps.find(s => s.step_number === stepNumber);
-                  
-                  return (
-                    <Card key={`step-${stepNumber}`} className="relative">
-                      <CardHeader>
-                        <CardTitle className="text-center">Step {stepNumber}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {step?.reward ? (
-                          <div className="space-y-2">
-                            <div className="font-medium">{step.reward.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {step.reward.description}
-                            </div>
-                            <EditCheckpointDialog step={step}>
-                              <Button variant="outline" className="w-full">
-                                Modifica Premio
-                              </Button>
-                            </EditCheckpointDialog>
-                          </div>
-                        ) : (
-                          <CreateCheckpointDialog 
-                            totalSteps={selectedOffer.total_steps} 
-                            defaultStep={stepNumber}
-                            offerId={selectedOffer.id}
-                          >
-                            <Button variant="outline" className="w-full">
-                              <Plus className="mr-2 h-4 w-4" />
-                              Aggiungi Premio
-                            </Button>
-                          </CreateCheckpointDialog>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: selectedOffer.total_steps }, (_, i) => {
+                      const stepNumber = i + 1;
+                      const step = steps.find(s => s.step_number === stepNumber);
+                      
+                      return (
+                        <Card key={`step-${stepNumber}`} className="relative overflow-hidden">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-center text-lg">Step {stepNumber}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            {step?.reward ? (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-center">
+                                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <span className="text-2xl">{step.reward.icon}</span>
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-medium">{step.reward.name}</div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    {step.reward.description}
+                                  </div>
+                                </div>
+                                <EditCheckpointDialog step={step} onSuccess={refreshData}>
+                                  <Button variant="outline" className="w-full">
+                                    Modifica Premio
+                                  </Button>
+                                </EditCheckpointDialog>
+                              </div>
+                            ) : (
+                              <CreateCheckpointDialog 
+                                totalSteps={selectedOffer.total_steps} 
+                                defaultStep={stepNumber}
+                                offerId={selectedOffer.id}
+                                onSuccess={refreshData}
+                              >
+                                <Button variant="outline" className="w-full gap-2">
+                                  <Plus className="h-4 w-4" />
+                                  Aggiungi Premio
+                                </Button>
+                              </CreateCheckpointDialog>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
       ) : (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Nessuna offerta checkpoint creata.</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Crea la tua prima offerta per iniziare a gestire i checkpoint.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="rounded-full bg-primary/10 p-3 mb-4">
+              <Plus className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-lg font-medium mb-2">Nessuna offerta checkpoint creata</p>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              Crea la tua prima offerta per iniziare a gestire i checkpoint del tuo programma fedeltà.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

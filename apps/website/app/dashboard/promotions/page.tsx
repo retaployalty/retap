@@ -88,14 +88,6 @@ export default function PromotionsPage() {
           <RewardsList />
         </TabsContent>
         <TabsContent value="checkpoints" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium">Checkpoints</h3>
-              <p className="text-sm text-muted-foreground">
-                Gestisci i checkpoint del tuo programma fedeltà. Ogni acquisto fa avanzare il cliente di uno step.
-              </p>
-            </div>
-          </div>
           <CheckpointsList />
         </TabsContent>
       </Tabs>

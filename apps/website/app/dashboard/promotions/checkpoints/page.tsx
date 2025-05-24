@@ -27,7 +27,7 @@ interface CheckpointStep {
     id: string
     name: string
     description: string
-    image_path: string
+    icon: string
   } | null
   offer_id: string
 }
