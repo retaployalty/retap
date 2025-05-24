@@ -452,12 +452,16 @@ CREATE TABLE IF NOT EXISTS "public"."checkpoint_offers" (
 ALTER TABLE "public"."checkpoint_offers" OWNER TO "postgres";
 
 
+COMMENT ON TABLE "public"."checkpoint_offers" IS 'Offerte di checkpoint per i programmi fedeltà';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."checkpoint_rewards" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "merchant_id" "uuid" NOT NULL,
     "name" "text" NOT NULL,
     "description" "text" NOT NULL,
-    "image_path" "text" NOT NULL,
+    "icon" "text" DEFAULT 'gift'::"text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -466,19 +470,27 @@ CREATE TABLE IF NOT EXISTS "public"."checkpoint_rewards" (
 ALTER TABLE "public"."checkpoint_rewards" OWNER TO "postgres";
 
 
+COMMENT ON TABLE "public"."checkpoint_rewards" IS 'Premi associati ai checkpoint';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."checkpoint_steps" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "merchant_id" "uuid" NOT NULL,
     "step_number" integer NOT NULL,
     "total_steps" integer NOT NULL,
     "reward_id" "uuid",
+    "offer_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "offer_id" "uuid" NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
 ALTER TABLE "public"."checkpoint_steps" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."checkpoint_steps" IS 'Step dei checkpoint con i relativi premi';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."customer_checkpoints" (
@@ -486,7 +498,8 @@ CREATE TABLE IF NOT EXISTS "public"."customer_checkpoints" (
     "customer_id" "uuid" NOT NULL,
     "merchant_id" "uuid" NOT NULL,
     "current_step" integer DEFAULT 1 NOT NULL,
-    "last_updated" timestamp with time zone DEFAULT "now"() NOT NULL
+    "last_updated" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "customer_checkpoints_step_valid" CHECK (("current_step" > 0))
 );
 
 
@@ -669,6 +682,14 @@ ALTER TABLE ONLY "public"."transactions"
 
 
 CREATE OR REPLACE TRIGGER "on_checkpoint_offers_updated" BEFORE UPDATE ON "public"."checkpoint_offers" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_checkpoint_rewards_updated" BEFORE UPDATE ON "public"."checkpoint_rewards" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_checkpoint_steps_updated" BEFORE UPDATE ON "public"."checkpoint_steps" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
 
 
 
@@ -993,6 +1014,15 @@ CREATE POLICY "Users can update their own subscriptions" ON "public"."subscripti
 
 CREATE POLICY "Users can view their own subscriptions" ON "public"."subscriptions" FOR SELECT USING (("auth"."uid"() = "profile_id"));
 
+
+
+ALTER TABLE "public"."checkpoint_offers" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."checkpoint_rewards" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."checkpoint_steps" ENABLE ROW LEVEL SECURITY;
 
 
 

@@ -84,23 +84,45 @@ export function CreateCheckpointDialog({
       }
 
       // Create reward in database
+      console.log("Creating reward with data:", {
+        name,
+        description,
+        icon: "gift",
+        merchant_id: merchant.id
+      });
+
       const { data: reward, error: rewardError } = await supabase
         .from("checkpoint_rewards")
         .insert({
           name,
           description,
-          image_path: "default-reward.png", // Using a default image
+          icon: "gift",
           merchant_id: merchant.id
         })
         .select()
         .single()
 
       if (rewardError) {
-        console.error("Reward error:", rewardError)
+        console.error("Reward error details:", {
+          code: rewardError.code,
+          message: rewardError.message,
+          details: rewardError.details,
+          hint: rewardError.hint
+        })
         throw new Error("Errore durante il salvataggio del premio")
       }
 
+      console.log("Reward created successfully:", reward)
+
       // Create step with reward
+      console.log("Creating step with data:", {
+        step_number: defaultStep,
+        total_steps: totalSteps,
+        reward_id: reward.id,
+        merchant_id: merchant.id,
+        offer_id: offerId
+      });
+
       const { error: stepError } = await supabase
         .from("checkpoint_steps")
         .insert({
@@ -112,9 +134,16 @@ export function CreateCheckpointDialog({
         })
 
       if (stepError) {
-        console.error("Step error:", stepError)
+        console.error("Step error details:", {
+          code: stepError.code,
+          message: stepError.message,
+          details: stepError.details,
+          hint: stepError.hint
+        })
         throw new Error("Errore durante il salvataggio dello step")
       }
+
+      console.log("Step created successfully")
 
       toast.success("Premio aggiunto con successo")
       setOpen(false)
