@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+**/node_modules
+**/.dart_tool
+**/build
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache
+**/.pub
+**/pubspec.lock 
