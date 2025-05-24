@@ -387,23 +387,17 @@ CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
     "zip_code" "text" NOT NULL,
     "country" "text" NOT NULL,
     "vat_number" "text",
-    "created_at" timestamp with time zone DEFAULT "now"()
-);
+    "payment_method" text CHECK (payment_method IN ('card', 'bank_transfer')
+    "created_at" timestamp with time zone DEFAULT "now"(),
+);)
 
 
 ALTER TABLE "public"."checkout_billing" OWNER TO "postgres";
 
 
-ALTER TABLE public.checkout_billing
-  ADD COLUMN title text,
-  ADD COLUMN first_name text,
-  ADD COLUMN last_name text,
-  ADD COLUMN street_address text,
-  ADD COLUMN address_extra text,
-  ADD COLUMN address_info text,
-  ADD COLUMN is_company boolean,
-  ADD COLUMN company_name text,
-  ADD COLUMN phone text;
+UPDATE public.checkout_billing
+SET payment_method = 'card'
+WHERE payment_method IS NULL;
 
 
 ALTER TABLE "public"."subscriptions" OWNER TO "postgres";

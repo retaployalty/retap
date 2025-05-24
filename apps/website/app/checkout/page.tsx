@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-=======
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,11 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Check, CreditCard, Shield, Zap } from "lucide-react";
+import { Check, CreditCard, Shield, Zap, Mail, MessageCircle, ArrowLeft, Building2, MapPin, User, Banknote } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import dynamic from 'next/dynamic';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
+import { toast } from "sonner";
+import { createClient } from '@supabase/supabase-js';
 
 const features = [
   {
@@ -35,6 +37,16 @@ const features = [
 
 // Inizializza Stripe con la tua chiave pubblica
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+// Lazy load dei componenti non essenziali
+const Dialog = dynamic(() => import('@/components/ui/dialog').then(mod => mod.Dialog), { ssr: false });
+const DialogContent = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogContent), { ssr: false });
+const DialogHeader = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogHeader), { ssr: false });
+const DialogTitle = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogTitle), { ssr: false });
+const DialogDescription = dynamic(() => import('@/components/ui/dialog').then(mod => mod.DialogDescription), { ssr: false });
+
+// Chiave per il localStorage
+const FORM_STORAGE_KEY = 'retap_checkout_form';
 
 export default function CheckoutWrapper() {
   return (
@@ -84,190 +96,7 @@ function CheckoutPage() {
     phone: '',
   });
   const [success, setSuccess] = useState(false);
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, CreditCard, Building2, MapPin, Mail, User, Banknote } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
-import { createClient } from '@supabase/supabase-js';
 
-const plans = {
-  BASIC: {
-    name: "BASIC",
-    monthlyPrice: "€49",
-    monthlyPriceAfter: "€49",
-    annualPrice: "€470",
-    description: "First month (activation), then €49/month",
-    annualDescription: "Annual subscription with 20% discount",
-    features: ["100 carte/mese", "Visibilità standard"]
-  },
-  INTERMEDIATE: {
-    name: "INTERMEDIATE",
-    monthlyPrice: "€69",
-    annualPrice: "€662",
-    description: "Monthly subscription",
-    annualDescription: "Annual subscription with 20% discount",
-    features: ["Fino a 400 carte/mese", "Posizione più alta"]
-  },
-  PRO: {
-    name: "PRO",
-    monthlyPrice: "€99",
-    annualPrice: "€950",
-    description: "Monthly subscription",
-    annualDescription: "Annual subscription with 20% discount",
-    features: ["Fino a 1000 carte/mese", "Primo nella lista nella zona"]
-  }
-} as const;
-
-type PlanType = keyof typeof plans;
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-const countries = [
-  { code: 'it', name: 'Italy', flag: '🇮🇹' },
-  { code: 'nl', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'ch', name: 'Switzerland', flag: '🇨🇭' },
-  { code: 'at', name: 'Austria', flag: '🇦🇹' },
-  { code: 'fr', name: 'France', flag: '🇫🇷' },
-  { code: 'de', name: 'Germany', flag: '🇩🇪' },
-  { code: 'es', name: 'Spain', flag: '🇪🇸' },
-  { code: 'be', name: 'Belgium', flag: '🇧🇪' },
-  { code: 'uk', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'us', name: 'United States', flag: '🇺🇸' },
-  { code: 'pl', name: 'Poland', flag: '🇵🇱' },
-  { code: 'cz', name: 'Czech Republic', flag: '🇨🇿' },
-  { code: 'pt', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'ie', name: 'Ireland', flag: '🇮🇪' },
-  { code: 'se', name: 'Sweden', flag: '🇸🇪' },
-  { code: 'fi', name: 'Finland', flag: '🇫🇮' },
-  { code: 'no', name: 'Norway', flag: '🇳🇴' },
-  { code: 'dk', name: 'Denmark', flag: '🇩🇰' },
-  { code: 'gr', name: 'Greece', flag: '🇬🇷' },
-  { code: 'hu', name: 'Hungary', flag: '🇭🇺' },
-  { code: 'ro', name: 'Romania', flag: '🇷🇴' },
-  { code: 'bg', name: 'Bulgaria', flag: '🇧🇬' },
-  { code: 'sk', name: 'Slovakia', flag: '🇸🇰' },
-  { code: 'si', name: 'Slovenia', flag: '🇸🇮' },
-  { code: 'hr', name: 'Croatia', flag: '🇭🇷' },
-  { code: 'ee', name: 'Estonia', flag: '🇪🇪' },
-  { code: 'lv', name: 'Latvia', flag: '🇱🇻' },
-  { code: 'lt', name: 'Lithuania', flag: '🇱🇹' },
-  { code: 'lu', name: 'Luxembourg', flag: '🇱🇺' },
-  { code: 'mt', name: 'Malta', flag: '🇲🇹' },
-  { code: 'cy', name: 'Cyprus', flag: '🇨🇾' },
-  { code: 'tr', name: 'Turkey', flag: '🇹🇷' },
-  { code: 'ua', name: 'Ukraine', flag: '🇺🇦' },
-  { code: 'ru', name: 'Russia', flag: '🇷🇺' },
-  { code: 'md', name: 'Moldova', flag: '🇲🇩' },
-  { code: 'al', name: 'Albania', flag: '🇦🇱' },
-  { code: 'rs', name: 'Serbia', flag: '🇷🇸' },
-  { code: 'ba', name: 'Bosnia & Herzegovina', flag: '🇧🇦' },
-  { code: 'me', name: 'Montenegro', flag: '🇲🇪' },
-  { code: 'mk', name: 'North Macedonia', flag: '🇲🇰' },
-  { code: 'li', name: 'Liechtenstein', flag: '🇱🇮' },
-  { code: 'is', name: 'Iceland', flag: '🇮🇸' },
-  { code: 'mc', name: 'Monaco', flag: '🇲🇨' },
-  { code: 'sm', name: 'San Marino', flag: '🇸🇲' },
-  { code: 'va', name: 'Vatican City', flag: '🇻🇦' },
-];
-
-export default function CheckoutPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const planParam = searchParams.get("plan")?.toUpperCase() || "BASIC";
-  const billing = searchParams.get("billing") || "monthly";
-  
-  // Verifica che il piano sia valido
-  const isValidPlan = planParam in plans;
-  const plan = isValidPlan ? planParam as PlanType : "BASIC";
-  const selectedPlan = plans[plan];
-  
-  const isAnnual = billing === "annual";
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Reindirizza se il piano non è valido
-  useEffect(() => {
-    if (!isValidPlan) {
-      toast.error("Piano non valido, reindirizzamento al piano BASIC");
-      router.replace(`/checkout?plan=BASIC&billing=${billing}`);
-    }
-  }, [isValidPlan, billing, router]);
-
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    company: "",
-    address: "",
-    city: "",
-    postalCode: "",
-    country: "it",
-    vatId: ""
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    // Validazione VAT
-    if (!validateVat()) {
-      toast.error("VAT non valido");
-      setIsLoading(false);
-      return;
-    }
-
-    // Salva su Supabase
-    const { error } = await supabase
-      .from('checkout_leads')
-      .insert([{
-        ...formData,
-        plan,
-        billing: isAnnual ? "annual" : "monthly"
-      }]);
-    if (error) {
-      toast.error("Errore nel salvataggio dati");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          plan,
-          billingDetails: formData,
-          isAnnual
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Errore durante il pagamento');
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      toast.error('Si è verificato un errore durante il pagamento');
-      console.error('Payment error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   // Gestore per il form di fatturazione
   const handleBillingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
@@ -275,17 +104,11 @@ export default function CheckoutPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      setForm((prev) => ({
-        ...prev,
-        [name]: (e.target as HTMLInputElement).checked,
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    const newForm = {
+      ...form,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    };
+    setForm(newForm);
   };
 
   // Salva su Supabase e passa allo step 3
@@ -319,6 +142,7 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
+
   const handleCardExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9]/g, "");
     if (value.length > 2) {
@@ -327,50 +151,96 @@ export default function CheckoutPage() {
     setCardExpiry(value);
   };
 
+  // Modifica handleSubmit per pulire il localStorage dopo il successo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(false);
 
-    // 1. Salva i dati su Supabase
-    const { error } = await supabase.from('checkout_billing').insert([form]);
-
-    if (error) {
-      setLoading(false);
-      alert('Errore nel salvataggio: ' + error.message);
-      return;
-    }
-
-    // 2. Crea la sessione di pagamento Stripe tramite la tua API
     try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Qui puoi passare eventuali dati necessari per Stripe
-          priceId: billingCycle === 'monthly'
-            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
-            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
-          customerEmail: form.email,
-          successUrl: window.location.origin + '/success',
-          cancelUrl: window.location.origin + '/checkout',
-        }),
-      });
-      const { url, error: stripeError } = await response.json();
-      if (stripeError) throw new Error(stripeError);
+      // 1. Salva i dati su Supabase
+      const { error } = await supabase.from('checkout_billing').insert([{
+        ...form,
+        payment_method: paymentMethod === 'card' ? 'card' : 'bank_transfer'
+      }]);
 
-      // 3. Reindirizza a Stripe
-      if (url) {
-        window.location.href = url;
+      if (error) {
+        setLoading(false);
+        alert('Errore nel salvataggio: ' + error.message);
         return;
       }
-    } catch (err) {
-      alert('Errore durante la creazione della sessione di pagamento');
-      console.error(err);
+
+      // 2. Se il metodo di pagamento è carta, procedi con Stripe
+      if (paymentMethod === 'card') {
+        try {
+          const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              priceId: billingCycle === 'monthly'
+                ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
+                : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+              customerEmail: form.email,
+              successUrl: window.location.origin + '/success',
+              cancelUrl: window.location.origin + '/checkout',
+            }),
+          });
+          const { url, error: stripeError } = await response.json();
+          if (stripeError) throw new Error(stripeError);
+
+          if (url) {
+            window.location.href = url;
+            return;
+          }
+        } catch (err) {
+          alert('Errore durante la creazione della sessione di pagamento');
+          console.error(err);
+        }
+      } else {
+        // 3. Se il metodo è bonifico, mostra il dialog di ringraziamento
+        setShowThankYouDialog(true);
+      }
+
+      // Se tutto va bene, pulisci il localStorage
+      localStorage.removeItem(FORM_STORAGE_KEY);
+    } catch (error) {
+      console.error('Errore durante il submit:', error);
+      alert('Si è verificato un errore durante l\'elaborazione della richiesta');
     } finally {
       setLoading(false);
     }
   };
+
+  const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+
+  // Dati per il bonifico bancario
+  const bankDetails = {
+    iban: 'IT60X0542811101000000123456',
+    swift: 'UNCRITM1XXX',
+    beneficiary: 'ReTap S.r.l.',
+    amount: billingCycle === 'monthly' ? '148.00' : '530.00',
+    reason: `Abbonamento ReTap Business ${billingCycle === 'monthly' ? 'Mensile' : 'Annuale'}`,
+  };
+
+  // Salvataggio e ripristino dati form in localStorage
+  useEffect(() => {
+    // Carica dati form da localStorage all'avvio
+    const savedForm = localStorage.getItem('retap_checkout_form');
+    if (savedForm) setForm(JSON.parse(savedForm));
+    
+    const savedBilling = localStorage.getItem('retap_checkout_billing');
+    if (savedBilling) setBillingForm(JSON.parse(savedBilling));
+  }, []);
+
+  // Salva i dati del form principale ad ogni modifica
+  useEffect(() => {
+    localStorage.setItem('retap_checkout_form', JSON.stringify(form));
+  }, [form]);
+
+  // Salva i dati di fatturazione ad ogni modifica
+  useEffect(() => {
+    localStorage.setItem('retap_checkout_billing', JSON.stringify(billingForm));
+  }, [billingForm]);
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
@@ -429,7 +299,7 @@ export default function CheckoutPage() {
             <CardTitle className="text-2xl">Completa il tuo abbonamento</CardTitle>
             <p className="text-sm text-muted-foreground">
               {step === 1 && "Scegli il piano e procedi"}
-              {step === 2 && "Inserisci i dati di fatturazione"}
+              {step === 2 && "Inserisci i dati di spedizione"}
             </p>
           </CardHeader>
           <CardContent>
@@ -588,262 +458,143 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* Sezione Metodo di Pagamento */}
+                {billingCycle === 'yearly' && (
+                  <div className="space-y-4">
+                    <Label className="font-semibold">Metodo di pagamento</Label>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => setPaymentMethod(value as 'card' | 'bank')}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div>
+                        <RadioGroupItem
+                          value="card"
+                          id="card"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="card"
+                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
+                        >
+                          <CreditCard className="w-6 h-6 mb-2" />
+                          <div className="text-sm font-medium">Carta di credito</div>
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem
+                          value="bank"
+                          id="bank"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="bank"
+                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
+                        >
+                          <svg className="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3" />
+                          </svg>
+                          <div className="text-sm font-medium">Bonifico bancario</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {paymentMethod === 'bank' && (
+                      <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                        <h4 className="font-semibold">Dettagli per il bonifico bancario</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Intestatario:</span>
+                            <span className="font-medium">{bankDetails.beneficiary}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">IBAN:</span>
+                            <span className="font-medium">{bankDetails.iban}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">SWIFT/BIC:</span>
+                            <span className="font-medium">{bankDetails.swift}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Importo:</span>
+                            <span className="font-medium">€{bankDetails.amount}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Causale:</span>
+                            <span className="font-medium">{bankDetails.reason}</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-4">
+                          Una volta effettuato il bonifico, riceverai una email di conferma con le credenziali di accesso.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Bottone submit */}
                 <Button
                   type="submit"
                   className="w-full h-12 text-base"
                   disabled={loading}
                 >
-                  {loading ? "Elaborazione..." : "Continua"}
+                  {loading ? "Elaborazione..." : paymentMethod === 'bank' ? "Conferma e procedi" : "Continua"}
                 </Button>
               </form>
             )}
           </CardContent>
         </Card>
-  const showActivationFee = plan === 'BASIC' && !isAnnual;
-  const activationFee = 25;
-
-  const getVatLabel = () => {
-    if (formData.country === "nl") return "BTW Number";
-    if (formData.country === "it") return "Partita IVA";
-    return "VAT ID";
-  };
-
-  const getVatPlaceholder = () => {
-    if (formData.country === "nl") return "NL123456789B01";
-    if (formData.country === "it") return "IT12345678901";
-    return "";
-  };
-
-  const validateVat = () => {
-    const { vatId, country } = formData;
-    if (!vatId || vatId.length < 8) return false;
-    if (!/^[a-zA-Z0-9]+$/.test(vatId)) return false;
-    if (country === "nl" && vatId) {
-      return /^NL[0-9]{9}B[0-9]{2}$/.test(vatId);
-    }
-    return true;
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="container mx-auto px-4 py-8">
-        <Link href="/pricing" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Torna ai prezzi
-        </Link>
-
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              Completa il tuo abbonamento
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Sei a pochi passi dal piano {selectedPlan.name}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-8 lg:grid-cols-3">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-8">
-                {/* Billing Details */}
-                <Card className="border-none shadow-lg">
-                  <CardHeader className="border-b bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-primary" />
-                      <CardTitle>Dettagli Fatturazione</CardTitle>
-                    </div>
-                    <CardDescription>Inserisci i dati della tua azienda</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-sm font-medium">Nome</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                          <Input 
-                            id="firstName" 
-                            className="pl-10" 
-                            required 
-                            value={formData.firstName}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-sm font-medium">Cognome</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                          <Input 
-                            id="lastName" 
-                            className="pl-10" 
-                            required 
-                            value={formData.lastName}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          className="pl-10" 
-                          required 
-                          value={formData.email}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company" className="text-sm font-medium">Nome Azienda</Label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                          id="company" 
-                          className="pl-10" 
-                          required 
-                          value={formData.company}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">Indirizzo</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                          id="address" 
-                          className="pl-10" 
-                          required 
-                          value={formData.address}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="city" className="text-sm font-medium">Città</Label>
-                        <Input 
-                          id="city" 
-                          required 
-                          value={formData.city}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="postalCode" className="text-sm font-medium">CAP</Label>
-                        <Input 
-                          id="postalCode" 
-                          required 
-                          value={formData.postalCode}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="country" className="text-sm font-medium">Paese</Label>
-                        <Select 
-                          value={formData.country}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un paese" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {countries.map(c => (
-                              <SelectItem key={c.code} value={c.code}>
-                                <span className="mr-2">{c.flag}</span>{c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="vatId" className="text-sm font-medium">{getVatLabel()}</Label>
-                        <Input
-                          id="vatId"
-                          placeholder={getVatPlaceholder()}
-                          value={formData.vatId}
-                          onChange={e => setFormData(prev => ({ ...prev, vatId: e.target.value.toUpperCase() }))}
-                          className="pl-4"
-                          required
-                        />
-                        {formData.vatId && !validateVat() && (
-                          <p className="text-xs text-red-500">Inserisci un VAT valido ({getVatLabel()})</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Order Summary */}
-              <div className="lg:col-span-1">
-                <Card className="border-none shadow-lg sticky top-8">
-                  <CardHeader className="border-b bg-muted/50">
-                    <CardTitle>Riepilogo Ordine</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">Piano {selectedPlan.name}</p>
-                          <p className="text-sm text-muted-foreground">{getDescription()}</p>
-                        </div>
-                        <p className="font-bold text-lg">{getPrice()}</p>
-                      </div>
-                      <div className="space-y-2">
-                        {selectedPlan.features.map((feature) => (
-                          <div key={feature} className="flex items-center gap-2 text-sm">
-                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            {feature}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {showActivationFee && (
-                      <div className="flex justify-between items-center text-sm border-t pt-4">
-                        <p className="text-muted-foreground">Fee di attivazione</p>
-                        <p>€{activationFee}</p>
-                      </div>
-                    )}
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between items-center font-bold text-lg">
-                        <p>Totale</p>
-                        <p>
-                          {showActivationFee
-                            ? `€${(
-                                parseFloat(getPrice().replace('€', '')) + activationFee
-                              ).toFixed(2)}`
-                            : getPrice()}
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      className="w-full" 
-                      size="lg" 
-                      type="submit"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Elaborazione..." : "Completa il Pagamento"}
-                    </Button>
-                    <p className="text-xs text-center text-muted-foreground">
-                      Completando l'acquisto accetti i nostri Termini di Servizio
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </form>
-        </div>
       </div>
       {success && <p>Dati salvati con successo!</p>}
+
+      {/* Dialog di ringraziamento per bonifico */}
+      <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-center mb-1">Grazie per il tuo ordine!</DialogTitle>
+            <DialogDescription className="text-center text-base mb-4">
+              Abbiamo ricevuto la tua richiesta di abbonamento con pagamento tramite bonifico bancario.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div>
+              <h4 className="font-semibold text-lg mb-2">Prossimi passi</h4>
+              <ol className="list-decimal list-inside space-y-1 text-base text-muted-foreground">
+                <li>Effettua il bonifico bancario utilizzando i dati forniti</li>
+                <li>Invia la ricevuta del bonifico a <span className='font-medium text-primary'>payments@retap.com</span> oppure su WhatsApp</li>
+              </ol>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-5 flex flex-col items-center shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircle className="w-7 h-7 text-green-600" />
+                <span className="font-semibold text-green-700 text-lg">Configura il tuo business</span>
+              </div>
+              <p className="text-center text-green-900 mb-4 text-base">Prenota la call iniziale di 30 minuti su WhatsApp: ti aiutiamo a configurare e usare ReTap senza pensieri.</p>
+              <a 
+                href="https://wa.me/390212345678?text=Ciao,%20vorrei%20prenotare%20la%20call%20di%20setup%20per%20ReTap" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg shadow-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 mb-2"
+              >
+                <MessageCircle className="w-6 h-6" />
+                Scrivici su WhatsApp
+              </a>
+              <span className="text-green-700 font-bold text-base select-all mb-1">+39 02 12345678</span>
+            </div>
+            <div className="text-center text-sm text-muted-foreground mt-2">
+              Il tuo account sarà attivato entro 24 ore lavorative dalla ricezione del pagamento.
+            </div>
+          </div>
+          <div className="flex justify-center mt-5">
+            <Button
+              onClick={() => router.push('/dashboard')}
+              className="w-full h-12 text-base"
+            >
+              Vai alla Dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
