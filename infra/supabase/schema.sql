@@ -389,7 +389,9 @@ CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
     "vat_number" "text",
     "payment_method" text CHECK (payment_method IN ('card', 'bank_transfer')
     "created_at" timestamp with time zone DEFAULT "now"(),
-);)
+    "subscription_type" text,
+    "payment_successful" boolean DEFAULT false
+);
 
 
 ALTER TABLE "public"."checkout_billing" OWNER TO "postgres";
@@ -614,14 +616,11 @@ CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (
 
 
 CREATE POLICY "Merchant can update transactions" ON "public"."transactions" FOR UPDATE USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
-
-
-
-CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("card_merchant_id" IN ( SELECT "card_merchants"."id"
    FROM "public"."card_merchants"
   WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
            FROM "public"."merchants"
           WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
+
 
 
 CREATE POLICY "Merchants are viewable by their profile owner" ON "public"."merchants" FOR SELECT USING (("auth"."uid"() = "profile_id"));
@@ -1114,3 +1113,15 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 RESET ALL;
+
+ALTER TABLE users ADD COLUMN has_seen_tutorial BOOLEAN DEFAULT FALSE;
+
+INSERT INTO checkout_billing (user_id, amount, subscription_type)
+VALUES ('123', 49, 'mensile');
+
+ALTER TABLE public.checkout_billing
+ALTER COLUMN payment_successful SET DEFAULT false;
+
+UPDATE public.checkout_billing
+SET payment_successful = false
+WHERE payment_successful IS NULL;
