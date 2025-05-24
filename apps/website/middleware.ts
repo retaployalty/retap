@@ -7,7 +7,7 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res })
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
 
   // Check if the request is for the admin panel
   if (req.nextUrl.pathname.startsWith('/admin-panel')) {
@@ -22,6 +22,14 @@ export async function middleware(req: NextRequest) {
     // If not authenticated, redirect to login
     if (!isAdminAuthenticated) {
       return NextResponse.redirect(new URL('/admin-panel/login', req.url))
+    }
+  }
+
+  // Check if the request is for the dashboard
+  if (req.nextUrl.pathname.startsWith('/dashboard')) {
+    // If not authenticated, redirect to login
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', req.url))
     }
   }
 
@@ -40,5 +48,6 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
     '/admin-panel/:path*',
+    '/dashboard/:path*',
   ],
 } 
