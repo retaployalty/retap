@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               height: 90,
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: AppColors.accent,
+                                                color: AppColors.primary.withOpacity(0.08),
                                                 border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 2),
                                               ),
                                               child: ClipOval(
