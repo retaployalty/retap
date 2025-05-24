@@ -11,7 +11,6 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { supabase } from '../lib/supabaseClient';
 
 const features = [
   {
@@ -67,13 +66,19 @@ function CheckoutPage() {
   });
 
   const [form, setForm] = useState({
-    full_name: '',
-    email: '',
-    address: '',
-    city: '',
+    title: '', // Sig., Sig.ra, Not specified
+    first_name: '',
+    last_name: '',
+    street_address: '',
+    address_extra: '',
+    address_info: '',
     zip_code: '',
+    city: '',
     country: '',
-    vat_number: '',
+    is_company: false,
+    company_name: '',
+    email: '',
+    phone: '',
   });
   const [success, setSuccess] = useState(false);
 
@@ -82,8 +87,19 @@ function CheckoutPage() {
     setBillingForm({ ...billingForm, [e.target.name]: e.target.value });
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      setForm((prev) => ({
+        ...prev,
+        [name]: (e.target as HTMLInputElement).checked,
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   // Salva su Supabase e passa allo step 3
@@ -300,96 +316,101 @@ function CheckoutPage() {
             )}
             {step === 2 && (
               <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Sezione Anagrafica */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Nome completo</Label>
-                      <Input
-                        id="full_name"
-                        name="full_name"
-                        value={form.full_name}
-                        onChange={handleChange}
-                        placeholder="Mario Rossi"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" name="email" type="email" required value={form.email} onChange={handleChange} placeholder="mariorossi@gmail.com"/>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Indirizzo</Label>
-                    <Input id="address" name="address" required value={form.address} onChange={handleChange} placeholder="Via Nuova 123"/>
-                  </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Città</Label>
-                      <Input id="city" name="city" required value={form.city} onChange={handleChange} placeholder="Milano"/>
+                    <div>
+                      <Label htmlFor="title">Titolo</Label>
+                      <select
+                        id="title"
+                        name="title"
+                        value={form.title}
+                        onChange={handleChange}
+                        className="w-full border rounded px-3 py-2"
+                        required
+                      >
+                        <option value="">Non specificato</option>
+                        <option value="Mr">Sig.</option>
+                        <option value="Ms">Sig.ra</option>
+                      </select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">CAP</Label>
-                      <Input id="postalCode" name="zip_code" required value={form.zip_code} onChange={handleChange} placeholder="303454"/>
+                    <div>
+                      <Label htmlFor="first_name">Nome</Label>
+                      <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country">Paese</Label>
-                      <Input id="country" name="country" required value={form.country} onChange={handleChange} placeholder="Italy"/>
+                    <div>
+                      <Label htmlFor="last_name">Cognome</Label>
+                      <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} required />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vatNumber">Partita IVA</Label>
-                    <Input id="vatNumber" name="vat_number" required value={form.vat_number} onChange={handleChange} placeholder="IT12345678901"/>
                   </div>
                 </div>
-                {/* Metodo di pagamento solo per annuale */}
-                {billingCycle === 'yearly' && (
-                  <div className="space-y-4">
-                    <Label className="text-base">Metodo di pagamento</Label>
-                    <div className="flex gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="card"
-                          checked={paymentMethod === 'card'}
-                          onChange={() => setPaymentMethod('card')}
-                        />
-                        <span>Carta</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="bank"
-                          checked={paymentMethod === 'bank'}
-                          onChange={() => setPaymentMethod('bank')}
-                        />
-                        <span>Bonifico</span>
-                      </label>
+
+                {/* Sezione Indirizzo */}
+                <div className="space-y-4">
+                  <Label className="font-semibold">Indirizzo</Label>
+                  <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Via e numero civico" required />
+                  <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Appartamento, interno, codice accesso edificio (facoltativo)" />
+                  <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Altre info sull'indirizzo" />
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="zip_code">CAP</Label>
+                      <Input id="zip_code" name="zip_code" value={form.zip_code} onChange={handleChange} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="city">Città</Label>
+                      <Input id="city" name="city" value={form.city} onChange={handleChange} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Paese</Label>
+                      <Input id="country" name="country" value={form.country} onChange={handleChange} required />
                     </div>
                   </div>
-                )}
-                {/* Se bonifico, mostra dati beneficiario */}
-                {billingCycle === 'yearly' && paymentMethod === 'bank' && (
-                  <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-                    <div className="font-semibold">Dati per bonifico bancario</div>
-                    <div><span className="font-medium">Beneficiario:</span> ReTap Srl</div>
-                    <div><span className="font-medium">IBAN:</span> IT00A0000000000000000000000</div>
-                    <div><span className="font-medium">Banca:</span> Nome Banca</div>
-                    <div><span className="font-medium">Causale:</span> Abbonamento annuale ReTap - [Tua email]</div>
-                    <div className="text-xs text-muted-foreground mt-2">Dopo aver effettuato il bonifico, invia la ricevuta a <a href="mailto:info@retap.it" className="underline">info@retap.it</a> per attivare l'abbonamento.</div>
+                </div>
+
+                {/* Sezione Azienda */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_company"
+                      name="is_company"
+                      checked={form.is_company}
+                      onChange={handleChange}
+                      className="accent-primary"
+                    />
+                    <Label htmlFor="is_company">Questo è un indirizzo aziendale</Label>
                   </div>
-                )}
-                {/* Bottone continua solo se carta o mensile */}
-                {(billingCycle === 'monthly' || paymentMethod === 'card') && (
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base"
-                    disabled={loading}
-                  >
-                    {loading ? "Elaborazione..." : "Continua"}
-                  </Button>
-                )}
+                  {form.is_company && (
+                    <div>
+                      <Label htmlFor="company_name">Nome società</Label>
+                      <Input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} required={form.is_company} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Sezione Contatti */}
+                <div className="space-y-2">
+                  <Label className="font-semibold">Quali sono le tue informazioni di contatto?</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Numero di cellulare</Label>
+                      <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Numero di cellulare" required />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottone submit */}
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base"
+                  disabled={loading}
+                >
+                  {loading ? "Elaborazione..." : "Continua"}
+                </Button>
               </form>
             )}
           </CardContent>
