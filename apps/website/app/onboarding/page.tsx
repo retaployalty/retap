@@ -171,13 +171,13 @@ export default function OnboardingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Business Address</Label>
               <Input
                 id="address"
                 name="address"
                 type="text"
                 required
-                placeholder="e.g. 123 Main St, City"
+                placeholder="e.g. 123 Main St, City (business address)"
               />
             </div>
 

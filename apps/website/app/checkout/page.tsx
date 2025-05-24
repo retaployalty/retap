@@ -94,6 +94,7 @@ function CheckoutPage() {
     company_name: '',
     email: '',
     phone: '',
+    subscription_type: 'mensile',
   });
   const [success, setSuccess] = useState(false);
 
@@ -127,6 +128,7 @@ function CheckoutPage() {
           customerEmail: billingForm.email,
           successUrl: window.location.origin + '/success',
           cancelUrl: window.location.origin + '/checkout',
+          subscription_type: form.subscription_type,
         }),
       });
       const { url, error } = await response.json();
@@ -161,7 +163,9 @@ function CheckoutPage() {
       // 1. Salva i dati su Supabase
       const { error } = await supabase.from('checkout_billing').insert([{
         ...form,
-        payment_method: paymentMethod === 'card' ? 'card' : 'bank_transfer'
+        payment_method: paymentMethod === 'card' ? 'card' : 'bank_transfer',
+        subscription_type: form.subscription_type,
+        payment_successful: false
       }]);
 
       if (error) {
@@ -183,6 +187,7 @@ function CheckoutPage() {
               customerEmail: form.email,
               successUrl: window.location.origin + '/success',
               cancelUrl: window.location.origin + '/checkout',
+              subscription_type: form.subscription_type,
             }),
           });
           const { url, error: stripeError } = await response.json();
@@ -241,6 +246,14 @@ function CheckoutPage() {
   useEffect(() => {
     localStorage.setItem('retap_checkout_billing', JSON.stringify(billingForm));
   }, [billingForm]);
+
+  // Sincronizza la scelta del piano con il campo subscription_type
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      subscription_type: billingCycle === "monthly" ? "mensile" : "annuale",
+    }));
+  }, [billingCycle]);
 
   return (
     <div className="container max-w-7xl mx-auto py-8 px-4">
