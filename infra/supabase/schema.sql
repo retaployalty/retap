@@ -58,6 +58,148 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid") RETURNS TABLE("current_step" integer, "total_steps" integer, "reward_id" "uuid", "reward_name" "text", "reward_description" "text")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_current_step integer;
+    v_total_steps integer;
+    v_next_step integer;
+    v_reward_id uuid;
+    v_reward_name text;
+    v_reward_description text;
+BEGIN
+    -- Get or create customer checkpoint
+    INSERT INTO customer_checkpoints (customer_id, merchant_id, current_step)
+    VALUES (p_customer_id, p_merchant_id, 1)
+    ON CONFLICT (customer_id, merchant_id) DO NOTHING;
+
+    -- Get current step and total steps
+    SELECT 
+        cp.current_step,
+        cs.total_steps
+    INTO 
+        v_current_step,
+        v_total_steps
+    FROM customer_checkpoints cp
+    JOIN checkpoint_steps cs ON cs.merchant_id = cp.merchant_id
+    WHERE cp.customer_id = p_customer_id
+    AND cp.merchant_id = p_merchant_id
+    LIMIT 1;
+
+    -- Calculate next step
+    v_next_step := v_current_step + 1;
+    IF v_next_step > v_total_steps THEN
+        v_next_step := 1;
+    END IF;
+
+    -- Update customer checkpoint
+    UPDATE customer_checkpoints
+    SET 
+        current_step = v_next_step,
+        last_updated = now()
+    WHERE customer_id = p_customer_id
+    AND merchant_id = p_merchant_id;
+
+    -- Check if there's a reward at this step
+    SELECT 
+        cs.reward_id,
+        cr.name,
+        cr.description
+    INTO 
+        v_reward_id,
+        v_reward_name,
+        v_reward_description
+    FROM checkpoint_steps cs
+    LEFT JOIN checkpoint_rewards cr ON cr.id = cs.reward_id
+    WHERE cs.merchant_id = p_merchant_id
+    AND cs.step_number = v_next_step;
+
+    RETURN QUERY
+    SELECT 
+        v_next_step,
+        v_total_steps,
+        v_reward_id,
+        v_reward_name,
+        v_reward_description;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") RETURNS TABLE("current_step" integer, "total_steps" integer, "reward_id" "uuid", "reward_name" "text", "reward_description" "text")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_current_step integer;
+    v_total_steps integer;
+    v_next_step integer;
+    v_reward_id uuid;
+    v_reward_name text;
+    v_reward_description text;
+BEGIN
+    -- Get or create customer checkpoint
+    INSERT INTO customer_checkpoints (customer_id, merchant_id, current_step)
+    VALUES (p_customer_id, p_merchant_id, 1)
+    ON CONFLICT (customer_id, merchant_id) DO NOTHING;
+
+    -- Get current step and total steps from the offer
+    SELECT 
+        cp.current_step,
+        co.total_steps
+    INTO 
+        v_current_step,
+        v_total_steps
+    FROM customer_checkpoints cp
+    JOIN checkpoint_offers co ON co.merchant_id = cp.merchant_id
+    WHERE cp.customer_id = p_customer_id
+    AND cp.merchant_id = p_merchant_id
+    AND co.id = p_offer_id;
+
+    -- Calculate next step
+    v_next_step := v_current_step + 1;
+    IF v_next_step > v_total_steps THEN
+        v_next_step := 1;
+    END IF;
+
+    -- Update customer checkpoint
+    UPDATE customer_checkpoints
+    SET 
+        current_step = v_next_step,
+        last_updated = now()
+    WHERE customer_id = p_customer_id
+    AND merchant_id = p_merchant_id;
+
+    -- Check if there's a reward at this step
+    SELECT 
+        cs.reward_id,
+        cr.name,
+        cr.description
+    INTO 
+        v_reward_id,
+        v_reward_name,
+        v_reward_description
+    FROM checkpoint_steps cs
+    LEFT JOIN checkpoint_rewards cr ON cr.id = cs.reward_id
+    WHERE cs.offer_id = p_offer_id
+    AND cs.step_number = v_next_step;
+
+    RETURN QUERY
+    SELECT 
+        v_next_step,
+        v_total_steps,
+        v_reward_id,
+        v_reward_name,
+        v_reward_description;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" integer, "is_issuer" boolean)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
@@ -296,6 +438,61 @@ CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
 ALTER TABLE "public"."checkout_billing" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."checkpoint_offers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text" NOT NULL,
+    "total_steps" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."checkpoint_offers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."checkpoint_rewards" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text" NOT NULL,
+    "image_path" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."checkpoint_rewards" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."checkpoint_steps" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "step_number" integer NOT NULL,
+    "total_steps" integer NOT NULL,
+    "reward_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "offer_id" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."checkpoint_steps" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."customer_checkpoints" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "customer_id" "uuid" NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "current_step" integer DEFAULT 1 NOT NULL,
+    "last_updated" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."customer_checkpoints" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."customers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "email" "text",
@@ -411,6 +608,36 @@ ALTER TABLE ONLY "public"."checkout_billing"
 
 
 
+ALTER TABLE ONLY "public"."checkpoint_offers"
+    ADD CONSTRAINT "checkpoint_offers_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_rewards"
+    ADD CONSTRAINT "checkpoint_rewards_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_steps"
+    ADD CONSTRAINT "checkpoint_steps_offer_step_unique" UNIQUE ("offer_id", "step_number");
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_steps"
+    ADD CONSTRAINT "checkpoint_steps_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."customer_checkpoints"
+    ADD CONSTRAINT "customer_checkpoints_customer_merchant_unique" UNIQUE ("customer_id", "merchant_id");
+
+
+
+ALTER TABLE ONLY "public"."customer_checkpoints"
+    ADD CONSTRAINT "customer_checkpoints_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."customers"
     ADD CONSTRAINT "customers_pkey" PRIMARY KEY ("id");
 
@@ -438,6 +665,10 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE OR REPLACE TRIGGER "on_checkpoint_offers_updated" BEFORE UPDATE ON "public"."checkpoint_offers" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
 
 
 
@@ -470,6 +701,41 @@ ALTER TABLE ONLY "public"."cards"
 
 ALTER TABLE ONLY "public"."cards"
     ADD CONSTRAINT "cards_issuing_merchant_id_fkey" FOREIGN KEY ("issuing_merchant_id") REFERENCES "public"."merchants"("id");
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_offers"
+    ADD CONSTRAINT "checkpoint_offers_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_rewards"
+    ADD CONSTRAINT "checkpoint_rewards_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_steps"
+    ADD CONSTRAINT "checkpoint_steps_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_steps"
+    ADD CONSTRAINT "checkpoint_steps_offer_id_fkey" FOREIGN KEY ("offer_id") REFERENCES "public"."checkpoint_offers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_steps"
+    ADD CONSTRAINT "checkpoint_steps_reward_id_fkey" FOREIGN KEY ("reward_id") REFERENCES "public"."checkpoint_rewards"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."customer_checkpoints"
+    ADD CONSTRAINT "customer_checkpoints_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."customer_checkpoints"
+    ADD CONSTRAINT "customer_checkpoints_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
 
 
 
@@ -597,7 +863,43 @@ CREATE POLICY "Merchants can be updated by their profile owner" ON "public"."mer
 
 
 
+CREATE POLICY "Merchants can create their own checkpoint offers" ON "public"."checkpoint_offers" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can create their own checkpoint rewards" ON "public"."checkpoint_rewards" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can create their own checkpoint steps" ON "public"."checkpoint_steps" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can create their own rewards" ON "public"."rewards" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can delete their own checkpoint offers" ON "public"."checkpoint_offers" FOR DELETE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can delete their own checkpoint rewards" ON "public"."checkpoint_rewards" FOR DELETE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can delete their own checkpoint steps" ON "public"."checkpoint_steps" FOR DELETE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -609,7 +911,55 @@ CREATE POLICY "Merchants can delete their own rewards" ON "public"."rewards" FOR
 
 
 
+CREATE POLICY "Merchants can update their customers' checkpoints" ON "public"."customer_checkpoints" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their own checkpoint offers" ON "public"."checkpoint_offers" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their own checkpoint rewards" ON "public"."checkpoint_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their own checkpoint steps" ON "public"."checkpoint_steps" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can update their own rewards" ON "public"."rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their customers' checkpoints" ON "public"."customer_checkpoints" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their own checkpoint offers" ON "public"."checkpoint_offers" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their own checkpoint rewards" ON "public"."checkpoint_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their own checkpoint steps" ON "public"."checkpoint_steps" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -643,9 +993,6 @@ CREATE POLICY "Users can update their own subscriptions" ON "public"."subscripti
 
 CREATE POLICY "Users can view their own subscriptions" ON "public"."subscriptions" FOR SELECT USING (("auth"."uid"() = "profile_id"));
 
-
-
-ALTER TABLE "public"."rewards" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -828,6 +1175,18 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "service_role";
@@ -906,6 +1265,30 @@ GRANT ALL ON TABLE "public"."cards" TO "service_role";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "anon";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "authenticated";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."checkpoint_offers" TO "anon";
+GRANT ALL ON TABLE "public"."checkpoint_offers" TO "authenticated";
+GRANT ALL ON TABLE "public"."checkpoint_offers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."checkpoint_rewards" TO "anon";
+GRANT ALL ON TABLE "public"."checkpoint_rewards" TO "authenticated";
+GRANT ALL ON TABLE "public"."checkpoint_rewards" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."checkpoint_steps" TO "anon";
+GRANT ALL ON TABLE "public"."checkpoint_steps" TO "authenticated";
+GRANT ALL ON TABLE "public"."checkpoint_steps" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."customer_checkpoints" TO "anon";
+GRANT ALL ON TABLE "public"."customer_checkpoints" TO "authenticated";
+GRANT ALL ON TABLE "public"."customer_checkpoints" TO "service_role";
 
 
 
