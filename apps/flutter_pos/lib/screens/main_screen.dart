@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import 'pos_home_page.dart';
 import 'settings_screen.dart';
+import '../components/bottom_nav_bar.dart';
 
 class MainScreen extends StatefulWidget {
   final String merchantId;
@@ -40,23 +41,13 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.point_of_sale),
-            label: 'POS',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }

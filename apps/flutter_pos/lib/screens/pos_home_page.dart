@@ -5,8 +5,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
+import 'card_details_screen.dart';
 
-class POSHomePage extends StatelessWidget {
+class POSHomePage extends StatefulWidget {
   final String merchantId;
   final String merchantName;
 
@@ -15,6 +16,63 @@ class POSHomePage extends StatelessWidget {
     required this.merchantId,
     required this.merchantName,
   });
+
+  @override
+  State<POSHomePage> createState() => _POSHomePageState();
+}
+
+class _POSHomePageState extends State<POSHomePage> {
+  bool _isPolling = false;
+  bool _isScreenOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  Future<void> _startPolling() async {
+    if (_isPolling) return;
+    _isPolling = true;
+
+    try {
+      while (_isPolling) {
+        try {
+          debugPrint('In attesa di una carta NFC...');
+          final tag = await FlutterNfcKit.poll();
+          debugPrint('Carta rilevata!');
+          debugPrint('UID: ${tag.id}');
+
+          if (_isScreenOpen) {
+            debugPrint('Una schermata è già aperta, ignoro la rilevazione');
+            await FlutterNfcKit.finish();
+            continue;
+          }
+
+          if (mounted) {
+            _isScreenOpen = true;
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CardDetailsScreen(
+                  cardUid: tag.id,
+                  merchantId: widget.merchantId,
+                ),
+              ),
+            );
+            _isScreenOpen = false;
+          }
+
+          await FlutterNfcKit.finish();
+        } catch (e) {
+          debugPrint('Errore durante il polling NFC: $e');
+          await FlutterNfcKit.finish();
+        }
+      }
+    } catch (e) {
+      debugPrint('Errore durante il polling NFC: $e');
+    }
+  }
 
   Future<void> _writeCard(BuildContext context) async {
     try {
@@ -32,7 +90,7 @@ class POSHomePage extends StatelessWidget {
       final cardRes = await http.get(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag.id}'),
         headers: {
-          'x-merchant-id': merchantId,
+          'x-merchant-id': widget.merchantId,
         },
       );
 
@@ -54,10 +112,10 @@ class POSHomePage extends StatelessWidget {
           Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
           headers: {
             'Content-Type': 'application/json',
-            'x-merchant-id': merchantId,
+            'x-merchant-id': widget.merchantId,
           },
           body: jsonEncode({
-            'merchant_id': merchantId,
+            'merchant_id': widget.merchantId,
           }),
         );
 
@@ -77,7 +135,7 @@ class POSHomePage extends StatelessWidget {
           Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
           headers: {
             'Content-Type': 'application/json',
-            'x-merchant-id': merchantId,
+            'x-merchant-id': widget.merchantId,
           },
           body: jsonEncode({
             'cardId': cardId,
@@ -159,130 +217,17 @@ class POSHomePage extends StatelessWidget {
     }
   }
 
-  Future<void> _readCard(BuildContext context) async {
-    try {
-      debugPrint('Iniziando la lettura della carta...');
-      debugPrint('In attesa di una carta NFC...');
-      final tag = await FlutterNfcKit.poll();
-      debugPrint('Carta rilevata!');
-      debugPrint('UID: ${tag.id}');
-
-      // Prima cerchiamo la carta nel database
-      debugPrint('Cercando la carta nel database...');
-      final cardRes = await http.get(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${tag.id}'),
-        headers: {
-          'x-merchant-id': merchantId,
-        },
-      );
-      debugPrint('Risposta ricerca carta:');
-      debugPrint('Status code: ${cardRes.statusCode}');
-      debugPrint('Body: ${cardRes.body}');
-
-      if (cardRes.statusCode != 200) {
-        debugPrint('Carta non trovata nel database');
-        await FlutterNfcKit.finish(iosAlertMessage: 'Carta non registrata');
-        return;
-      }
-
-      final card = jsonDecode(cardRes.body);
-      debugPrint('Carta trovata: $card');
-
-      // Mostra il saldo attuale
-      final balanceRes = await http.get(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=${card['id']}'),
-        headers: {
-          'x-merchant-id': merchantId,
-        },
-      );
-
-      if (balanceRes.statusCode != 200) {
-        debugPrint('Errore nel recupero del saldo');
-        await FlutterNfcKit.finish(iosAlertMessage: 'Errore nel recupero del saldo');
-        return;
-      }
-
-      final balanceData = jsonDecode(balanceRes.body);
-      final currentBalance = balanceData['balance'] ?? 0;
-      debugPrint('Saldo attuale: $currentBalance punti');
-      
-      // Mostra un dialog con il saldo
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Saldo Carta'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('UID: ${card['uid']}'),
-                const SizedBox(height: 8),
-                Text(
-                  '$currentBalance punti',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Chiudi'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  // Creiamo la transazione
-                  debugPrint('Creando transazione...');
-                  final txRes = await http.post(
-                    Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/tx'),
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'x-merchant-id': merchantId,
-                    },
-                    body: jsonEncode({
-                      'cardId': card['id'],
-                      'points': 10, // Punti da accreditare
-                    }),
-                  );
-                  debugPrint('Risposta creazione transazione:');
-                  debugPrint('Status code: ${txRes.statusCode}');
-                  debugPrint('Body: ${txRes.body}');
-
-                  await FlutterNfcKit.finish(iosAlertMessage: 'Transazione completata!');
-                },
-                child: const Text('Accredita 10 punti'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('ERRORE durante l\'operazione:');
-      debugPrint('Tipo di errore: ${e.runtimeType}');
-      debugPrint('Messaggio: $e');
-      
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Errore: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      
-      await FlutterNfcKit.finish(iosAlertMessage: 'Errore: $e');
-    }
+  @override
+  void dispose() {
+    _isPolling = false;
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('ReTap POS - $merchantName'),
+        title: Text('ReTap POS - ${widget.merchantName}'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -299,12 +244,10 @@ class POSHomePage extends StatelessWidget {
               onPressed: () => _writeCard(context),
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Leggi Carta'),
-              onPressed: () => _readCard(context),
+            Text(
+              'Avvicina una carta NFC per vedere i dettagli',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
         ),
