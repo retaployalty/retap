@@ -84,7 +84,7 @@ export default function PromotionsPage() {
                 Nuovo Reward
               </Button>
             </CreateRewardDialog>
-          </div>
+      </div>
           <RewardsList />
         </TabsContent>
         <TabsContent value="checkpoints" className="space-y-4">

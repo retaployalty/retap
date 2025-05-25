@@ -62,7 +62,7 @@ export default function BusinessProfilePage() {
           phone: merchant.phone || "",
           googleMapsUrl: merchant.google_maps_url || "",
           logoUrl: merchant.logo_url || "",
-          coverImages: merchant.cover_images || (merchant.cover_image_url ? [merchant.cover_image_url] : []),
+          coverImages: merchant.cover_image_url || [],
           hours: merchant.hours || prev.hours,
           annualClosures: merchant.annual_closures || [],
           galleryImages: merchant.gallery_images || [],
@@ -152,7 +152,7 @@ export default function BusinessProfilePage() {
           phone: profile.phone,
           google_maps_url: profile.googleMapsUrl,
           logo_url: profile.logoUrl,
-          cover_images: profile.coverImages,
+          cover_image_url: profile.coverImages,
           hours: profile.hours,
           annual_closures: profile.annualClosures,
           gallery_images: profile.galleryImages,
@@ -167,6 +167,7 @@ export default function BusinessProfilePage() {
 
       router.refresh();
     } catch (error) {
+      console.error("Error saving profile:", error);
       toast.error("Errore", {
         description: "C'è stato un problema nel salvataggio del profilo. Riprova.",
       });

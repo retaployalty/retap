@@ -1,3 +1,5 @@
+
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -524,12 +526,12 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "industry" "text" NOT NULL,
     "address" "text" NOT NULL,
     "logo_url" "text",
-    "cover_image_url" "text",
+    "cover_image_url" "text"[] DEFAULT '{}'::"text"[],
     "phone" "text",
     "google_maps_url" "text",
     "hours" "jsonb",
     "annual_closures" "jsonb",
-    "gallery_images" "jsonb"
+    "gallery_images" "text"[] DEFAULT '{}'::"text"[]
 );
 
 
@@ -540,7 +542,7 @@ COMMENT ON COLUMN "public"."merchants"."logo_url" IS 'URL del logo del negozio';
 
 
 
-COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'URL dell''immagine di copertina del negozio';
+COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'Array di URL immagini di copertina del negozio';
 
 
 
