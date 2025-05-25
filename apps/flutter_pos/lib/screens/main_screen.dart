@@ -4,6 +4,7 @@ import '../theme/text_styles.dart';
 import 'pos_home_page.dart';
 import 'settings_screen.dart';
 import '../components/bottom_nav_bar.dart';
+import 'offers_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String merchantId;
@@ -22,18 +23,28 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [];
+  late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _screens.addAll([
+    _screens = [
       POSHomePage(
         merchantId: widget.merchantId,
         merchantName: widget.merchantName,
       ),
+      OffersScreen(
+        merchantId: widget.merchantId,
+        merchantName: widget.merchantName,
+      ),
       const SettingsScreen(),
-    ]);
+    ];
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
@@ -43,11 +54,21 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.nfc),
+            label: 'NFC',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Offerte',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Impostazioni',
+          ),
+        ],
       ),
     );
   }
