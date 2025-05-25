@@ -107,11 +107,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _offers.length,
-      itemBuilder: (context, index) {
-        final offer = _offers[index];
+    return Column(
+      children: _offers.map((offer) {
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 16),
@@ -252,18 +249,19 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                           Text(
                                             step.reward!.description,
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 13,
                                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                             ),
                                           ),
                                         ],
-                                      ] else
-                                        const Text(
-                                          'Nessun premio',
-                                          style: TextStyle(
-                                            fontStyle: FontStyle.italic,
+                                      ] else ...[
+                                        Text(
+                                          'Step ${step.stepNumber}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -279,7 +277,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
             ),
           ),
         );
-      },
+      }).toList(),
     );
   }
 }
