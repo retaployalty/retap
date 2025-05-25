@@ -526,12 +526,12 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "industry" "text" NOT NULL,
     "address" "text" NOT NULL,
     "logo_url" "text",
-    "cover_image_url" "text"[] DEFAULT '{}'::"text"[],
+    "cover_image_url" "text"[],
     "phone" "text",
     "google_maps_url" "text",
     "hours" "jsonb",
     "annual_closures" "jsonb",
-    "gallery_images" "text"[] DEFAULT '{}'::"text"[]
+    "gallery_images" "jsonb"
 );
 
 
@@ -542,7 +542,7 @@ COMMENT ON COLUMN "public"."merchants"."logo_url" IS 'URL del logo del negozio';
 
 
 
-COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'Array di URL immagini di copertina del negozio';
+COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'Array di URL delle immagini di copertina del negozio';
 
 
 
@@ -961,9 +961,17 @@ CREATE POLICY "Merchants can delete their own checkpoint steps" ON "public"."che
 
 
 
+CREATE POLICY "Merchants can delete their own profile" ON "public"."merchants" FOR DELETE USING (("auth"."uid"() = "profile_id"));
+
+
+
 CREATE POLICY "Merchants can delete their own rewards" ON "public"."rewards" FOR DELETE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can insert their own profile" ON "public"."merchants" FOR INSERT WITH CHECK (("auth"."uid"() = "profile_id"));
 
 
 
@@ -988,6 +996,10 @@ CREATE POLICY "Merchants can update their own checkpoint rewards" ON "public"."c
 CREATE POLICY "Merchants can update their own checkpoint steps" ON "public"."checkpoint_steps" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their own profile" ON "public"."merchants" FOR UPDATE USING (("auth"."uid"() = "profile_id")) WITH CHECK (("auth"."uid"() = "profile_id"));
 
 
 
@@ -1018,6 +1030,10 @@ CREATE POLICY "Merchants can view their own checkpoint rewards" ON "public"."che
 CREATE POLICY "Merchants can view their own checkpoint steps" ON "public"."checkpoint_steps" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their own profile" ON "public"."merchants" FOR SELECT USING (("auth"."uid"() = "profile_id"));
 
 
 
