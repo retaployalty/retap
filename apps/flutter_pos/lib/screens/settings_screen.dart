@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 import 'login_screen.dart';
 import 'merchant_selection_screen.dart';
 import '../services/merchant_service.dart';
@@ -7,57 +9,81 @@ import '../services/merchant_service.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-      await MerchantService.clearSelectedMerchant();
-      
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
-          ),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Errore durante il logout: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Impostazioni'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Settings',
+          style: AppTextStyles.titleLarge,
+        ),
       ),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          ListTile(
-            leading: const Icon(Icons.store),
-            title: const Text('Cambia Negozio'),
-            onTap: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const MerchantSelectionScreen(),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(
+                'Profile',
+                style: AppTextStyles.titleMedium,
+              ),
+              subtitle: Text(
+                'Manage your account settings',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
-              );
-            },
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                // TODO: Navigate to profile settings
+              },
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () => _logout(context),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.store_outlined),
+              title: Text(
+                'Change Merchant',
+                style: AppTextStyles.titleMedium,
+              ),
+              subtitle: Text(
+                'Select a different merchant',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                await MerchantService.clearSelectedMerchant();
+                if (!context.mounted) return;
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const MerchantSelectionScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.logout),
+              title: Text(
+                'Sign Out',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: Colors.red,
+                ),
+              ),
+              onTap: () async {
+                await Supabase.instance.client.auth.signOut();
+                await MerchantService.clearSelectedMerchant();
+                if (!context.mounted) return;
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+            ),
           ),
         ],
       ),
