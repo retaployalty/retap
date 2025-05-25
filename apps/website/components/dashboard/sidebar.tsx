@@ -10,6 +10,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  Store,
 } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
@@ -28,6 +29,11 @@ const navigation = [
     name: "Promotions",
     href: "/dashboard/promotions",
     icon: Gift,
+  },
+  {
+    name: "Profile",
+    href: "/dashboard/profile",
+    icon: Store,
   },
   {
     name: "Tutorial",

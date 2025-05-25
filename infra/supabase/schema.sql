@@ -1,5 +1,3 @@
-
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -524,11 +522,46 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "profile_id" "uuid",
     "country" "text" NOT NULL,
     "industry" "text" NOT NULL,
-    "address" "text" NOT NULL
+    "address" "text" NOT NULL,
+    "logo_url" "text",
+    "cover_image_url" "text",
+    "phone" "text",
+    "google_maps_url" "text",
+    "hours" "jsonb",
+    "annual_closures" "jsonb",
+    "gallery_images" "jsonb"
 );
 
 
 ALTER TABLE "public"."merchants" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."merchants"."logo_url" IS 'URL del logo del negozio';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'URL dell''immagine di copertina del negozio';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."phone" IS 'Numero di telefono del negozio';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."google_maps_url" IS 'Link Google Maps del negozio';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."hours" IS 'Orari di apertura in formato JSON';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."annual_closures" IS 'Chiusure annuali in formato JSON';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."gallery_images" IS 'Array di URL immagini aggiuntive (galleria)';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
@@ -1023,6 +1056,9 @@ ALTER TABLE "public"."checkpoint_rewards" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."checkpoint_steps" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."merchants" ENABLE ROW LEVEL SECURITY;
 
 
 
