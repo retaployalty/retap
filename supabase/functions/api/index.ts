@@ -60,22 +60,65 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
-      const { data, error } = await supabaseClient
+
+      // Prima verifichiamo se la carta esiste senza filtri
+      const { data: allCards, error: allCardsError } = await supabaseClient
         .from('cards')
         .select('*')
-        .eq('uid', params.uid)
-        .eq('issuing_merchant_id', merchantId)
-        .single()
+        .eq('uid', params.uid);
 
-      if (error) {
+      if (allCardsError) {
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: allCardsError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
+      if (!allCards || allCards.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Card not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // La carta esiste, verifichiamo se è già associata al merchant
+      const card = allCards[0];
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .select('*')
+        .eq('card_id', card.id)
+        .eq('merchant_id', merchantId)
+        .single();
+
+      if (cmError && cmError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        return new Response(
+          JSON.stringify({ error: cmError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Se la carta non è associata al merchant, la associamo
+      if (!cardMerchant) {
+        const { error: insertError } = await supabaseClient
+          .from('card_merchants')
+          .insert({
+            card_id: card.id,
+            merchant_id: merchantId,
+          });
+
+        if (insertError) {
+          return new Response(
+            JSON.stringify({ error: insertError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify({
+          ...card,
+          is_new_merchant: !cardMerchant
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

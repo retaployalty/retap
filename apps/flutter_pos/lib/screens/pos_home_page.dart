@@ -45,7 +45,6 @@ class _POSHomePageState extends State<POSHomePage> {
 
           if (_isScreenOpen) {
             debugPrint('Una schermata è già aperta, ignoro la rilevazione');
-            await FlutterNfcKit.finish();
             continue;
           }
 

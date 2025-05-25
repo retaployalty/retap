@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import '../models/checkpoint_offer.dart';
+import '../services/checkpoint_service.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
@@ -16,7 +16,7 @@ class CheckpointOffersList extends StatefulWidget {
 
 class _CheckpointOffersListState extends State<CheckpointOffersList> {
   bool _isLoading = true;
-  List<dynamic> _offers = [];
+  List<CheckpointOffer> _offers = [];
   String? _error;
 
   @override
@@ -27,83 +27,14 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
   Future<void> _fetchOffers() async {
     try {
-      debugPrint('Fetching checkpoint offers for merchant: ${widget.merchantId}');
-      
-      // Prima otteniamo le offerte
-      final offersUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co/rest/v1/checkpoint_offers?merchant_id=eq.${widget.merchantId}';
-      debugPrint('Fetching offers from: $offersUrl');
-      debugPrint('Headers: ${{
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-        'x-merchant-id': widget.merchantId,
-      }}');
-      
-      final offersResponse = await http.get(
-        Uri.parse(offersUrl),
-        headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-          'x-merchant-id': widget.merchantId,
-        },
-      );
-
-      debugPrint('Offers response status: ${offersResponse.statusCode}');
-      debugPrint('Offers response body: ${offersResponse.body}');
-      debugPrint('Offers response headers: ${offersResponse.headers}');
-
-      if (offersResponse.statusCode != 200) {
-        setState(() {
-          _error = 'Errore nel caricamento delle offerte: ${offersResponse.statusCode} - ${offersResponse.body}';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final offers = jsonDecode(offersResponse.body) as List;
-      debugPrint('Found ${offers.length} offers');
-      if (offers.isNotEmpty) {
-        debugPrint('First offer: ${offers[0]}');
-      }
-
-      // Per ogni offerta, otteniamo i suoi step
-      for (var offer in offers) {
-        final stepsUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co/rest/v1/checkpoint_steps?offer_id=eq.${offer['id']}&select=*,reward:checkpoint_rewards(*)';
-        debugPrint('Fetching steps for offer ${offer['id']} from: $stepsUrl');
-        debugPrint('Headers for steps: ${{
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-          'x-merchant-id': widget.merchantId,
-        }}');
-        
-        final stepsResponse = await http.get(
-          Uri.parse(stepsUrl),
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-            'x-merchant-id': widget.merchantId,
-          },
-        );
-
-        debugPrint('Steps response status for offer ${offer['id']}: ${stepsResponse.statusCode}');
-        debugPrint('Steps response body for offer ${offer['id']}: ${stepsResponse.body}');
-        debugPrint('Steps response headers for offer ${offer['id']}: ${stepsResponse.headers}');
-
-        if (stepsResponse.statusCode == 200) {
-          offer['steps'] = jsonDecode(stepsResponse.body);
-          debugPrint('Added ${offer['steps'].length} steps to offer ${offer['id']}');
-          if (offer['steps'].isNotEmpty) {
-            debugPrint('First step: ${offer['steps'][0]}');
-          }
-        }
-      }
-
+      final offers = await CheckpointService.fetchOffers(widget.merchantId);
       if (!mounted) return;
       setState(() {
         _offers = offers;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching offers: $e');
+      if (!mounted) return;
       setState(() {
         _error = 'Errore: $e';
         _isLoading = false;
@@ -204,7 +135,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                 ),
               ),
               title: Text(
-                offer['name'],
+                offer.name,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -215,7 +146,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                 children: [
                   const SizedBox(height: 4),
                   Text(
-                    offer['description'],
+                    offer.description,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
@@ -237,7 +168,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${offer['total_steps']} step',
+                          '${offer.totalSteps} step',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w500,
@@ -249,7 +180,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                 ],
               ),
               children: [
-                if (offer['steps'] != null && offer['steps'].isNotEmpty) ...[
+                if (offer.steps != null && offer.steps!.isNotEmpty) ...[
                   const Divider(height: 1),
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -274,7 +205,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        ...offer['steps'].map<Widget>((step) {
+                        ...offer.steps!.map<Widget>((step) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(12),
@@ -296,7 +227,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      '${step['step_number']}',
+                                      '${step.stepNumber}',
                                       style: TextStyle(
                                         color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.bold,
@@ -309,17 +240,17 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      if (step['reward'] != null) ...[
+                                      if (step.reward != null) ...[
                                         Text(
-                                          step['reward']['name'],
+                                          step.reward!.name,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        if (step['reward']['description'] != null) ...[
+                                        if (step.reward!.description.isNotEmpty) ...[
                                           const SizedBox(height: 4),
                                           Text(
-                                            step['reward']['description'],
+                                            step.reward!.description,
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -350,11 +281,5 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         );
       },
     );
-  }
-
-  String? getImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imagePath';
   }
 }
