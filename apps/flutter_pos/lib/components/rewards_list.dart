@@ -4,12 +4,14 @@ import '../services/reward_service.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
-  final int? userPoints; // opzionale, per mostrare saldo punti
+  final int userPoints;
+  final bool compactMode;
 
   const RewardsList({
     super.key,
     required this.merchantId,
-    this.userPoints,
+    required this.userPoints,
+    this.compactMode = false,
   });
 
   @override
@@ -30,11 +32,13 @@ class _RewardsListState extends State<RewardsList> {
   Future<void> _fetchRewards() async {
     try {
       final rewards = await RewardService.fetchRewards(widget.merchantId);
+      if (!mounted) return;
       setState(() {
         _rewards = rewards;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Errore: $e';
         _isLoading = false;
@@ -44,195 +48,176 @@ class _RewardsListState extends State<RewardsList> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = const Color(0xFFEB6E63); // rosso salmone
-    final double cardWidth = 180;
-    final double cardHeight = 240;
-    final int userPoints = widget.userPoints ?? 100; // fallback demo
-
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
+      return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+    }
+
+    if (_rewards.isEmpty) {
       return Center(
-        child: Text(
-          _error!,
-          style: const TextStyle(color: Colors.red),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.card_giftcard_outlined,
+              size: 48,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Nessun premio disponibile',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    if (_rewards.isEmpty) {
-      return const Center(
-        child: Text('Nessun premio disponibile'),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: accent,
-        borderRadius: BorderRadius.circular(32),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Reward',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 26,
-                  letterSpacing: 1.2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with points
+            Row(
+              children: [
+                Icon(
+                  Icons.stars,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 24,
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(20),
+                const SizedBox(width: 8),
+                Text(
+                  '${widget.userPoints} punti disponibili',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Text(
-                      '$userPoints',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Rewards list
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _rewards.length,
+                itemBuilder: (context, index) {
+                  final reward = _rewards[index];
+                  final canRedeem = widget.userPoints >= reward.priceCoins;
+                  
+                  return Container(
+                    width: 200,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: canRedeem
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                          : Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: canRedeem
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline.withOpacity(0.1),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.attach_money, color: Colors.white, size: 20),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: cardHeight,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _rewards.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final reward = _rewards[index];
-                final bool locked = userPoints < reward.priceCoins;
-                return Container(
-                  width: cardWidth,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(28),
-                                topRight: Radius.circular(28),
-                              ),
-                              child: (reward.imagePath != null && reward.imagePath!.isNotEmpty && !reward.imagePath!.toLowerCase().endsWith('.avif'))
-                                ? Image.network(
-                                    getImageUrl(reward.imagePath)!,
-                                    width: cardWidth,
-                                    height: cardWidth,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Icon(
-                                      Icons.broken_image,
-                                      size: 80,
-                                      color: accent.withOpacity(0.5),
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.icecream,
-                                    size: 80,
-                                    color: accent.withOpacity(0.5),
-                                  ),
-                            ),
-                            if (locked)
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.85),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.black, width: 2),
-                                ),
-                                child: const Icon(Icons.lock, size: 32, color: Colors.black),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(28),
-                            bottomRight: Radius.circular(28),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              reward.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            if (reward.description.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                reward.description,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black.withOpacity(0.6),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Text(
-                                  '${reward.priceCoins} ',
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  reward.name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const Icon(Icons.attach_money, size: 18),
-                              ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: canRedeem
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.star,
+                                      size: 14,
+                                      color: canRedeem ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${reward.priceCoins}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: canRedeem ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            reward.description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             ),
-                          ],
-                        ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Spacer(),
+                          if (canRedeem)
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  // TODO: Implement reward redemption
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Riscatta'),
+                              ),
+                            ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  String? getImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    // Sostituisci 'rewards' con il nome del tuo bucket se diverso
-    return 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imagePath';
   }
 }

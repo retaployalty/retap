@@ -42,7 +42,18 @@ export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpoi
     setLoading(true)
 
     try {
-      // Delete reward
+      // Delete step first
+      const { error: deleteStepError } = await supabase
+        .from("checkpoint_steps")
+        .delete()
+        .eq("id", step.id)
+
+      if (deleteStepError) {
+        console.error("Delete step error:", deleteStepError)
+        throw new Error("Errore durante l'eliminazione dello step")
+      }
+
+      // Then delete reward
       const { error: deleteRewardError } = await supabase
         .from("checkpoint_rewards")
         .delete()
@@ -52,14 +63,6 @@ export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpoi
         console.error("Delete reward error:", deleteRewardError)
         throw new Error("Errore durante l'eliminazione del premio")
       }
-
-      // Update step to remove reward reference
-      const { error } = await supabase
-        .from("checkpoint_steps")
-        .update({ reward_id: null })
-        .eq("id", step.id)
-
-      if (error) throw error
 
       toast.success("Premio eliminato con successo")
       router.refresh()
