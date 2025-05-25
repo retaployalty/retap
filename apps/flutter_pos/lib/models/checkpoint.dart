@@ -4,7 +4,7 @@ class Checkpoint {
   final String name;
   final String description;
   final int totalSteps;
-  final List<CheckpointStep> steps;
+  final List<CheckpointStep>? steps;
 
   Checkpoint({
     required this.id,
@@ -12,7 +12,7 @@ class Checkpoint {
     required this.name,
     required this.description,
     required this.totalSteps,
-    required this.steps,
+    this.steps,
   });
 
   factory Checkpoint.fromJson(Map<String, dynamic> json) {
@@ -22,10 +22,23 @@ class Checkpoint {
       name: json['name'],
       description: json['description'],
       totalSteps: json['total_steps'],
-      steps: (json['steps'] as List)
-          .map((step) => CheckpointStep.fromJson(step))
-          .toList(),
+      steps: json['steps'] != null
+          ? (json['steps'] as List)
+              .map((step) => CheckpointStep.fromJson(step))
+              .toList()
+          : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'merchant_id': merchantId,
+      'name': name,
+      'description': description,
+      'total_steps': totalSteps,
+      'steps': steps?.map((step) => step.toJson()).toList(),
+    };
   }
 }
 
@@ -55,5 +68,16 @@ class CheckpointStep {
       rewardName: json['reward_name'],
       rewardDescription: json['reward_description'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'step_number': stepNumber,
+      'total_steps': totalSteps,
+      'reward_id': rewardId,
+      'reward_name': rewardName,
+      'reward_description': rewardDescription,
+    };
   }
 } 
