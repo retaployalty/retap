@@ -85,44 +85,44 @@ class _RewardsListState extends State<RewardsList> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: [
+        children: [
             // Header with points
-            Row(
-              children: [
+          Row(
+            children: [
                 Icon(
                   Icons.stars,
                   color: Theme.of(context).colorScheme.primary,
                   size: 24,
-                ),
+              ),
                 const SizedBox(width: 8),
-                Text(
+                    Text(
                   '${widget.userPoints} punti disponibili',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
-                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
             // Rewards list
-            SizedBox(
+          SizedBox(
               height: 120,
               child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _rewards.length,
-                itemBuilder: (context, index) {
-                  final reward = _rewards[index];
+              scrollDirection: Axis.horizontal,
+              itemCount: _rewards.length,
+              itemBuilder: (context, index) {
+                final reward = _rewards[index];
                   final canRedeem = widget.userPoints >= reward.priceCoins;
                   
-                  return Container(
+                return Container(
                     width: 200,
                     margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
+                  decoration: BoxDecoration(
                       color: canRedeem
                           ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                           : Theme.of(context).colorScheme.surface,
@@ -135,13 +135,13 @@ class _RewardsListState extends State<RewardsList> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Column(
+                  child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
+                    children: [
+                      Expanded(
                                 child: Text(
                                   reward.name,
                                   style: const TextStyle(
@@ -150,8 +150,8 @@ class _RewardsListState extends State<RewardsList> {
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                                  ),
+                            ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
@@ -176,22 +176,22 @@ class _RewardsListState extends State<RewardsList> {
                                         fontWeight: FontWeight.bold,
                                         color: canRedeem ? Colors.white : Theme.of(context).colorScheme.onSurface,
                                       ),
-                                    ),
-                                  ],
-                                ),
                               ),
+                          ],
+                        ),
+                      ),
                             ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            reward.description,
-                            style: TextStyle(
+                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                reward.description,
+                                style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                           const Spacer(),
                           if (canRedeem)
                             SizedBox(
@@ -208,14 +208,14 @@ class _RewardsListState extends State<RewardsList> {
                                 child: const Text('Riscatta'),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+                          ],
+                        ),
+                  ),
+                );
+              },
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );
