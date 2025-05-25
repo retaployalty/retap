@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     const url = new URL(req.url)
@@ -309,6 +309,137 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ merchants: data }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // POST /redeemed_rewards
+    if (path === 'redeemed_rewards' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { customer_id, reward_id, points_spent, status } = await req.json()
+
+      // Verifica che il premio esista e appartenga al merchant
+      const { data: reward, error: rewardError } = await supabaseClient
+        .from('rewards')
+        .select('*')
+        .eq('id', reward_id)
+        .eq('merchant_id', merchantId)
+        .single()
+
+      if (rewardError || !reward) {
+        return new Response(
+          JSON.stringify({ error: 'Reward not found or not authorized' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Verifica che il cliente esista
+      const { data: customer, error: customerError } = await supabaseClient
+        .from('customers')
+        .select('*')
+        .eq('id', customer_id)
+        .single()
+
+      if (customerError || !customer) {
+        return new Response(
+          JSON.stringify({ error: 'Customer not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Trova la carta del cliente per questo merchant
+      const { data: card, error: cardError } = await supabaseClient
+        .from('cards')
+        .select('id')
+        .eq('customer_id', customer_id)
+        .single()
+
+      if (cardError || !card) {
+        return new Response(
+          JSON.stringify({ error: 'Card not found for customer' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Trova o crea la relazione card_merchants
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .select('id')
+        .eq('card_id', card.id)
+        .eq('merchant_id', merchantId)
+        .single()
+
+      if (cmError && cmError.code !== 'PGRST116') {
+        return new Response(
+          JSON.stringify({ error: 'Error finding card-merchant relationship' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Se la relazione non esiste, la creiamo
+      let cardMerchantId = cardMerchant?.id
+      if (!cardMerchantId) {
+        const { data: newCardMerchant, error: createError } = await supabaseClient
+          .from('card_merchants')
+          .insert({
+            card_id: card.id,
+            merchant_id: merchantId,
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          return new Response(
+            JSON.stringify({ error: 'Error creating card-merchant relationship' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        cardMerchantId = newCardMerchant.id
+      }
+
+      // Crea la transazione per scalare i punti
+      const { error: txError } = await supabaseClient
+        .from('transactions')
+        .insert({
+          card_merchant_id: cardMerchantId,
+          points: -points_spent, // Punti negativi per scalare
+        })
+
+      if (txError) {
+        return new Response(
+          JSON.stringify({ error: 'Error creating transaction' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crea il record del premio riscattato
+      const { data, error } = await supabaseClient
+        .from('redeemed_rewards')
+        .insert({
+          customer_id,
+          merchant_id: merchantId,
+          reward_id,
+          points_spent,
+          status: status || 'pending',
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify(data),
+        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

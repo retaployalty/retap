@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import '../models/reward.dart';
+import '../models/card.dart';
 import '../services/reward_service.dart';
+import '../services/points_service.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
   final int userPoints;
   final bool compactMode;
+  final String? cardId;
+  final CardModel? card;
+  final Function(int)? onPointsUpdated;
 
   const RewardsList({
     super.key,
     required this.merchantId,
     required this.userPoints,
     this.compactMode = false,
+    this.cardId,
+    this.card,
+    this.onPointsUpdated,
   });
 
   @override
@@ -22,6 +30,7 @@ class _RewardsListState extends State<RewardsList> {
   bool _isLoading = true;
   List<Reward> _rewards = [];
   String? _error;
+  int _userPoints = 0;
 
   @override
   void initState() {
@@ -43,6 +52,59 @@ class _RewardsListState extends State<RewardsList> {
         _error = 'Errore: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _redeemReward(Reward reward) async {
+    if (widget.card == null || widget.card!.customerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Carta o cliente non trovato'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      print('Starting reward redemption...');
+      print('Card data: id=${widget.card!.id}, customerId=${widget.card!.customerId}');
+      print('Reward data: id=${reward.id}, name=${reward.name}, price=${reward.priceCoins}');
+      print('Merchant ID: ${widget.merchantId}');
+
+      final redeemedReward = await RewardService.redeemReward(
+        customerId: widget.card!.customerId!,
+        rewardId: reward.id,
+        pointsSpent: reward.priceCoins,
+        merchantId: widget.merchantId,
+      );
+
+      if (!mounted) return;
+
+      // Aggiorna i punti dopo il riscatto
+      final newPoints = await PointsService.getCardBalance(widget.card!.id!, widget.merchantId);
+      setState(() {
+        _userPoints = newPoints;
+      });
+
+      // Notifica il parent component del cambiamento dei punti
+      widget.onPointsUpdated?.call(newPoints);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Premio ${reward.name} riscattato con successo!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('ERROR in reward redemption: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore nel riscatto del premio: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -85,44 +147,44 @@ class _RewardsListState extends State<RewardsList> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-        children: [
+          children: [
             // Header with points
-          Row(
-            children: [
+            Row(
+              children: [
                 Icon(
                   Icons.stars,
                   color: Theme.of(context).colorScheme.primary,
                   size: 24,
-              ),
+                ),
                 const SizedBox(width: 8),
-                    Text(
+                Text(
                   '${widget.userPoints} punti disponibili',
                   style: TextStyle(
                     fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 16),
             // Rewards list
-          SizedBox(
+            SizedBox(
               height: 120,
               child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _rewards.length,
-              itemBuilder: (context, index) {
-                final reward = _rewards[index];
+                scrollDirection: Axis.horizontal,
+                itemCount: _rewards.length,
+                itemBuilder: (context, index) {
+                  final reward = _rewards[index];
                   final canRedeem = widget.userPoints >= reward.priceCoins;
                   
-                return Container(
+                  return Container(
                     width: 200,
                     margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
+                    decoration: BoxDecoration(
                       color: canRedeem
                           ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                           : Theme.of(context).colorScheme.surface,
@@ -135,13 +197,13 @@ class _RewardsListState extends State<RewardsList> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                  child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
+                            children: [
+                              Expanded(
                                 child: Text(
                                   reward.name,
                                   style: const TextStyle(
@@ -150,8 +212,8 @@ class _RewardsListState extends State<RewardsList> {
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  ),
-                            ),
+                                ),
+                              ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
@@ -176,30 +238,28 @@ class _RewardsListState extends State<RewardsList> {
                                         fontWeight: FontWeight.bold,
                                         color: canRedeem ? Colors.white : Theme.of(context).colorScheme.onSurface,
                                       ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                          ],
-                        ),
-                      ),
                             ],
-                            ),
-                              const SizedBox(height: 4),
-                              Text(
-                                reward.description,
-                                style: TextStyle(
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            reward.description,
+                            style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const Spacer(),
                           if (canRedeem)
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement reward redemption
-                                },
+                                onPressed: () => _redeemReward(reward),
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -208,14 +268,14 @@ class _RewardsListState extends State<RewardsList> {
                                 child: const Text('Riscatta'),
                               ),
                             ),
-                          ],
-                        ),
-                  ),
-                );
-              },
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

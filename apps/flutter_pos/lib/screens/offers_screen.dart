@@ -166,6 +166,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                                   merchantId: widget.merchantId,
                                   userPoints: _userPoints,
                                   compactMode: true,
+                                  cardId: widget.cardId,
                                 ),
                         ),
                       ],

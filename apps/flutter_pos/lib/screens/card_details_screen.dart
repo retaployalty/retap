@@ -382,6 +382,9 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                                       RewardsList(
                                         merchantId: widget.merchantId,
                                         userPoints: _currentPoints,
+                                        cardId: _card!.id,
+                                        card: _card,
+                                        onPointsUpdated: _updatePoints,
                                       ),
                                   ],
                                 ),

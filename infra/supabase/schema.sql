@@ -1168,12 +1168,6 @@ CREATE POLICY "Merchants can update their customers' redeemed checkpoint rewar" 
 
 
 
-CREATE POLICY "Merchants can update their customers' redeemed rewards" ON "public"."redeemed_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
-   FROM "public"."merchants"
-  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
-
-
-
 CREATE POLICY "Merchants can update their own checkpoint offers" ON "public"."checkpoint_offers" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -1202,6 +1196,12 @@ CREATE POLICY "Merchants can update their own rewards" ON "public"."rewards" FOR
 
 
 
+CREATE POLICY "Merchants can update their redeemed rewards" ON "public"."redeemed_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can view their customers' checkpoints" ON "public"."customer_checkpoints" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -1209,12 +1209,6 @@ CREATE POLICY "Merchants can view their customers' checkpoints" ON "public"."cus
 
 
 CREATE POLICY "Merchants can view their customers' redeemed checkpoint rewards" ON "public"."redeemed_checkpoint_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
-   FROM "public"."merchants"
-  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
-
-
-
-CREATE POLICY "Merchants can view their customers' redeemed rewards" ON "public"."redeemed_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -1243,6 +1237,12 @@ CREATE POLICY "Merchants can view their own profile" ON "public"."merchants" FOR
 
 
 CREATE POLICY "Merchants can view their own rewards" ON "public"."rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their redeemed rewards" ON "public"."redeemed_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 

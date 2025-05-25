@@ -3,19 +3,33 @@ import 'dart:convert';
 import '../models/card.dart';
 
 class CardService {
-  static const _baseUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co/rest/v1/cards';
+  static const _baseUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api';
 
-  static Future<CardModel?> fetchCardByUid(String uid) async {
+  static Future<CardModel?> fetchCardByUid(String uid, String merchantId) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl?uid=eq.$uid'),
+      Uri.parse('$_baseUrl/cards?uid=$uid'),
       headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
+        'Content-Type': 'application/json',
+        'x-merchant-id': merchantId,
       },
     );
     if (response.statusCode != 200) return null;
-    final List<dynamic> data = jsonDecode(response.body);
-    if (data.isEmpty) return null;
-    return CardModel.fromJson(data[0]);
+    final data = jsonDecode(response.body);
+    if (data == null) return null;
+    return CardModel.fromJson(data);
+  }
+
+  static Future<CardModel?> fetchCardById(String id, String merchantId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/cards?id=$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-merchant-id': merchantId,
+      },
+    );
+    if (response.statusCode != 200) return null;
+    final data = jsonDecode(response.body);
+    if (data == null) return null;
+    return CardModel.fromJson(data);
   }
 } 
