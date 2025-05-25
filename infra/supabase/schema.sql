@@ -251,6 +251,71 @@ $_$;
 ALTER FUNCTION "public"."get_current_subscription"("profile_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_customer_id uuid;
+BEGIN
+    -- Cerca un customer esistente per questo merchant
+    SELECT c.id INTO v_customer_id
+    FROM public.customers c
+    JOIN public.cards cd ON cd.customer_id = c.id
+    JOIN public.card_merchants cm ON cm.card_id = cd.id
+    WHERE cm.merchant_id = p_merchant_id
+    LIMIT 1;
+
+    -- Se non esiste, crea un nuovo customer
+    IF v_customer_id IS NULL THEN
+        INSERT INTO public.customers (id)
+        VALUES (gen_random_uuid())
+        RETURNING id INTO v_customer_id;
+    END IF;
+
+    RETURN v_customer_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid", "p_card_uid" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_customer_id uuid;
+    v_card_id uuid;
+BEGIN
+    -- Prima cerchiamo se esiste già una carta con questo UID
+    SELECT c.id, c.customer_id INTO v_card_id, v_customer_id
+    FROM public.cards c
+    WHERE c.uid = p_card_uid
+    LIMIT 1;
+
+    -- Se la carta esiste, usiamo il customer_id esistente
+    IF v_customer_id IS NOT NULL THEN
+        -- Aggiungiamo la relazione card_merchants se non esiste
+        INSERT INTO public.card_merchants (card_id, merchant_id)
+        VALUES (v_card_id, p_merchant_id)
+        ON CONFLICT (card_id, merchant_id) DO NOTHING;
+        
+        RETURN v_customer_id;
+    END IF;
+
+    -- Se la carta non esiste, creiamo un nuovo customer
+    INSERT INTO public.customers (id)
+    VALUES (gen_random_uuid())
+    RETURNING id INTO v_customer_id;
+
+    RETURN v_customer_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid", "p_card_uid" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_subscription_history"("profile_id" "uuid") RETURNS TABLE("plan_type" "text", "billing_type" "text", "status" "text", "start_date" timestamp with time zone, "end_date" timestamp with time zone, "payment_amount" numeric, "payment_status" "text", "payment_date" timestamp with time zone)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
@@ -509,7 +574,6 @@ ALTER TABLE "public"."customer_checkpoints" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."customers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "email" "text",
-    "merchant_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
@@ -580,6 +644,44 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."redeemed_checkpoint_rewards" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "customer_id" "uuid" NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "checkpoint_reward_id" "uuid" NOT NULL,
+    "checkpoint_step_id" "uuid" NOT NULL,
+    "redeemed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    CONSTRAINT "redeemed_checkpoint_rewards_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'completed'::"text", 'cancelled'::"text"])))
+);
+
+
+ALTER TABLE "public"."redeemed_checkpoint_rewards" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."redeemed_checkpoint_rewards" IS 'Traccia i premi dei checkpoint riscattati dai clienti';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."redeemed_rewards" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "customer_id" "uuid" NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "reward_id" "uuid" NOT NULL,
+    "points_spent" integer NOT NULL,
+    "redeemed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    CONSTRAINT "redeemed_rewards_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'completed'::"text", 'cancelled'::"text"])))
+);
+
+
+ALTER TABLE "public"."redeemed_rewards" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."redeemed_rewards" IS 'Traccia i rewards riscattati dai clienti';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."rewards" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "merchant_id" "uuid" NOT NULL,
@@ -642,12 +744,22 @@ ALTER TABLE ONLY "public"."cards"
 
 
 ALTER TABLE ONLY "public"."cards"
+    ADD CONSTRAINT "cards_customer_id_unique" UNIQUE ("customer_id");
+
+
+
+ALTER TABLE ONLY "public"."cards"
     ADD CONSTRAINT "cards_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."cards"
     ADD CONSTRAINT "cards_uid_key" UNIQUE ("uid");
+
+
+
+ALTER TABLE ONLY "public"."cards"
+    ADD CONSTRAINT "cards_uid_unique" UNIQUE ("uid");
 
 
 
@@ -701,6 +813,16 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."redeemed_checkpoint_rewards"
+    ADD CONSTRAINT "redeemed_checkpoint_rewards_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."redeemed_rewards"
+    ADD CONSTRAINT "redeemed_rewards_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."rewards"
     ADD CONSTRAINT "rewards_pkey" PRIMARY KEY ("id");
 
@@ -729,6 +851,14 @@ CREATE OR REPLACE TRIGGER "on_checkpoint_steps_updated" BEFORE UPDATE ON "public
 
 
 CREATE OR REPLACE TRIGGER "on_profiles_updated" BEFORE UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_redeemed_checkpoint_rewards_updated" BEFORE UPDATE ON "public"."redeemed_checkpoint_rewards" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_redeemed_rewards_updated" BEFORE UPDATE ON "public"."redeemed_rewards" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
 
 
 
@@ -795,11 +925,6 @@ ALTER TABLE ONLY "public"."customer_checkpoints"
 
 
 
-ALTER TABLE ONLY "public"."customers"
-    ADD CONSTRAINT "customers_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id");
-
-
-
 ALTER TABLE ONLY "public"."merchants"
     ADD CONSTRAINT "merchants_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -807,6 +932,41 @@ ALTER TABLE ONLY "public"."merchants"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_checkpoint_rewards"
+    ADD CONSTRAINT "redeemed_checkpoint_rewards_checkpoint_reward_id_fkey" FOREIGN KEY ("checkpoint_reward_id") REFERENCES "public"."checkpoint_rewards"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_checkpoint_rewards"
+    ADD CONSTRAINT "redeemed_checkpoint_rewards_checkpoint_step_id_fkey" FOREIGN KEY ("checkpoint_step_id") REFERENCES "public"."checkpoint_steps"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_checkpoint_rewards"
+    ADD CONSTRAINT "redeemed_checkpoint_rewards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_checkpoint_rewards"
+    ADD CONSTRAINT "redeemed_checkpoint_rewards_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_rewards"
+    ADD CONSTRAINT "redeemed_rewards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_rewards"
+    ADD CONSTRAINT "redeemed_rewards_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."redeemed_rewards"
+    ADD CONSTRAINT "redeemed_rewards_reward_id_fkey" FOREIGN KEY ("reward_id") REFERENCES "public"."rewards"("id") ON DELETE CASCADE;
 
 
 
@@ -825,12 +985,6 @@ ALTER TABLE ONLY "public"."transactions"
 
 
 
-CREATE POLICY "Merchant can insert" ON "public"."customers" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
-   FROM "public"."merchants"
-  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
-
-
-
 CREATE POLICY "Merchant can insert card_merchants" ON "public"."card_merchants" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -843,17 +997,20 @@ CREATE POLICY "Merchant can insert cards" ON "public"."cards" FOR INSERT WITH CH
 
 
 
+CREATE POLICY "Merchant can insert customers" ON "public"."customers" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM ("public"."cards" "c"
+     JOIN "public"."card_merchants" "cm" ON (("cm"."card_id" = "c"."id")))
+  WHERE (("c"."customer_id" = "customers"."id") AND ("cm"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"())))))));
+
+
+
 CREATE POLICY "Merchant can insert transactions" ON "public"."transactions" FOR INSERT WITH CHECK (("card_merchant_id" IN ( SELECT "card_merchants"."id"
    FROM "public"."card_merchants"
   WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
            FROM "public"."merchants"
           WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
-
-
-
-CREATE POLICY "Merchant can select" ON "public"."customers" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
-   FROM "public"."merchants"
-  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
 
@@ -869,17 +1026,20 @@ CREATE POLICY "Merchant can select cards" ON "public"."cards" FOR SELECT USING (
 
 
 
+CREATE POLICY "Merchant can select customers" ON "public"."customers" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM ("public"."cards" "c"
+     JOIN "public"."card_merchants" "cm" ON (("cm"."card_id" = "c"."id")))
+  WHERE (("c"."customer_id" = "customers"."id") AND ("cm"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"())))))));
+
+
+
 CREATE POLICY "Merchant can select transactions" ON "public"."transactions" FOR SELECT USING (("card_merchant_id" IN ( SELECT "card_merchants"."id"
    FROM "public"."card_merchants"
   WHERE ("card_merchants"."merchant_id" IN ( SELECT "merchants"."id"
            FROM "public"."merchants"
           WHERE ("merchants"."profile_id" = "auth"."uid"()))))));
-
-
-
-CREATE POLICY "Merchant can update" ON "public"."customers" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
-   FROM "public"."merchants"
-  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
 
 
@@ -892,6 +1052,15 @@ CREATE POLICY "Merchant can update card_merchants" ON "public"."card_merchants" 
 CREATE POLICY "Merchant can update cards" ON "public"."cards" FOR UPDATE USING (("issuing_merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchant can update customers" ON "public"."customers" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM ("public"."cards" "c"
+     JOIN "public"."card_merchants" "cm" ON (("cm"."card_id" = "c"."id")))
+  WHERE (("c"."customer_id" = "customers"."id") AND ("cm"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"())))))));
 
 
 
@@ -971,11 +1140,29 @@ CREATE POLICY "Merchants can delete their own rewards" ON "public"."rewards" FOR
 
 
 
+CREATE POLICY "Merchants can insert redeemed checkpoint rewards" ON "public"."redeemed_checkpoint_rewards" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can insert redeemed rewards" ON "public"."redeemed_rewards" FOR INSERT WITH CHECK (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can insert their own profile" ON "public"."merchants" FOR INSERT WITH CHECK (("auth"."uid"() = "profile_id"));
 
 
 
 CREATE POLICY "Merchants can update their customers' checkpoints" ON "public"."customer_checkpoints" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their customers' redeemed checkpoint rewar" ON "public"."redeemed_checkpoint_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -1009,7 +1196,19 @@ CREATE POLICY "Merchants can update their own rewards" ON "public"."rewards" FOR
 
 
 
+CREATE POLICY "Merchants can update their redeemed rewards" ON "public"."redeemed_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can view their customers' checkpoints" ON "public"."customer_checkpoints" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their customers' redeemed checkpoint rewards" ON "public"."redeemed_checkpoint_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -1043,6 +1242,12 @@ CREATE POLICY "Merchants can view their own rewards" ON "public"."rewards" FOR S
 
 
 
+CREATE POLICY "Merchants can view their redeemed rewards" ON "public"."redeemed_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Public profiles are viewable by everyone." ON "public"."profiles" FOR SELECT USING (true);
 
 
@@ -1067,16 +1272,13 @@ CREATE POLICY "Users can view their own subscriptions" ON "public"."subscription
 
 
 
-ALTER TABLE "public"."checkpoint_offers" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."checkpoint_rewards" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."checkpoint_steps" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."merchants" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."redeemed_checkpoint_rewards" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."redeemed_rewards" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -1283,6 +1485,18 @@ GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") T
 
 
 
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid", "p_card_uid" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid", "p_card_uid" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid", "p_card_uid" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_subscription_history"("profile_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_subscription_history"("profile_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_subscription_history"("profile_id" "uuid") TO "service_role";
@@ -1391,6 +1605,18 @@ GRANT ALL ON TABLE "public"."merchants" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."redeemed_checkpoint_rewards" TO "anon";
+GRANT ALL ON TABLE "public"."redeemed_checkpoint_rewards" TO "authenticated";
+GRANT ALL ON TABLE "public"."redeemed_checkpoint_rewards" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."redeemed_rewards" TO "anon";
+GRANT ALL ON TABLE "public"."redeemed_rewards" TO "authenticated";
+GRANT ALL ON TABLE "public"."redeemed_rewards" TO "service_role";
 
 
 

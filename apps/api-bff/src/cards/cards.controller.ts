@@ -5,6 +5,7 @@ import {
     Body,
     Req,
     BadRequestException,
+    Query,
   } from '@nestjs/common';
   import { SupabaseService } from '../supabase.service';
   
@@ -53,14 +54,42 @@ import {
     }
 
     @Get()
-    async getCards(@Req() req: any) {
+    async getCards(@Req() req: any, @Query('uid') uid?: string) {
       const merchantId = req.headers['x-merchant-id'];
+      console.log('Searching for card with UID:', uid);
+      console.log('Merchant ID:', merchantId);
 
-      // Ottieni tutte le carte
+      // Se viene fornito un UID, cerca quella carta specifica
+      if (uid) {
+        // Prima verifichiamo se la carta esiste senza filtri
+        const { data: allCards, error: allCardsError } = await this.supabase.client
+          .from('cards')
+          .select('*')
+          .eq('uid', uid);
+
+        console.log('All cards with this UID:', allCards);
+        console.log('All cards error:', allCardsError);
+
+        // Poi proviamo con il filtro merchant
+        const { data: card, error: cardError } = await this.supabase.client
+          .from('cards')
+          .select('*')
+          .eq('uid', uid)
+          .eq('issuing_merchant_id', merchantId);
+
+        console.log('Filtered cards:', card);
+        console.log('Filtered cards error:', cardError);
+
+        if (cardError) throw new BadRequestException('Card not found');
+        if (!card || card.length === 0) throw new BadRequestException('Card not found');
+        return card[0];
+      }
+
+      // Altrimenti ottieni tutte le carte
       const { data: cards, error: cardsError } = await this.supabase.client
         .from('cards')
         .select()
-        .eq('merchant_id', merchantId);
+        .eq('issuing_merchant_id', merchantId);
 
       if (cardsError) throw new BadRequestException(cardsError.message);
 
