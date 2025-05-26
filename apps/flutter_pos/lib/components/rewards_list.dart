@@ -3,6 +3,7 @@ import '../models/reward.dart';
 import '../models/card.dart';
 import '../services/reward_service.dart';
 import '../services/points_service.dart';
+import '../services/cache_service.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
@@ -40,7 +41,23 @@ class _RewardsListState extends State<RewardsList> {
 
   Future<void> _fetchRewards() async {
     try {
+      // Prima prova a recuperare i dati dalla cache
+      final cachedRewards = await CacheService.getCachedRewards(widget.merchantId);
+      
+      if (cachedRewards != null) {
+        if (!mounted) return;
+        setState(() {
+          _rewards = cachedRewards;
+          _isLoading = false;
+        });
+      }
+
+      // In ogni caso, aggiorna i dati dal server
       final rewards = await RewardService.fetchRewards(widget.merchantId);
+      
+      // Salva i nuovi dati in cache
+      await CacheService.cacheRewards(widget.merchantId, rewards);
+      
       if (!mounted) return;
       setState(() {
         _rewards = rewards;

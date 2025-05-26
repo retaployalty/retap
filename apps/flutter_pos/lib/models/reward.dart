@@ -1,6 +1,5 @@
 class Reward {
   final String id;
-  final String merchantId;
   final String name;
   final String description;
   final String imagePath;
@@ -9,7 +8,6 @@ class Reward {
 
   Reward({
     required this.id,
-    required this.merchantId,
     required this.name,
     required this.description,
     required this.imagePath,
@@ -20,12 +18,22 @@ class Reward {
   factory Reward.fromJson(Map<String, dynamic> json) {
     return Reward(
       id: json['id'],
-      merchantId: json['merchant_id'],
       name: json['name'],
       description: json['description'],
       imagePath: json['image_path'],
       priceCoins: json['price_coins'],
       isActive: json['is_active'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'image_path': imagePath,
+      'price_coins': priceCoins,
+      'is_active': isActive,
+    };
   }
 } 

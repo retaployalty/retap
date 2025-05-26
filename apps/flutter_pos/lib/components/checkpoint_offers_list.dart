@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/checkpoint_offer.dart';
+import '../models/checkpoint.dart';
 import '../services/checkpoint_service.dart';
+import '../services/cache_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -22,41 +23,53 @@ class CheckpointOffersList extends StatefulWidget {
 
 class _CheckpointOffersListState extends State<CheckpointOffersList> {
   bool _isLoading = true;
-  List<CheckpointOffer> _offers = [];
+  List<Checkpoint> _checkpoints = [];
   String? _error;
   Map<String, int> _currentSteps = {};
 
   @override
   void initState() {
     super.initState();
-    _fetchOffers();
+    _fetchCheckpoints();
   }
 
-  Future<void> _fetchOffers() async {
+  Future<void> _fetchCheckpoints() async {
     try {
-      final offers = await CheckpointService.fetchOffers(widget.merchantId);
-      if (!mounted) return;
+      // Prima prova a recuperare i dati dalla cache
+      final cachedCheckpoints = await CacheService.getCachedCheckpoints(widget.merchantId);
       
-      // Fetch current steps only if cardId is provided
-      if (widget.cardId != null) {
-        for (var offer in offers) {
-          final response = await http.get(
-            Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints?cardId=${widget.cardId}&offerId=${offer.id}'),
-            headers: {
-              'x-merchant-id': widget.merchantId,
-              'Content-Type': 'application/json',
-            },
-          );
-          
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body);
-            _currentSteps[offer.id] = data['current_step'] ?? 1;
-          }
-        }
+      if (cachedCheckpoints != null) {
+        if (!mounted) return;
+        setState(() {
+          _checkpoints = cachedCheckpoints;
+          _isLoading = false;
+        });
       }
 
+      // In ogni caso, aggiorna i dati dal server
+      final offers = await CheckpointService.fetchOffers(widget.merchantId);
+      final checkpoints = offers.map((offer) => Checkpoint(
+        id: offer.id,
+        merchantId: offer.merchantId,
+        name: offer.name,
+        description: offer.description,
+        totalSteps: offer.totalSteps,
+        steps: offer.steps?.map((step) => CheckpointStep(
+          id: step.id,
+          stepNumber: step.stepNumber,
+          totalSteps: step.totalSteps,
+          rewardId: step.rewardId,
+          rewardName: step.reward?.name,
+          rewardDescription: step.reward?.description,
+        )).toList(),
+      )).toList();
+      
+      // Salva i nuovi dati in cache
+      await CacheService.cacheCheckpoints(widget.merchantId, checkpoints);
+      
+      if (!mounted) return;
       setState(() {
-        _offers = offers;
+        _checkpoints = checkpoints;
         _isLoading = false;
       });
     } catch (e) {
@@ -72,6 +85,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     if (widget.cardId == null) return;
     
     try {
+      debugPrint('Advancing checkpoint for card ${widget.cardId} and offer $offerId');
       final response = await http.post(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/advance'),
         headers: {
@@ -84,8 +98,12 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         }),
       );
 
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body)[0];
+        debugPrint('Parsed response data: $data');
         setState(() {
           _currentSteps[offerId] = data['current_step'];
         });
@@ -98,9 +116,67 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               backgroundColor: Colors.green,
             ),
           );
+        } else {
+          // Show generic success message if no reward
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Checkpoint avanzato con successo!'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
+      } else {
+        throw Exception('Errore ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      debugPrint('Error advancing checkpoint: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rewindCheckpoint(String offerId) async {
+    if (widget.cardId == null) return;
+    
+    try {
+      debugPrint('Rewinding checkpoint for card ${widget.cardId} and offer $offerId');
+      final response = await http.post(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/rewind'),
+        headers: {
+          'x-merchant-id': widget.merchantId,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'cardId': widget.cardId,
+          'offerId': offerId,
+        }),
+      );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)[0];
+        debugPrint('Parsed response data: $data');
+        setState(() {
+          _currentSteps[offerId] = data['current_step'];
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Checkpoint arretrato con successo!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        throw Exception('Errore ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error rewinding checkpoint: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore: $e'),
@@ -120,7 +196,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
     }
 
-    if (_offers.isEmpty) {
+    if (_checkpoints.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -154,9 +230,9 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // List of offers with details
-            ..._offers.map((offer) {
-              final currentStep = _currentSteps[offer.id] ?? 1;
-              final progress = (currentStep / offer.totalSteps).clamp(0.0, 1.0);
+            ..._checkpoints.map((checkpoint) {
+              final currentStep = _currentSteps[checkpoint.id] ?? 1;
+              final progress = (currentStep / checkpoint.totalSteps).clamp(0.0, 1.0);
               
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,7 +253,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '$currentStep/${offer.totalSteps}',
+                        '$currentStep/${checkpoint.totalSteps}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -188,8 +264,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                   ),
                   const SizedBox(height: 8),
                   // Steps timeline
-                  if (offer.steps != null && offer.steps!.isNotEmpty)
-                    ...offer.steps!.map<Widget>((step) {
+                  if (checkpoint.steps != null && checkpoint.steps!.isNotEmpty)
+                    ...checkpoint.steps!.map<Widget>((step) {
                       final isCurrentStep = step.stepNumber == currentStep;
                       final isCompleted = step.stepNumber < currentStep;
                       
@@ -238,9 +314,9 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (step.reward != null) ...[
+                                  if (step.rewardName != null) ...[
                                     Text(
-                                      step.reward!.name,
+                                      step.rewardName!,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: isCurrentStep
@@ -249,10 +325,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                         fontSize: 13,
                                       ),
                                     ),
-                                    if (step.reward!.description.isNotEmpty) ...[
+                                    if (step.rewardDescription?.isNotEmpty ?? false) ...[
                                       const SizedBox(height: 2),
                                       Text(
-                                        step.reward!.description,
+                                        step.rewardDescription!,
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -282,23 +358,49 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
             const SizedBox(height: 16),
 
             // Large advance button at the bottom
-            if (widget.cardId != null && _offers.isNotEmpty)
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () => _advanceCheckpoint(_offers.first.id),
-                  icon: const Icon(Icons.add, size: 24),
-                  label: const Text(
-                    'Avanza Checkpoint',
-                    style: TextStyle(fontSize: 16),
+            if (widget.cardId != null && _checkpoints.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _rewindCheckpoint(_checkpoints.first.id),
+                        icon: const Icon(Icons.remove, size: 24),
+                        label: const Text(
+                          'Togli',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _advanceCheckpoint(_checkpoints.first.id),
+                        icon: const Icon(Icons.add, size: 24),
+                        label: const Text(
+                          'Avanza Checkpoint',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
           ],
         ),
