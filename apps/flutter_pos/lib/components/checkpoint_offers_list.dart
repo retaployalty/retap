@@ -85,6 +85,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     if (widget.cardId == null) return;
     
     try {
+      debugPrint('Advancing checkpoint for card ${widget.cardId} and offer $offerId');
       final response = await http.post(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/advance'),
         headers: {
@@ -97,8 +98,12 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         }),
       );
 
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body)[0];
+        debugPrint('Parsed response data: $data');
         setState(() {
           _currentSteps[offerId] = data['current_step'];
         });
@@ -111,9 +116,20 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               backgroundColor: Colors.green,
             ),
           );
+        } else {
+          // Show generic success message if no reward
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Checkpoint avanzato con successo!'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
+      } else {
+        throw Exception('Errore ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      debugPrint('Error advancing checkpoint: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore: $e'),

@@ -21,14 +21,31 @@ class POSHomePage extends StatefulWidget {
   State<POSHomePage> createState() => _POSHomePageState();
 }
 
-class _POSHomePageState extends State<POSHomePage> {
+class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   bool _isPolling = false;
   bool _isScreenOpen = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _isPolling = false;
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startPolling();
+    } else if (state == AppLifecycleState.paused) {
+      _isPolling = false;
+    }
   }
 
   Future<void> _startPolling() async {
@@ -60,6 +77,8 @@ class _POSHomePageState extends State<POSHomePage> {
               ),
             );
             _isScreenOpen = false;
+            // Riavvia il polling dopo il ritorno dalla schermata
+            _startPolling();
           }
 
           await FlutterNfcKit.finish();
@@ -214,12 +233,6 @@ class _POSHomePageState extends State<POSHomePage> {
       
       await FlutterNfcKit.finish(iosAlertMessage: 'Errore: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _isPolling = false;
-    super.dispose();
   }
 
   @override

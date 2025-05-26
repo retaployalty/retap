@@ -19,7 +19,8 @@ serve(async (req) => {
     )
 
     const url = new URL(req.url)
-    const path = url.pathname.split('/').pop()
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    const path = pathParts.slice(1).join('/')
     const params = Object.fromEntries(url.searchParams)
     const merchantId = req.headers.get('x-merchant-id')
 
@@ -440,6 +441,52 @@ serve(async (req) => {
       return new Response(
         JSON.stringify(data),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // POST /checkpoints/advance
+    if (path === 'checkpoints/advance' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { cardId, offerId } = await req.json()
+
+      // Get the customer ID from the card
+      const { data: card, error: cardError } = await supabaseClient
+        .from('cards')
+        .select('customer_id')
+        .eq('id', cardId)
+        .single()
+
+      if (cardError || !card) {
+        return new Response(
+          JSON.stringify({ error: 'Card not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Call the advance_customer_checkpoint function
+      const { data, error } = await supabaseClient
+        .rpc('advance_customer_checkpoint', {
+          p_customer_id: card.customer_id,
+          p_merchant_id: merchantId,
+          p_offer_id: offerId
+        })
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify(data),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
