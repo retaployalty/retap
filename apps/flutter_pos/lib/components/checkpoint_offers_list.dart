@@ -139,6 +139,53 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     }
   }
 
+  Future<void> _rewindCheckpoint(String offerId) async {
+    if (widget.cardId == null) return;
+    
+    try {
+      debugPrint('Rewinding checkpoint for card ${widget.cardId} and offer $offerId');
+      final response = await http.post(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/rewind'),
+        headers: {
+          'x-merchant-id': widget.merchantId,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'cardId': widget.cardId,
+          'offerId': offerId,
+        }),
+      );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)[0];
+        debugPrint('Parsed response data: $data');
+        setState(() {
+          _currentSteps[offerId] = data['current_step'];
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Checkpoint arretrato con successo!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        throw Exception('Errore ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error rewinding checkpoint: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -312,22 +359,48 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
             // Large advance button at the bottom
             if (widget.cardId != null && _checkpoints.isNotEmpty)
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () => _advanceCheckpoint(_checkpoints.first.id),
-                  icon: const Icon(Icons.add, size: 24),
-                  label: const Text(
-                    'Avanza Checkpoint',
-                    style: TextStyle(fontSize: 16),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _rewindCheckpoint(_checkpoints.first.id),
+                        icon: const Icon(Icons.remove, size: 24),
+                        label: const Text(
+                          'Togli',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _advanceCheckpoint(_checkpoints.first.id),
+                        icon: const Icon(Icons.add, size: 24),
+                        label: const Text(
+                          'Avanza Checkpoint',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
           ],
         ),

@@ -490,6 +490,91 @@ serve(async (req) => {
       )
     }
 
+    // POST /checkpoints/rewind
+    if (path === 'checkpoints/rewind' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { cardId, offerId } = await req.json()
+
+      // Get the customer ID from the card
+      const { data: card, error: cardError } = await supabaseClient
+        .from('cards')
+        .select('customer_id')
+        .eq('id', cardId)
+        .single()
+
+      if (cardError || !card) {
+        return new Response(
+          JSON.stringify({ error: 'Card not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Get current step and total steps
+      const { data: checkpoint, error: checkpointError } = await supabaseClient
+        .from('customer_checkpoints')
+        .select('current_step')
+        .eq('customer_id', card.customer_id)
+        .eq('merchant_id', merchantId)
+        .single()
+
+      if (checkpointError) {
+        return new Response(
+          JSON.stringify({ error: 'Checkpoint not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Get total steps from the offer
+      const { data: offer, error: offerError } = await supabaseClient
+        .from('checkpoint_offers')
+        .select('total_steps')
+        .eq('id', offerId)
+        .single()
+
+      if (offerError) {
+        return new Response(
+          JSON.stringify({ error: 'Offer not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Calculate previous step
+      let previousStep = checkpoint.current_step - 1
+      if (previousStep < 1) {
+        previousStep = offer.total_steps
+      }
+
+      // Update customer checkpoint
+      const { data: updatedCheckpoint, error: updateError } = await supabaseClient
+        .from('customer_checkpoints')
+        .update({ current_step: previousStep })
+        .eq('customer_id', card.customer_id)
+        .eq('merchant_id', merchantId)
+        .select()
+        .single()
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: updateError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify([{
+          current_step: previousStep,
+          total_steps: offer.total_steps
+        }]),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

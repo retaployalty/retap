@@ -221,13 +221,6 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_card != null)
-                                      CheckpointOffersList(
-                                        merchantId: widget.merchantId,
-                                        cardId: _card!.id,
-                                      ),
-                                    const SizedBox(height: 12),
-
                                     Card(
                                       elevation: 2,
                                       shape: RoundedRectangleBorder(
@@ -352,6 +345,13 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(height: 12),
+
+                                    if (_card != null)
+                                      CheckpointOffersList(
+                                        merchantId: widget.merchantId,
+                                        cardId: _card!.id,
+                                      ),
                                     const SizedBox(height: 12),
 
                                     if (_card != null)
