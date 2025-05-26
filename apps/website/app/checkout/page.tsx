@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -16,21 +16,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from '@supabase/supabase-js';
+import { Switch } from "@/components/ui/switch";
 
 const features = [
   {
-    title: "Carte NFC Illimitate",
-    description: "Emetti quante carte fedeltà vuoi per i tuoi clienti",
+    title: "Unlimited NFC Cards",
+    description: "Issue as many loyalty cards as you want for your customers",
     icon: CreditCard,
   },
   {
-    title: "Gestione Punti",
-    description: "Personalizza i tuoi programmi fedeltà con punti e premi",
+    title: "Points Management",
+    description: "Customize your loyalty programs with points and rewards",
     icon: Zap,
   },
   {
-    title: "Sicurezza Garantita",
-    description: "I dati dei tuoi clienti sono protetti e crittografati",
+    title: "Guaranteed Security",
+    description: "Your customers' data is protected and encrypted",
     icon: Shield,
   },
 ];
@@ -47,6 +48,21 @@ const DialogDescription = dynamic(() => import('@/components/ui/dialog').then(mo
 
 // Chiave per il localStorage
 const FORM_STORAGE_KEY = 'retap_checkout_form';
+
+// Inserisco la costante per il piano unico in inglese
+const SUBSCRIPTION = {
+  name: "SINGLE SUBSCRIPTION",
+  monthlyPrice: 49,
+  activationFee: 99,
+  annualDiscount: 0.10, // 10%
+  features: [
+    "Up to 1000 cards/month",
+    "Full dashboard",
+    "Advanced statistics",
+    "Priority support",
+    "API access"
+  ]
+};
 
 export default function CheckoutWrapper() {
   return (
@@ -256,139 +272,145 @@ function CheckoutPage() {
   }, [billingCycle]);
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <div className="container max-w-7xl mx-auto py-12 px-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* Colonna sinistra - Caratteristiche */}
-        <div className="space-y-8">
+        <div className="space-y-10">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight">ReTap Business</h1>
             <p className="text-lg text-muted-foreground">
-              La soluzione completa per la gestione della tua fedeltà clienti
+              The complete solution for managing your customer loyalty
             </p>
           </div>
 
           <div className="space-y-6">
             {features.map((feature) => (
-              <div key={feature.title} className="flex items-start gap-4 p-4 rounded-lg border bg-card">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <feature.icon className="w-6 h-6 text-primary" />
+              <div key={feature.title} className="flex items-start gap-4 p-5 rounded-2xl border bg-card shadow-sm">
+                <div className="p-3 bg-primary/10 rounded-xl">
+                  <feature.icon className="w-7 h-7 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <h3 className="font-semibold text-lg mb-1">{feature.title}</h3>
+                  <p className="text-muted-foreground text-base">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <Card className="border-2">
+          <Card className="border-2 rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="text-xl">Incluso nel piano</CardTitle>
+              <CardTitle className="text-xl">Included in the plan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Dashboard personalizzata</span>
+                <span className="text-base">Custom dashboard</span>
               </div>
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Supporto tecnico dedicato</span>
+                <span className="text-base">Dedicated technical support</span>
               </div>
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Analisi e reportistica</span>
+                <span className="text-base">Analytics and reporting</span>
               </div>
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Integrazione POS</span>
+                <span className="text-base">POS integration</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Colonna destra - Step multipli */}
-        <Card className="border-2">
-          <CardHeader className="space-y-1.5">
-            <CardTitle className="text-2xl">Completa il tuo abbonamento</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {step === 1 && "Scegli il piano e procedi"}
-              {step === 2 && "Inserisci i dati di spedizione"}
+        <Card className="border-2 rounded-2xl shadow-lg">
+          <CardHeader className="space-y-1.5 pb-2">
+            <CardTitle className="text-2xl text-center">Complete your subscription</CardTitle>
+            <p className="text-sm text-muted-foreground text-center">
+              {step === 1 && "Choose your plan and continue"}
+              {step === 2 && "Enter your billing and shipping details"}
             </p>
           </CardHeader>
           <CardContent>
             {step === 1 && (
               <div className="space-y-8">
-                <div className="space-y-4">
-                  <Label className="text-base">Piano di abbonamento</Label>
-                  <RadioGroup
-                    value={billingCycle}
-                    onValueChange={(value) => setBillingCycle(value as "monthly" | "yearly")}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <div className="h-full">
-                      <RadioGroupItem
-                        value="monthly"
-                        id="monthly"
-                        className="peer sr-only"
-                      />
-                      <Label
-                        htmlFor="monthly"
-                        className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-6 min-h-[200px] min-w-[220px] h-full w-full hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
-                      >
-                        <div className="text-lg font-semibold">Mensile</div>
-                        <div className="text-3xl font-bold my-2">$49</div>
-                        <div className="text-sm text-muted-foreground">/mese</div>
-                      </Label>
-                    </div>
-                    <div className="h-full">
-                      <RadioGroupItem
-                        value="yearly"
-                        id="yearly"
-                        className="peer sr-only"
-                      />
-                      <Label
-                        htmlFor="yearly"
-                        className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-6 min-h-[200px] min-w-[220px] h-full w-full hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
-                      >
-                        <div className="text-lg font-semibold">Annuale</div>
-                        <div className="text-3xl font-bold my-2">$530</div>
-                        <div className="text-sm text-muted-foreground">-10%</div>
-                        <div className="text-xs text-muted-foreground mt-1">Senza fee di attivazione</div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
-                  {billingCycle === "monthly" && (
-                    <div className="flex justify-between text-sm">
-                      <span>Fee di attivazione (solo il primo mese)</span>
-                      <span className="font-medium">$99</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span>Abbonamento {billingCycle === "monthly" ? "mensile" : "annuale"}</span>
-                    <span className="font-medium">${billingCycle === "monthly" ? "49" : "530"}</span>
-                  </div>
-                  <div className="border-t pt-3 flex justify-between text-base font-semibold">
-                    <span>Totale</span>
-                    <span>${billingCycle === "monthly" ? "148" : "530"}</span>
+                <div className="text-center mb-4">
+                  <h2 className="text-2xl font-bold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+                    Pricing
+                  </h2>
+                  <p className="text-base text-muted-foreground mb-4">
+                    One simple, transparent subscription
+                  </p>
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <Label htmlFor="billing-toggle" className="text-sm font-medium">Monthly</Label>
+                    <Switch
+                      id="billing-toggle"
+                      checked={billingCycle === 'yearly'}
+                      onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+                    />
+                    <Label htmlFor="billing-toggle" className="text-sm font-medium">
+                      Annual
+                    </Label>
                   </div>
                 </div>
-                <Button
-                  className="w-full h-12 text-base"
-                  onClick={() => setStep(2)}
-                >
-                  Procedi al pagamento
-                </Button>
+                <div className="flex justify-center">
+                  <Card className="max-w-md w-full border-primary shadow-md rounded-2xl">
+                    <CardHeader>
+                      <CardTitle className="text-2xl text-center">{SUBSCRIPTION.name}</CardTitle>
+                      <CardDescription className="text-center">For all businesses, big and small</CardDescription>
+                      <div className="mt-4 flex flex-col items-center">
+                        <span className="text-5xl font-bold mb-1">
+                          {billingCycle === 'yearly' ? `${Math.round(SUBSCRIPTION.monthlyPrice * 12 * (1 - SUBSCRIPTION.annualDiscount))}€` : `${SUBSCRIPTION.monthlyPrice}€`}
+                        </span>
+                        <span className="text-muted-foreground text-lg">
+                          /{billingCycle === 'yearly' ? "year" : "month"}
+                        </span>
+                      </div>
+                      {billingCycle === 'monthly' && (
+                        <p className="text-sm text-muted-foreground mt-2 text-center">
+                          + {SUBSCRIPTION.activationFee}€ one-time activation fee
+                        </p>
+                      )}
+                      {billingCycle === 'yearly' && (
+                        <p className="text-sm text-primary mt-2 text-center">
+                          10% discount and no activation fee
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 mb-4">
+                        {SUBSCRIPTION.features.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary" />
+                            <span className="text-sm">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="flex justify-center">
+                        <div className="bg-green-50 text-green-700 text-sm font-bold rounded-lg px-4 py-2 mb-4 shadow-sm border border-green-200">
+                          30-day money-back guarantee. No questions asked.
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <Button className="w-full h-12 text-base mt-2" variant="default" onClick={() => setStep(2)}>
+                        Continue
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </div>
+                <div className="text-center mt-8 text-muted-foreground">
+                  <p>ReTap is always free for end customers.</p>
+                </div>
               </div>
             )}
             {step === 2 && (
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Sezione Anagrafica */}
+                {/* Personal Info Section */}
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="title">Titolo</Label>
+                      <Label htmlFor="title">Title</Label>
                       <select
                         id="title"
                         name="title"
@@ -397,45 +419,43 @@ function CheckoutPage() {
                         className="w-full border rounded px-3 py-2"
                         required
                       >
-                        <option value="">Non specificato</option>
-                        <option value="Mr">Sig.</option>
-                        <option value="Ms">Sig.ra</option>
+                        <option value="">Not specified</option>
+                        <option value="Mr">Mr</option>
+                        <option value="Ms">Ms</option>
                       </select>
                     </div>
                     <div>
-                      <Label htmlFor="first_name">Nome</Label>
+                      <Label htmlFor="first_name">First name</Label>
                       <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} required />
                     </div>
                     <div>
-                      <Label htmlFor="last_name">Cognome</Label>
+                      <Label htmlFor="last_name">Last name</Label>
                       <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} required />
                     </div>
                   </div>
                 </div>
-
-                {/* Sezione Indirizzo */}
+                {/* Address Section */}
                 <div className="space-y-4">
-                  <Label className="font-semibold">Indirizzo</Label>
-                  <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Via e numero civico" required />
-                  <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Appartamento, interno, codice accesso edificio (facoltativo)" />
-                  <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Altre info sull'indirizzo" />
+                  <Label className="font-semibold">Address</Label>
+                  <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Street and number" required />
+                  <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Apartment, suite, building code (optional)" />
+                  <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Other address info" />
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="zip_code">CAP</Label>
+                      <Label htmlFor="zip_code">ZIP code</Label>
                       <Input id="zip_code" name="zip_code" value={form.zip_code} onChange={handleChange} required />
                     </div>
                     <div>
-                      <Label htmlFor="city">Città</Label>
+                      <Label htmlFor="city">City</Label>
                       <Input id="city" name="city" value={form.city} onChange={handleChange} required />
                     </div>
                     <div>
-                      <Label htmlFor="country">Paese</Label>
+                      <Label htmlFor="country">Country</Label>
                       <Input id="country" name="country" value={form.country} onChange={handleChange} required />
                     </div>
                   </div>
                 </div>
-
-                {/* Sezione Azienda */}
+                {/* Company Section */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <input
@@ -446,35 +466,33 @@ function CheckoutPage() {
                       onChange={handleChange}
                       className="accent-primary"
                     />
-                    <Label htmlFor="is_company">Questo è un indirizzo aziendale</Label>
+                    <Label htmlFor="is_company">This is a company address</Label>
                   </div>
                   {form.is_company && (
                     <div>
-                      <Label htmlFor="company_name">Nome società</Label>
+                      <Label htmlFor="company_name">Company name</Label>
                       <Input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} required={form.is_company} />
                     </div>
                   )}
                 </div>
-
-                {/* Sezione Contatti */}
+                {/* Contact Section */}
                 <div className="space-y-2">
-                  <Label className="font-semibold">Quali sono le tue informazioni di contatto?</Label>
+                  <Label className="font-semibold">Contact information</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Numero di cellulare</Label>
-                      <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Numero di cellulare" required />
+                      <Label htmlFor="phone">Phone number</Label>
+                      <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Phone number" required />
                     </div>
                   </div>
                 </div>
-
-                {/* Sezione Metodo di Pagamento */}
+                {/* Payment Method Section */}
                 {billingCycle === 'yearly' && (
                   <div className="space-y-4">
-                    <Label className="font-semibold">Metodo di pagamento</Label>
+                    <Label className="font-semibold">Payment method</Label>
                     <RadioGroup
                       value={paymentMethod}
                       onValueChange={(value) => setPaymentMethod(value as 'card' | 'bank')}
@@ -491,7 +509,7 @@ function CheckoutPage() {
                           className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
                         >
                           <CreditCard className="w-6 h-6 mb-2" />
-                          <div className="text-sm font-medium">Carta di credito</div>
+                          <div className="text-sm font-medium">Credit card</div>
                         </Label>
                       </div>
                       <div>
@@ -507,17 +525,16 @@ function CheckoutPage() {
                           <svg className="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3" />
                           </svg>
-                          <div className="text-sm font-medium">Bonifico bancario</div>
+                          <div className="text-sm font-medium">Bank transfer</div>
                         </Label>
                       </div>
                     </RadioGroup>
-
                     {paymentMethod === 'bank' && (
                       <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                        <h4 className="font-semibold">Dettagli per il bonifico bancario</h4>
+                        <h4 className="font-semibold">Bank transfer details</h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Intestatario:</span>
+                            <span className="text-muted-foreground">Beneficiary:</span>
                             <span className="font-medium">{bankDetails.beneficiary}</span>
                           </div>
                           <div className="flex justify-between">
@@ -529,29 +546,28 @@ function CheckoutPage() {
                             <span className="font-medium">{bankDetails.swift}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Importo:</span>
+                            <span className="text-muted-foreground">Amount:</span>
                             <span className="font-medium">€{bankDetails.amount}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Causale:</span>
+                            <span className="text-muted-foreground">Reason:</span>
                             <span className="font-medium">{bankDetails.reason}</span>
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground mt-4">
-                          Una volta effettuato il bonifico, riceverai una email di conferma con le credenziali di accesso.
+                          Once the transfer is complete, you will receive a confirmation email with your access credentials.
                         </p>
                       </div>
                     )}
                   </div>
                 )}
-
-                {/* Bottone submit */}
+                {/* Submit Button */}
                 <Button
                   type="submit"
                   className="w-full h-12 text-base"
                   disabled={loading}
                 >
-                  {loading ? "Elaborazione..." : paymentMethod === 'bank' ? "Conferma e procedi" : "Continua"}
+                  {loading ? "Processing..." : paymentMethod === 'bank' ? "Confirm and proceed" : "Continue"}
                 </Button>
               </form>
             )}
@@ -564,38 +580,38 @@ function CheckoutPage() {
       <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
         <DialogContent className="sm:max-w-md p-6">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-bold text-center mb-1">Grazie per il tuo ordine!</DialogTitle>
+            <DialogTitle className="text-3xl font-bold text-center mb-1">Thank you for your order!</DialogTitle>
             <DialogDescription className="text-center text-base mb-4">
-              Abbiamo ricevuto la tua richiesta di abbonamento con pagamento tramite bonifico bancario.
+              We have received your subscription request with bank transfer payment.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
             <div>
-              <h4 className="font-semibold text-lg mb-2">Prossimi passi</h4>
+              <h4 className="font-semibold text-lg mb-2">Next steps</h4>
               <ol className="list-decimal list-inside space-y-1 text-base text-muted-foreground">
-                <li>Effettua il bonifico bancario utilizzando i dati forniti</li>
-                <li>Invia la ricevuta del bonifico a <span className='font-medium text-primary'>payments@retap.com</span> oppure su WhatsApp</li>
+                <li>Make the bank transfer using the details provided</li>
+                <li>Send the payment receipt to <span className='font-medium text-primary'>payments@retap.com</span> or via WhatsApp</li>
               </ol>
             </div>
             <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-5 flex flex-col items-center shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <MessageCircle className="w-7 h-7 text-green-600" />
-                <span className="font-semibold text-green-700 text-lg">Configura il tuo business</span>
+                <span className="font-semibold text-green-700 text-lg">Set up your business</span>
               </div>
-              <p className="text-center text-green-900 mb-4 text-base">Prenota la call iniziale di 30 minuti su WhatsApp: ti aiutiamo a configurare e usare ReTap senza pensieri.</p>
+              <p className="text-center text-green-900 mb-4 text-base">Book your 30-minute onboarding call on WhatsApp: we'll help you configure and use ReTap with ease.</p>
               <a 
-                href="https://wa.me/390212345678?text=Ciao,%20vorrei%20prenotare%20la%20call%20di%20setup%20per%20ReTap" 
+                href="https://wa.me/390212345678?text=Hi,%20I%20would%20like%20to%20book%20the%20setup%20call%20for%20ReTap" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full px-4 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg shadow-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 mb-2"
               >
                 <MessageCircle className="w-6 h-6" />
-                Scrivici su WhatsApp
+                Chat with us on WhatsApp
               </a>
               <span className="text-green-700 font-bold text-base select-all mb-1">+39 02 12345678</span>
             </div>
             <div className="text-center text-sm text-muted-foreground mt-2">
-              Il tuo account sarà attivato entro 24 ore lavorative dalla ricezione del pagamento.
+              Your account will be activated within 24 business hours after payment is received.
             </div>
           </div>
           <div className="flex justify-center mt-5">
@@ -603,7 +619,7 @@ function CheckoutPage() {
               onClick={() => router.push('/dashboard')}
               className="w-full h-12 text-base"
             >
-              Vai alla Dashboard
+              Go to Dashboard
             </Button>
           </div>
         </DialogContent>

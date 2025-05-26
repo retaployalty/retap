@@ -21,6 +21,7 @@ export default function BusinessProfilePage() {
     date: "",
     name: "",
     description: "",
+    isRecurring: false,
   });
   const [profile, setProfile] = useState<BusinessProfile>({
     name: "",
@@ -91,9 +92,9 @@ export default function BusinessProfilePage() {
   };
 
   const handleAddClosure = () => {
-    if (!newClosure.date || !newClosure.name) {
-      toast.error("Error", {
-        description: "Please fill in all required fields",
+    if (!newClosure.name) {
+      toast.error("Errore", {
+        description: "Inserisci almeno il nome della chiusura",
       });
       return;
     }
@@ -113,10 +114,11 @@ export default function BusinessProfilePage() {
       date: "",
       name: "",
       description: "",
+      isRecurring: false,
     });
 
-    toast.success("Closure added", {
-      description: "New annual closure has been added",
+    toast.success("Chiusura aggiunta", {
+      description: "Nuova chiusura annuale è stata aggiunta",
     });
   };
 
@@ -134,7 +136,6 @@ export default function BusinessProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Recupera l'id del merchant associato all'utente
       const { data: merchant, error: merchantError } = await supabase
         .from('merchants')
         .select('id')
@@ -455,84 +456,100 @@ export default function BusinessProfilePage() {
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
-                <CardTitle className="text-base">Annual Closures</CardTitle>
-                <CardDescription className="text-xs">Add dates when your business will be closed</CardDescription>
+                <CardTitle className="text-base">Chiusure Annuali</CardTitle>
+                <CardDescription className="text-xs">Aggiungi le date in cui il negozio sarà chiuso</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Date</Label>
+            <div className="space-y-4">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="closure-name">Nome della Chiusura</Label>
                   <Input
-                    type="date"
-                    value={newClosure.date}
-                    onChange={(e) => setNewClosure(prev => ({ ...prev, date: e.target.value }))}
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Name</Label>
-                  <Input
-                    placeholder="e.g., Christmas Day"
+                    id="closure-name"
                     value={newClosure.name}
                     onChange={(e) => setNewClosure(prev => ({ ...prev, name: e.target.value }))}
-                    className="h-8"
+                    placeholder="es. Natale, Pasqua, etc."
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="recurring"
+                      checked={newClosure.isRecurring}
+                      onCheckedChange={(checked) => setNewClosure(prev => ({ ...prev, isRecurring: checked }))}
+                    />
+                    <Label htmlFor="recurring">Chiusura ricorrente (ogni anno)</Label>
+                  </div>
+                  <Input
+                    id="closure-date"
+                    type="date"
+                    value={newClosure.isRecurring && newClosure.date 
+                      ? `2000-${newClosure.date}` // Aggiungiamo un anno fittizio per il campo date
+                      : newClosure.date || ""}
+                    onChange={(e) => {
+                      const date = e.target.value;
+                      if (newClosure.isRecurring && date) {
+                        // Se è ricorrente, prendiamo solo mese e giorno
+                        const [_, month, day] = date.split('-');
+                        setNewClosure(prev => ({ ...prev, date: `${month}-${day}` }));
+                      } else {
+                        setNewClosure(prev => ({ ...prev, date }));
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {newClosure.isRecurring 
+                      ? "Seleziona il giorno e il mese per la chiusura ricorrente (es. 25 dicembre per Natale)"
+                      : "Seleziona la data specifica per la chiusura"}
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="closure-description">Descrizione (opzionale)</Label>
+                  <Textarea
+                    id="closure-description"
+                    value={newClosure.description || ""}
+                    onChange={(e) => setNewClosure(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Aggiungi dettagli sulla chiusura"
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Description (Optional)</Label>
-                <Textarea
-                  placeholder="Add any additional details about this closure"
-                  value={newClosure.description}
-                  onChange={(e) => setNewClosure(prev => ({ ...prev, description: e.target.value }))}
-                  className="h-16 text-sm"
-                />
-              </div>
-              <Button 
-                onClick={handleAddClosure}
-                className="h-8"
-              >
-                Add Closure
-              </Button>
+              <Button onClick={handleAddClosure}>Aggiungi Chiusura</Button>
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-              <Label className="text-sm">Added Closures</Label>
+              <Label className="text-sm">Chiusure Aggiunte</Label>
               {profile.annualClosures.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No closures added yet</p>
+                <p className="text-xs text-muted-foreground">Nessuna chiusura aggiunta</p>
               ) : (
                 <div className="space-y-2">
                   {profile.annualClosures.map((closure) => (
-                    <div 
-                      key={closure.id}
-                      className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{closure.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(closure.date).toLocaleDateString('en-US', { 
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                        {closure.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{closure.description}</p>
-                        )}
+                    <div key={closure.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{closure.name}</p>
+                          {closure.date && (
+                            <p className="text-xs text-muted-foreground">
+                              {closure.isRecurring 
+                                ? `Ogni anno il ${new Date(`2000-${closure.date}`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`
+                                : new Date(closure.date).toLocaleDateString('it-IT')}
+                            </p>
+                          )}
+                          {closure.description && (
+                            <p className="text-xs text-muted-foreground">{closure.description}</p>
+                          )}
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveClosure(closure.id)}
-                        className="h-7 w-7"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
@@ -549,16 +566,16 @@ export default function BusinessProfilePage() {
           className="h-9 px-6"
           onClick={() => router.back()}
         >
-          Cancel
+          Annulla
         </Button>
         <Button 
           className="h-9 px-6"
           onClick={handleSave}
           disabled={isLoading}
         >
-          {isLoading ? "Saving..." : "Save Profile"}
+          {isLoading ? "Salvataggio..." : "Salva Profilo"}
         </Button>
       </div>
     </div>
   );
-} 
+}

@@ -12,8 +12,8 @@ export function Navbar() {
         </Link>
         
         <div className="hidden md:flex items-center space-x-8">
-          <Link href="#overview" className="text-gray-600 hover:text-primary transition-colors">
-            Overview
+          <Link href="#home" className="text-gray-600 hover:text-primary transition-colors">
+            Home
           </Link>
           <Link href="#features" className="text-gray-600 hover:text-primary transition-colors">
             Features
@@ -24,10 +24,13 @@ export function Navbar() {
           <Link href="#pricing" className="text-gray-600 hover:text-primary transition-colors">
             Pricing
           </Link>
+          <Link href="#faq" className="text-gray-600 hover:text-primary transition-colors">
+            FAQ
+          </Link>
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button asChild variant="default">
+          <Button asChild variant="default" className="h-12 px-5 rounded-lg font-medium text-base shadow flex items-center justify-center">
             <Link href="/auth" target="_blank" rel="noopener noreferrer">Get Started</Link>
           </Button>
         </div>

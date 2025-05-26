@@ -8,9 +8,10 @@ export type BusinessHours = {
 
 export type AnnualClosure = {
   id: string;
-  date: string;
+  date?: string;
   name: string;
   description?: string;
+  isRecurring?: boolean;
 };
 
 export type BusinessProfile = {
