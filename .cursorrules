@@ -46,3 +46,6 @@ retap/
 ├─ turborepo.json                # build/lint/test pipeline
 └─ README.md
 
+Istruzioni per il progetto:
+
+- per ogni modifica al database, aggiungi una migration diversa in infra/supabase/migrations

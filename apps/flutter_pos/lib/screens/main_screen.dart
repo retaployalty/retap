@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 import 'pos_home_page.dart';
 import 'settings_screen.dart';
+import '../components/bottom_nav_bar.dart';
+import 'offers_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String merchantId;
@@ -29,6 +33,10 @@ class _MainScreenState extends State<MainScreen> {
         merchantId: widget.merchantId,
         merchantName: widget.merchantName,
       ),
+      OffersScreen(
+        merchantId: widget.merchantId,
+        merchantName: widget.merchantName,
+      ),
       const SettingsScreen(),
     ];
   }
@@ -42,20 +50,25 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.credit_card),
-            label: 'POS',
+            icon: Icon(Icons.nfc),
+            label: 'NFC',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Offerte',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Impostazioni',
           ),
         ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
       ),
     );
   }
