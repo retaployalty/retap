@@ -6,6 +6,25 @@ import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
+// Business categories with their corresponding icons
+const Map<String, IconData> BUSINESS_CATEGORIES = {
+  'Restaurant': Icons.restaurant,
+  'Pizzeria': Icons.local_pizza,
+  'Bar': Icons.local_bar,
+  'Cafe': Icons.coffee,
+  'Bakery': Icons.cake,
+  'Ice Cream Shop': Icons.icecream,
+  'Hair Salon': Icons.content_cut,
+  'Beauty Salon': Icons.face,
+  'Spa': Icons.spa,
+  'Gym': Icons.fitness_center,
+  'Clothing Store': Icons.checkroom,
+  'Shoe Store': Icons.shopping_bag,
+  'Jewelry Store': Icons.diamond,
+  'Bookstore': Icons.book,
+  'Other': Icons.store,
+};
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   List<dynamic> _merchantBalances = [];
   String? cardId;
+  String? _selectedCategory;
   static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
@@ -80,20 +100,46 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await http.get(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
       );
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
       if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero dei punti');
+        throw Exception('Errore nel recupero dei punti: ${response.statusCode} - ${response.body}');
       }
+      
       final data = jsonDecode(response.body);
+      print('API Response: $data'); // Debug log
+      
       setState(() {
         _merchantBalances = (data['balances'] ?? []).where((b) => ((b['balance'] ?? 0) is int && (b['balance'] ?? 0) > 0)).toList();
+        print('Filtered Balances: $_merchantBalances'); // Debug log
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading balances: $e'); // Debug log
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
     }
+  }
+
+  List<dynamic> get _filteredMerchantBalances {
+    if (_selectedCategory == null) return _merchantBalances;
+    
+    // Debug log
+    print('Selected Category: $_selectedCategory');
+    print('Filtering merchants...');
+    
+    final filtered = _merchantBalances.where((business) {
+      final businessCategory = business['industry'];
+      print('Business: ${business['merchant_name']}, Category: $businessCategory'); // Debug log
+      return businessCategory == _selectedCategory;
+    }).toList();
+    
+    print('Filtered Results: $filtered'); // Debug log
+    return filtered;
   }
 
   @override
@@ -134,13 +180,99 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            // Category filters
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: BUSINESS_CATEGORIES.length,
+                itemBuilder: (context, index) {
+                  final category = BUSINESS_CATEGORIES.keys.elementAt(index);
+                  final icon = BUSINESS_CATEGORIES[category]!;
+                  final isSelected = category == _selectedCategory;
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = isSelected ? null : category;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 80,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.07),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              icon,
+                              color: isSelected ? Colors.white : AppColors.primary,
+                              size: 28,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              category,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : AppColors.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-                      : _merchantBalances.isEmpty
-                          ? const Center(child: Text('Nessun business visitato'))
+                      : _filteredMerchantBalances.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _selectedCategory != null 
+                                        ? 'Nessun business trovato nella categoria ${_selectedCategory}'
+                                        : 'Nessun business visitato',
+                                    style: const TextStyle(color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_selectedCategory != null) ...[
+                                    const SizedBox(height: 16),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedCategory = null;
+                                        });
+                                      },
+                                      child: const Text('Rimuovi filtro'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            )
                           : Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               child: GridView.builder(
@@ -150,9 +282,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   crossAxisSpacing: 24,
                                   childAspectRatio: 0.75,
                                 ),
-                                itemCount: _merchantBalances.length,
+                                itemCount: _filteredMerchantBalances.length,
                                 itemBuilder: (context, index) {
-                                  final business = _merchantBalances[index];
+                                  final business = _filteredMerchantBalances[index];
                                   final imageUrl = _imageUrls[index % _imageUrls.length];
                                   return AnimatedScale(
                                     scale: 1.0,
