@@ -6,6 +6,7 @@ import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../components/category_filters.dart';
+import '../components/business_card.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -230,83 +231,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                 itemCount: _filteredMerchantBalances.length,
                                 itemBuilder: (context, index) {
                                   final business = _filteredMerchantBalances[index];
-                                  final imageUrl = _imageUrls[index % _imageUrls.length];
-                                  return AnimatedScale(
-                                    scale: 1.0,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(24),
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => BusinessDetailScreen(
-                                              businessName: business['merchant_name'] ?? '',
-                                              points: business['balance'] ?? 0,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(24),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.07),
-                                              blurRadius: 16,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              width: 90,
-                                              height: 90,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: AppColors.primary.withOpacity(0.08),
-                                                border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 2),
-                                              ),
-                                              child: ClipOval(
-                                                child: Image.network(
-                                                  imageUrl,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.store, color: AppColors.primary, size: 48),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 18),
-                                            Text(
-                                              business['merchant_name'] ?? '',
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 20,
-                                                color: AppColors.primary,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primary.withOpacity(0.10),
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                'Punti: ${business['balance']}',
-                                                style: const TextStyle(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                  final category = business['industry'] ?? 'Other';
+                                  final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
+                                  final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
+                                  final name = business['merchant_name'] ?? '';
+                                  // TODO: Sostituire con logica reale se disponibile
+                                  final isOpen = true; // oppure business['is_open']
+                                  final checkpointsCurrent = business['checkpoints_current'] ?? 4; // placeholder
+                                  final checkpointsTotal = business['checkpoints_total'] ?? 10; // placeholder
+                                  final points = business['balance'] ?? 0;
+                                  return BusinessCard(
+                                    category: category,
+                                    categoryIcon: categoryIcon,
+                                    logoUrl: logoUrl,
+                                    name: name,
+                                    isOpen: isOpen,
+                                    checkpointsCurrent: checkpointsCurrent,
+                                    checkpointsTotal: checkpointsTotal,
+                                    points: points,
                                   );
                                 },
                               ),
