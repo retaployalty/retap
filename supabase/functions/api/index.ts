@@ -32,13 +32,12 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      // Use the get_or_create_customer function instead of direct table insertion
       const { data, error } = await supabaseClient
-        .from('customers')
-        .insert({
-          merchant_id: merchantId,
+        .rpc('get_or_create_customer', {
+          p_merchant_id: merchantId
         })
-        .select()
-        .single()
 
       if (error) {
         return new Response(
@@ -48,7 +47,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify({ id: data }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

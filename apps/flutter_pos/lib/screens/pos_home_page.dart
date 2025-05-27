@@ -103,6 +103,16 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       debugPrint('Tipo di tag: ${tag.type}');
       debugPrint('UID: ${tag.id}');
 
+      // Verifica se il tag supporta NDEF
+      if (tag.ndefAvailable == false) {
+        throw Exception('Questa carta non supporta NDEF');
+      }
+
+      // Verifica se il tag è scrivibile
+      if (tag.ndefWritable == false) {
+        throw Exception('Questa carta è in sola lettura');
+      }
+
       // 2. Controlla se la carta esiste già
       debugPrint('Controllo se la carta esiste già...');
       final cardRes = await http.get(
@@ -145,27 +155,6 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         debugPrint('Customer creato: ${customer['id']}');
         customerId = customer['id'];
         cardId = const Uuid().v4();
-
-        // TEMPORANEO PER SVILUPPO: Creiamo la carta nel database prima di scrivere sul chip
-        // In produzione, la carta dovrebbe essere creata solo dopo la scrittura riuscita sul chip
-        debugPrint('TEMPORANEO PER SVILUPPO: Creo la carta nel database prima della scrittura NFC');
-        final res = await http.post(
-          Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
-          headers: {
-            'Content-Type': 'application/json',
-            'x-merchant-id': widget.merchantId,
-          },
-          body: jsonEncode({
-            'cardId': cardId,
-            'uid': tag.id,
-            'customerId': customerId,
-          }),
-        );
-
-        if (res.statusCode != 200) {
-          throw Exception('Errore nella creazione della carta: ${res.body}');
-        }
-        debugPrint('Carta creata nel database');
       }
 
       // 3. Crea il link
@@ -177,6 +166,28 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
         await FlutterNfcKit.writeNDEFRecords([uriRecord]);
         debugPrint('Link scritto sul chip con successo');
+
+        // Se la carta non esisteva, la creiamo solo dopo la scrittura riuscita
+        if (!isExistingCard) {
+          debugPrint('Creo la carta nel database dopo la scrittura NFC riuscita');
+          final res = await http.post(
+            Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-merchant-id': widget.merchantId,
+            },
+            body: jsonEncode({
+              'cardId': cardId,
+              'uid': tag.id,
+              'customerId': customerId,
+            }),
+          );
+
+          if (res.statusCode != 200) {
+            throw Exception('Errore nella creazione della carta: ${res.body}');
+          }
+          debugPrint('Carta creata nel database');
+        }
 
         // 5. Blocca il chip in sola lettura (se supportato)
         if (tag.type == NFCTagType.iso15693) {
@@ -208,7 +219,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Errore nella scrittura NFC: $e\nLa carta è stata comunque creata nel database (TEMPORANEO PER SVILUPPO)'),
+              content: Text('Errore nella scrittura NFC: $e'),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 5),
             ),
