@@ -57,7 +57,7 @@ export default function Home() {
     <main className={fredoka.className + " antialiased bg-gray-50 min-h-screen"}>
         <Navbar />
         {/* Hero Section */}
-      <section className="flex items-center justify-center min-h-screen pt-24 pb-12 px-4 bg-white border-b border-gray-200" id="home">
+      <section className="scroll-mt-24 flex items-center justify-center min-h-screen pt-24 pb-12 px-4 bg-white border-b border-gray-200" id="home">
         <div className="container mx-auto text-center flex flex-col justify-center items-center h-full max-w-3xl">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-900">
               Your universal loyalty card
@@ -93,67 +93,67 @@ export default function Home() {
         {/* Features Section */}
       <section
         id="features"
-        className="scroll-mt-24 flex items-center justify-center bg-gray-50 py-10 border-b border-gray-200 w-full"
+        className="scroll-mt-24 flex flex-col items-center justify-center bg-gray-50 px-4 pb-20 min-h-screen border-b border-gray-200"
       >
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8 w-full">
-          <div className="w-full md:w-1/2 flex justify-center mb-8 md:mb-0">
-            <img src="/retapBella.png" alt="ReTap" className="max-w-full h-auto rounded-lg shadow-lg" />
-          </div>
-          <div className="w-full md:w-1/2 text-left px-4 md:px-0">
-            <h2 className="text-4xl font-bold mb-10 text-gray-900 leading-tight">Why choose ReTap for your business?</h2>
-            <div className="flex flex-col gap-8">
-              {/* Point 1 */}
-              <div className="flex items-start gap-5">
-                <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="w-full md:w-1/2 flex justify-center mb-8 md:mb-0">
+              <img src="/retapBella.png" alt="ReTap" className="max-w-full h-auto rounded-lg shadow-lg" />
+            </div>
+            <div className="w-full md:w-1/2 text-left">
+              <h2 className="text-4xl font-bold mb-10 text-gray-900 leading-tight">Why choose ReTap for your business?</h2>
+              <div className="flex flex-col gap-8">
+                {/* Point 1 */}
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">It's easier to bring back a loyal customer than to acquire a new one</div>
+                    <div className="text-gray-700 text-lg leading-normal">ReTap helps you get your customers to return more often.</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">It's easier to bring back a loyal customer than to acquire a new one</div>
-                  <div className="text-gray-700 text-lg leading-normal">ReTap helps you get your customers to return more often.</div>
+                {/* Point 2 */}
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">Access to aggregated data</div>
+                    <div className="text-gray-700 text-lg leading-normal">Understand your customers' behavior with clear, actionable insights.</div>
+                  </div>
                 </div>
+                {/* Point 3 */}
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">Increase average spend</div>
+                    <div className="text-gray-700 text-lg leading-normal">Customers come back more often and spend more at each visit.</div>
               </div>
-              {/* Point 2 */}
-              <div className="flex items-start gap-5">
-                <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div>
-                  <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">Access to aggregated data</div>
-                  <div className="text-gray-700 text-lg leading-normal">Understand your customers' behavior with clear, actionable insights.</div>
-                </div>
+                {/* Point 4 */}
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">ReTap ecosystem</div>
+                    <div className="text-gray-700 text-lg leading-normal">Customers discover your store and your offers through the web app.</div>
               </div>
-              {/* Point 3 */}
-              <div className="flex items-start gap-5">
-                <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <div>
-                  <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">Increase average spend</div>
-                  <div className="text-gray-700 text-lg leading-normal">Customers come back more often and spend more at each visit.</div>
-                </div>
-              </div>
-              {/* Point 4 */}
-              <div className="flex items-start gap-5">
-                <div className="flex-shrink-0 w-12 h-12 bg-[#ffeaea] rounded-full flex items-center justify-center">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#FF3131"/><path d="M7 11.5l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <div>
-                  <div className="font-bold text-xl text-gray-900 mb-2 leading-snug">ReTap ecosystem</div>
-                  <div className="text-gray-700 text-lg leading-normal">Customers discover your store and your offers through the web app.</div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
         {/* How it works Section */}
       <section
         id="how-it-works"
-        className="scroll-mt-24 flex flex-col items-center justify-center bg-white py-16 border-b border-gray-200 w-full"
+        className="scroll-mt-24 flex flex-col items-center justify-center bg-white px-4 py-20 min-h-screen border-b border-gray-200"
       >
-        <h2 className="text-4xl font-bold mb-16 text-gray-900 text-center w-full">How it works</h2>
-        <div className="relative w-full flex items-center justify-center" style={{height: 'min(70vw, 400px)'}}>
+        <div className="container mx-auto">
+          <h2 className="text-4xl font-bold mb-16 text-gray-900 text-center">How it works</h2>
           {/* Carosello stile 3 box visibili come esempio allegato */}
           {(() => {
             const steps = [
@@ -182,10 +182,10 @@ export default function Home() {
             const prev = (current - 1 + steps.length) % steps.length;
             const next = (current + 1) % steps.length;
             return (
-              <div className="relative w-full max-w-7xl flex items-center justify-center mx-auto" style={{height: 'min(70vw, 400px)'}}>
+              <div className="relative w-full max-w-7xl flex items-center justify-center mx-auto" style={{height: 'min(70vw, 440px)'}}>
                 {/* Box precedente */}
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-full sm:w-3/5 lg:w-2/5 px-2 sm:px-4">
-                  <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden flex flex-col h-[min(50vw,340px)] sm:h-[min(40vw,380px)] lg:h-[360px] opacity-60 transition-all duration-500">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-full sm:w-2/3 lg:w-1/3 px-2 sm:px-4">
+                  <div className="bg-white rounded-3xl border border-gray-300 overflow-hidden flex flex-col h-[min(55vw,370px)] sm:h-[min(45vw,400px)] lg:h-[380px] opacity-60 transition-all duration-500">
                     <div className="w-full aspect-[16/9] bg-gray-100 overflow-hidden flex items-center justify-center">
                       <img src={steps[prev].img} alt={steps[prev].title} className="w-full h-full object-cover rounded-t-3xl" />
                     </div>
@@ -196,8 +196,8 @@ export default function Home() {
                   </div>
                 </div>
                 {/* Box centrale */}
-                <div className="relative z-20 w-full sm:w-3/5 lg:w-2/5 px-2 sm:px-4 flex justify-center">
-                  <div className="bg-white rounded-3xl border border-primary overflow-hidden flex flex-col h-[min(60vw,420px)] sm:h-[min(50vw,480px)] lg:h-[420px] scale-105 transition-all duration-500">
+                <div className="relative z-20 w-full sm:w-2/3 lg:w-1/3 px-2 sm:px-4 flex justify-center">
+                  <div className="bg-white rounded-3xl border border-gray-300 overflow-hidden flex flex-col h-[min(65vw,440px)] sm:h-[min(55vw,480px)] lg:h-[440px] scale-105 transition-all duration-500">
                     <div className="w-full aspect-[16/9] bg-gray-100 overflow-hidden flex items-center justify-center">
                       <img src={steps[current].img} alt={steps[current].title} className="w-full h-full object-cover rounded-t-3xl" />
                     </div>
@@ -223,8 +223,8 @@ export default function Home() {
                   </button>
                 </div>
                 {/* Box successivo */}
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-full sm:w-3/5 lg:w-2/5 px-2 sm:px-4">
-                  <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden flex flex-col h-[min(50vw,340px)] sm:h-[min(40vw,380px)] lg:h-[360px] opacity-60 transition-all duration-500">
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-full sm:w-2/3 lg:w-1/3 px-2 sm:px-4">
+                  <div className="bg-white rounded-3xl border border-gray-300 overflow-hidden flex flex-col h-[min(55vw,370px)] sm:h-[min(45vw,400px)] lg:h-[380px] opacity-60 transition-all duration-500">
                     <div className="w-full aspect-[16/9] bg-gray-100 overflow-hidden flex items-center justify-center">
                       <img src={steps[next].img} alt={steps[next].title} className="w-full h-full object-cover rounded-t-3xl" />
                     </div>
@@ -241,7 +241,7 @@ export default function Home() {
       </section>
 
         {/* Pricing Section */}
-      <section id="pricing" className="flex items-center justify-center min-h-screen bg-white px-4 py-20 border-b border-gray-200">
+      <section id="pricing" className="scroll-mt-24 flex items-center justify-center min-h-screen bg-white px-4 py-20 border-b border-gray-200">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 text-gray-900">
@@ -317,7 +317,7 @@ export default function Home() {
         </section>
 
         {/* FAQ Section */}
-      <section id="faq" className="flex items-center justify-center min-h-screen px-4 py-20 bg-gray-50">
+      <section id="faq" className="scroll-mt-24 flex items-center justify-center min-h-screen px-4 py-20 bg-gray-50">
           <div className="container mx-auto text-center flex flex-col justify-center items-center h-full">
           <h2 className="text-3xl font-bold mb-10 text-gray-900">Frequently Asked Questions</h2>
             <div className="max-w-3xl mx-auto w-full">
@@ -330,4 +330,41 @@ export default function Home() {
                     aria-controls={`faq-content-${idx}`}
                   >
                     <span>{item.q}</span>
-                    <svg className={`
+                    <svg className={`w-5 h-5 ml-2 transition-transform ${open === idx ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <div
+                    id={`faq-content-${idx}`}
+                    className={`overflow-hidden transition-all duration-300 ${open === idx ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+                  >
+                    <p className="text-gray-600 pb-4 px-2">{item.a}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+      <footer className="py-10 bg-white text-center text-gray-500 text-sm border-t border-gray-200">
+        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-4">
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <span className="font-bold text-primary text-lg">ReTap S.r.l.</span>
+            <span>VAT IT12345678901</span>
+            <span className="text-xs text-gray-400">&copy; {new Date().getFullYear()} ReTap. All rights reserved.</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="font-semibold">Contacts</span>
+            <a href="mailto:info@retap.com" className="hover:underline text-gray-700">info@retap.com</a>
+            <a href="https://wa.me/393331234567" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#25D366]">
+              WhatsApp: +39 333 1234567
+            </a>
+          </div>
+          <div className="flex flex-col items-center md:items-end gap-1">
+            <a href="#" className="hover:underline text-gray-700">Privacy Policy</a>
+            <span className="text-xs text-gray-400">ReTap - Loyalty made simple for business</span>
+          </div>
+          </div>
+        </footer>
+      </main>
+  );
+}
