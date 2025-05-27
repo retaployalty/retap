@@ -257,6 +257,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           builder: (context) => BusinessDetailScreen(
                                             businessName: name,
                                             points: points,
+                                            logoUrl: logoUrl,
+                                            coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                            isOpen: isOpen,
+                                            hours: hours,
                                           ),
                                         ),
                                       );
