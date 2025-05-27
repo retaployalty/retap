@@ -5,6 +5,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
+import '../components/category_filters.dart';
+import '../components/business_card.dart';
+import '../shared_utils/business_hours.dart';
+
+// Business categories with their corresponding icons
+const Map<String, IconData> BUSINESS_CATEGORIES = {
+  'Restaurant': Icons.restaurant,
+  'Pizzeria': Icons.local_pizza,
+  'Bar': Icons.local_bar,
+  'Cafe': Icons.coffee,
+  'Bakery': Icons.cake,
+  'Ice Cream Shop': Icons.icecream,
+  'Hair Salon': Icons.content_cut,
+  'Beauty Salon': Icons.face,
+  'Spa': Icons.spa,
+  'Gym': Icons.fitness_center,
+  'Clothing Store': Icons.checkroom,
+  'Shoe Store': Icons.shopping_bag,
+  'Jewelry Store': Icons.diamond,
+  'Bookstore': Icons.book,
+  'Other': Icons.store,
+};
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   List<dynamic> _merchantBalances = [];
   String? cardId;
+  String? _selectedCategory;
   static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
@@ -80,20 +103,46 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await http.get(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
       );
+      
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
       if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero dei punti');
+        throw Exception('Errore nel recupero dei punti: ${response.statusCode} - ${response.body}');
       }
+      
       final data = jsonDecode(response.body);
+      print('API Response: $data'); // Debug log
+      
       setState(() {
         _merchantBalances = (data['balances'] ?? []).where((b) => ((b['balance'] ?? 0) is int && (b['balance'] ?? 0) > 0)).toList();
+        print('Filtered Balances: $_merchantBalances'); // Debug log
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading balances: $e'); // Debug log
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
     }
+  }
+
+  List<dynamic> get _filteredMerchantBalances {
+    if (_selectedCategory == null) return _merchantBalances;
+    
+    // Debug log
+    print('Selected Category: $_selectedCategory');
+    print('Filtering merchants...');
+    
+    final filtered = _merchantBalances.where((business) {
+      final businessCategory = business['industry'];
+      print('Business: ${business['merchant_name']}, Category: $businessCategory'); // Debug log
+      return businessCategory == _selectedCategory;
+    }).toList();
+    
+    print('Filtered Results: $filtered'); // Debug log
+    return filtered;
   }
 
   @override
@@ -134,13 +183,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            // Category filters
+            CategoryFilters(
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+              businessCategories: BUSINESS_CATEGORIES,
+            ),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-                      : _merchantBalances.isEmpty
-                          ? const Center(child: Text('Nessun business visitato'))
+                      : _filteredMerchantBalances.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _selectedCategory != null 
+                                        ? 'Nessun business trovato nella categoria ${_selectedCategory}'
+                                        : 'Nessun business visitato',
+                                    style: const TextStyle(color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_selectedCategory != null) ...[
+                                    const SizedBox(height: 16),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedCategory = null;
+                                        });
+                                      },
+                                      child: const Text('Rimuovi filtro'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            )
                           : Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               child: GridView.builder(
@@ -150,86 +229,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                   crossAxisSpacing: 24,
                                   childAspectRatio: 0.75,
                                 ),
-                                itemCount: _merchantBalances.length,
+                                itemCount: _filteredMerchantBalances.length,
                                 itemBuilder: (context, index) {
-                                  final business = _merchantBalances[index];
-                                  final imageUrl = _imageUrls[index % _imageUrls.length];
-                                  return AnimatedScale(
-                                    scale: 1.0,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(24),
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => BusinessDetailScreen(
-                                              businessName: business['merchant_name'] ?? '',
-                                              points: business['balance'] ?? 0,
-                                            ),
+                                  final business = _filteredMerchantBalances[index];
+                                  final category = business['industry'] ?? 'Other';
+                                  final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
+                                  final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
+                                  final name = business['merchant_name'] ?? '';
+                                  final hours = business['hours'];
+                                  final isOpen = isBusinessOpen(hours);
+                                  final checkpointsCurrent = business['checkpoints_current'] ?? 0;
+                                  final checkpointsTotal = business['checkpoints_total'] ?? 0;
+                                  final points = business['balance'] ?? 0;
+                                  return BusinessCard(
+                                    category: category,
+                                    categoryIcon: categoryIcon,
+                                    logoUrl: logoUrl,
+                                    name: name,
+                                    isOpen: isOpen,
+                                    checkpointsCurrent: checkpointsCurrent,
+                                    checkpointsTotal: checkpointsTotal,
+                                    points: points,
+                                    hours: hours,
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => BusinessDetailScreen(
+                                            businessName: name,
+                                            points: points,
                                           ),
-                                        );
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(24),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.07),
-                                              blurRadius: 16,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
                                         ),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              width: 90,
-                                              height: 90,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: AppColors.primary.withOpacity(0.08),
-                                                border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 2),
-                                              ),
-                                              child: ClipOval(
-                                                child: Image.network(
-                                                  imageUrl,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.store, color: AppColors.primary, size: 48),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 18),
-                                            Text(
-                                              business['merchant_name'] ?? '',
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 20,
-                                                color: AppColors.primary,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primary.withOpacity(0.10),
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                'Punti: ${business['balance']}',
-                                                style: const TextStyle(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 18,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                      );
+                                    },
                                   );
                                 },
                               ),

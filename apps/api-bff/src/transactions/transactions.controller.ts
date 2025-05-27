@@ -10,6 +10,18 @@ import {
   import { SupabaseService } from '../supabase.service';
   import { CreateTxDto } from './create-tx.dto';
   
+  interface Balance {
+    merchant_id: string;
+    merchant_name: string;
+    balance: number;
+    is_issuer: boolean;
+    industry: string;
+    logo_url: string;
+    hours: any;
+    checkpoints_current: number;
+    checkpoints_total: number;
+  }
+  
   @Controller('tx')
   export class TransactionsController {
     constructor(private readonly supabase: SupabaseService) {}
@@ -72,6 +84,17 @@ import {
       );
 
       return { balance };
+    }
+
+    @Get('web-balance/:cardId')
+    async getWebCardBalance(@Param('cardId') cardId: string) {
+      // Ottieni tutti i merchant associati alla carta con i loro saldi e dettagli
+      const { data: balances, error } = await this.supabase.client
+        .rpc('get_card_balance', { card_id: cardId });
+
+      if (error) throw new BadRequestException(error.message);
+
+      return { balances };
     }
   }
   
