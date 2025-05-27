@@ -200,22 +200,33 @@ $$;
 ALTER FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" integer, "is_issuer" boolean)
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
 BEGIN
-    RETURN QUERY
+  RETURN QUERY
+  WITH merchant_balances AS (
     SELECT 
-        m.id as merchant_id,
-        m.name as merchant_name,
-        COALESCE(SUM(t.points), 0)::integer as balance,
-        (c.issuing_merchant_id = m.id) as is_issuer
+      cm.merchant_id,
+      m.name as merchant_name,
+      COALESCE(SUM(t.points), 0) as balance,
+      c.issuing_merchant_id = cm.merchant_id as is_issuer,
+      m.industry
     FROM public.cards c
     JOIN public.card_merchants cm ON cm.card_id = c.id
     JOIN public.merchants m ON m.id = cm.merchant_id
     LEFT JOIN public.transactions t ON t.card_merchant_id = cm.id
     WHERE c.id = $1
-    GROUP BY m.id, m.name, c.issuing_merchant_id;
+    GROUP BY cm.merchant_id, m.name, c.issuing_merchant_id, m.industry
+  )
+  SELECT 
+    mb.merchant_id,
+    mb.merchant_name,
+    mb.balance,
+    mb.is_issuer,
+    mb.industry
+  FROM merchant_balances mb
+  ORDER BY mb.balance DESC;
 END;
 $_$;
 
