@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
+import '../components/category_filters.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -181,66 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             // Category filters
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: BUSINESS_CATEGORIES.length,
-                itemBuilder: (context, index) {
-                  final category = BUSINESS_CATEGORIES.keys.elementAt(index);
-                  final icon = BUSINESS_CATEGORIES[category]!;
-                  final isSelected = category == _selectedCategory;
-                  
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = isSelected ? null : category;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: 80,
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.07),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              icon,
-                              color: isSelected ? Colors.white : AppColors.primary,
-                              size: 28,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              category,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : AppColors.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            CategoryFilters(
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+              businessCategories: BUSINESS_CATEGORIES,
             ),
             Expanded(
               child: _isLoading
