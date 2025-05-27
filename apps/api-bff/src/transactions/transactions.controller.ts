@@ -16,6 +16,10 @@ import {
     balance: number;
     is_issuer: boolean;
     industry: string;
+    logo_url: string;
+    hours: any;
+    checkpoints_current: number;
+    checkpoints_total: number;
   }
   
   @Controller('tx')
@@ -84,7 +88,7 @@ import {
 
     @Get('web-balance/:cardId')
     async getWebCardBalance(@Param('cardId') cardId: string) {
-      // Ottieni tutti i merchant associati alla carta con i loro saldi
+      // Ottieni tutti i merchant associati alla carta con i loro saldi e dettagli
       const { data: balances, error } = await this.supabase.client
         .rpc('get_card_balance', { card_id: cardId });
 

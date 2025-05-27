@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../components/category_filters.dart';
 import '../components/business_card.dart';
+import '../shared_utils/business_hours.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -235,10 +236,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
                                   final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
                                   final name = business['merchant_name'] ?? '';
-                                  // TODO: Sostituire con logica reale se disponibile
-                                  final isOpen = true; // oppure business['is_open']
-                                  final checkpointsCurrent = business['checkpoints_current'] ?? 4; // placeholder
-                                  final checkpointsTotal = business['checkpoints_total'] ?? 10; // placeholder
+                                  final hours = business['hours'];
+                                  final isOpen = isBusinessOpen(hours);
+                                  final checkpointsCurrent = business['checkpoints_current'] ?? 0;
+                                  final checkpointsTotal = business['checkpoints_total'] ?? 0;
                                   final points = business['balance'] ?? 0;
                                   return BusinessCard(
                                     category: category,
@@ -249,6 +250,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                     checkpointsCurrent: checkpointsCurrent,
                                     checkpointsTotal: checkpointsTotal,
                                     points: points,
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => BusinessDetailScreen(
+                                            businessName: name,
+                                            points: points,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
                               ),
