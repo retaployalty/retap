@@ -350,8 +350,8 @@ function CheckoutPage() {
                     />
                     <Label htmlFor="billing-toggle" className="text-sm font-medium">
                       Annual
-                    </Label>
-                  </div>
+                      </Label>
+                    </div>
                 </div>
                 <div className="flex justify-center">
                   <Card className="max-w-md w-full border-primary shadow-md rounded-2xl">
@@ -365,7 +365,7 @@ function CheckoutPage() {
                         <span className="text-muted-foreground text-lg">
                           /{billingCycle === 'yearly' ? "year" : "month"}
                         </span>
-                      </div>
+                    </div>
                       {billingCycle === 'monthly' && (
                         <p className="text-sm text-muted-foreground mt-2 text-center">
                           + {SUBSCRIPTION.activationFee}€ one-time activation fee
@@ -390,7 +390,7 @@ function CheckoutPage() {
                         <div className="bg-green-50 text-green-700 text-sm font-bold rounded-lg px-4 py-2 mb-4 shadow-sm border border-green-200">
                           30-day money-back guarantee. No questions asked.
                         </div>
-                      </div>
+                  </div>
                     </CardContent>
                     <CardFooter>
                       <Button className="w-full h-12 text-base mt-2" variant="default" onClick={() => setStep(2)}>
@@ -398,7 +398,7 @@ function CheckoutPage() {
                       </Button>
                     </CardFooter>
                   </Card>
-                </div>
+                  </div>
                 <div className="text-center mt-8 text-muted-foreground">
                   <p>ReTap is always free for end customers.</p>
                 </div>

@@ -3,7 +3,7 @@
 
 export const colors = {
   // Brand
-  primary: '#FF6565',         // Rosso Retap
+  primary: '#ff3131',         // Rosso Retap
   primaryDark: '#E62C2C',     // Rosso scuro (hover/active)
   accent: '#FFD6D6',          // Rosa chiaro (accento, bg decorativo)
 

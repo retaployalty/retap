@@ -129,7 +129,7 @@ export default function PricingPage() {
               </CardContent>
               <CardFooter>
                 <Link href={`/checkout?plan=${key}&billing=${isAnnual ? 'annual' : 'monthly'}`} className="w-full">
-                  <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                  <Button className="w-full hover:bg-[#FF3131]" variant={plan.popular ? "default" : "outline"}>
                     {plan.buttonText}
                   </Button>
                 </Link>
