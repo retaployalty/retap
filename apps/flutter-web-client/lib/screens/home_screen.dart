@@ -250,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     checkpointsCurrent: checkpointsCurrent,
                                     checkpointsTotal: checkpointsTotal,
                                     points: points,
+                                    hours: hours,
                                     onTap: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(

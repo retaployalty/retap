@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
+import '../shared_utils/business_hours.dart';
 
 class BusinessCard extends StatelessWidget {
   final String category;
@@ -12,6 +13,7 @@ class BusinessCard extends StatelessWidget {
   final int checkpointsTotal;
   final int points;
   final VoidCallback? onTap;
+  final dynamic hours;
 
   const BusinessCard({
     Key? key,
@@ -24,6 +26,7 @@ class BusinessCard extends StatelessWidget {
     required this.checkpointsTotal,
     required this.points,
     this.onTap,
+    this.hours,
   }) : super(key: key);
 
   @override
@@ -129,11 +132,26 @@ class BusinessCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Text(
-                isOpen ? 'Open' : 'Closed',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: isOpen ? Colors.green : Colors.red,
-                ),
+              child: Row(
+                children: [
+                  Text(
+                    isOpen ? 'Open' : 'Closed',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isOpen ? Colors.green : Colors.red,
+                    ),
+                  ),
+                  if (!isOpen && hours != null && getTodayOpeningHours(hours).isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        getTodayOpeningHours(hours),
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
