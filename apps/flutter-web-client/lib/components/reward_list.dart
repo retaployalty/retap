@@ -152,7 +152,7 @@ class _RewardCard extends StatelessWidget {
                       height: 140,
                       decoration: BoxDecoration(
                         image: DecorationImage(
-                          image: NetworkImage(reward.imageUrl),
+                          image: NetworkImage(reward.fullImageUrl),
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -234,4 +234,6 @@ class RewardItem {
   final int price;
 
   RewardItem({required this.imageUrl, required this.title, required this.price});
+
+  String get fullImageUrl => 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imageUrl';
 } 
