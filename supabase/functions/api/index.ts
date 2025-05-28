@@ -574,6 +574,73 @@ serve(async (req) => {
       )
     }
 
+    // GET /rewards-and-checkpoints?merchantId=XXX
+    if (path === 'rewards-and-checkpoints' && req.method === 'GET') {
+      const merchantIdParam = params.merchantId;
+      if (!merchantIdParam) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchantId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // 1. Rewards
+      const { data: rewards, error: rewardsError } = await supabaseClient
+        .from('rewards')
+        .select('id, name, description, image_path, price_coins, is_active')
+        .eq('merchant_id', merchantIdParam);
+      if (rewardsError) {
+        return new Response(
+          JSON.stringify({ error: rewardsError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // 2. Checkpoint Offers
+      const { data: offers, error: offersError } = await supabaseClient
+        .from('checkpoint_offers')
+        .select('id, name, description, total_steps')
+        .eq('merchant_id', merchantIdParam);
+      if (offersError) {
+        return new Response(
+          JSON.stringify({ error: offersError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // 3. For each offer, get steps and rewards
+      const offersWithSteps = await Promise.all(
+        (offers || []).map(async (offer) => {
+          const { data: steps, error: stepsError } = await supabaseClient
+            .from('checkpoint_steps')
+            .select('id, step_number, reward_id, offer_id')
+            .eq('offer_id', offer.id)
+            .order('step_number', { ascending: true });
+          if (stepsError) {
+            throw new Error(stepsError.message);
+          }
+          // For each step, if reward_id, fetch reward details
+          const stepsWithReward = await Promise.all(
+            (steps || []).map(async (step) => {
+              let reward = null;
+              if (step.reward_id) {
+                const { data: rewardData, error: rewardError } = await supabaseClient
+                  .from('checkpoint_rewards')
+                  .select('id, name, description, icon')
+                  .eq('id', step.reward_id)
+                  .single();
+                if (rewardError) throw new Error(rewardError.message);
+                reward = rewardData;
+              }
+              return { ...step, reward };
+            })
+          );
+          return { ...offer, steps: stepsWithReward };
+        })
+      );
+      return new Response(
+        JSON.stringify({ rewards, checkpoint_offers: offersWithSteps }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

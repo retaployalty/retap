@@ -261,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
                                             isOpen: isOpen,
                                             hours: hours,
+                                            merchantId: business['merchant_id'],
                                           ),
                                         ),
                                       );

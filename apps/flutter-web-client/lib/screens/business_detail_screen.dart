@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../shared_utils/business_hours.dart';
 import '../components/reward_list.dart';
 
-class BusinessDetailScreen extends StatelessWidget {
+class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
   final int points;
   final String logoUrl;
   final List<String> coverImageUrls;
   final bool isOpen;
   final dynamic hours;
+  final String merchantId;
 
   const BusinessDetailScreen({
     super.key,
@@ -18,7 +21,51 @@ class BusinessDetailScreen extends StatelessWidget {
     required this.isOpen,
     required this.hours,
     required this.coverImageUrls,
+    required this.merchantId,
   });
+
+  @override
+  State<BusinessDetailScreen> createState() => _BusinessDetailScreenState();
+}
+
+class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
+  bool isLoading = true;
+  List<RewardItem> rewards = [];
+  // checkpoint_offers: puoi aggiungere qui la struttura se vuoi mostrarli in futuro
+
+  @override
+  void initState() {
+    super.initState();
+    fetchRewardsAndCheckpoints();
+  }
+
+  Future<void> fetchRewardsAndCheckpoints() async {
+    setState(() => isLoading = true);
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}');
+    final res = await http.get(url);
+    print('API status: \\${res.statusCode}');
+    print('API body: \\${res.body}');
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      print('Decoded data: \\${data}');
+      final rewardsData = data['rewards'] as List<dynamic>;
+      final offersData = data['checkpoint_offers'] as List<dynamic>?;
+      print('rewardsData: \\${rewardsData}');
+      print('checkpoint_offers: \\${offersData}');
+      setState(() {
+        rewards = rewardsData.map((r) => RewardItem(
+          imageUrl: r['image_path'] ?? '',
+          title: r['name'] ?? '',
+          price: r['price_coins'] ?? 0,
+        )).toList();
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+      print('API error: \\${res.statusCode} - \\${res.body}');
+      // In produzione: gestisci errore
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,11 +76,11 @@ class BusinessDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             BusinessHeader(
-              businessName: businessName,
-              logoUrl: logoUrl,
-              coverImageUrls: coverImageUrls,
-              isOpen: isOpen,
-              hours: hours,
+              businessName: widget.businessName,
+              logoUrl: widget.logoUrl,
+              coverImageUrls: widget.coverImageUrls,
+              isOpen: widget.isOpen,
+              hours: widget.hours,
             ),
             const SizedBox(height: 16),
             Padding(
@@ -60,21 +107,21 @@ class BusinessDetailScreen extends StatelessWidget {
                         Icon(
                           Icons.schedule,
                           size: 16,
-                          color: isOpen ? Colors.green : Colors.red,
+                          color: widget.isOpen ? Colors.green : Colors.red,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isOpen ? 'Aperto' : 'Chiuso',
+                          widget.isOpen ? 'Aperto' : 'Chiuso',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isOpen ? Colors.green : Colors.red,
+                            color: widget.isOpen ? Colors.green : Colors.red,
                             fontSize: 14,
                           ),
                         ),
-                        if (getTodayOpeningHours(hours).isNotEmpty) ...[
+                        if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Text(
-                            getTodayOpeningHours(hours),
+                            getTodayOpeningHours(widget.hours),
                             style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500, fontSize: 13),
                           ),
                         ]
@@ -88,31 +135,12 @@ class BusinessDetailScreen extends StatelessWidget {
             // --- REWARD LIST UI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: RewardList(
-                userPoints: points,
-                rewards: [
-                  RewardItem(
-                    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
-                    title: 'Free Topping for Icecream',
-                    price: 100,
-                  ),
-                  RewardItem(
-                    imageUrl: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-                    title: 'Free Topping for Icecream',
-                    price: 200,
-                  ),
-                  RewardItem(
-                    imageUrl: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
-                    title: 'Free Coffee',
-                    price: 300,
-                  ),
-                  RewardItem(
-                    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
-                    title: 'Free Cookie',
-                    price: 400,
-                  ),
-                ],
-              ),
+              child: isLoading
+                  ? const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                  : RewardList(
+                      userPoints: widget.points,
+                      rewards: rewards,
+                    ),
             ),
             const SizedBox(height: 24),
             // Info business (ex Center)
@@ -121,13 +149,13 @@ class BusinessDetailScreen extends StatelessWidget {
                 const Icon(Icons.store, color: Colors.red, size: 64),
                 const SizedBox(height: 24),
                 Text(
-                  businessName,
+                  widget.businessName,
                   style: const TextStyle(
                       fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Punti: $points',
+                  'Punti: ${widget.points}',
                   style: const TextStyle(
                       fontSize: 40,
                       color: Colors.red,
