@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../shared_utils/business_hours.dart';
+import '../components/reward_list.dart';
 
 class BusinessDetailScreen extends StatelessWidget {
   final String businessName;
@@ -23,97 +24,120 @@ class BusinessDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       // The entire screen scrolls so the header collapses naturally if content grows.
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BusinessHeader(
-                  businessName: businessName,
-                  logoUrl: logoUrl,
-                  coverImageUrls: coverImageUrls,
-                  isOpen: isOpen,
-                  hours: hours,
-                ),
-                // Stato orari pillola sotto il nome merchant, centrata
-                Padding(
-                  padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 6,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.schedule,
-                              size: 16,
-                              color: isOpen ? Colors.green : Colors.red,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isOpen ? 'Aperto' : 'Chiuso',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isOpen ? Colors.green : Colors.red,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (getTodayOpeningHours(hours).isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                getTodayOpeningHours(hours),
-                                style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500, fontSize: 13),
-                              ),
-                            ]
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
+      body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.store, color: Colors.red, size: 64),
-            const SizedBox(height: 24),
-            Text(
-              businessName,
-                    style: const TextStyle(
-                        fontSize: 28, fontWeight: FontWeight.bold),
+            BusinessHeader(
+              businessName: businessName,
+              logoUrl: logoUrl,
+              coverImageUrls: coverImageUrls,
+              isOpen: isOpen,
+              hours: hours,
             ),
             const SizedBox(height: 16),
-            Text(
-              'Punti: $points',
-                    style: const TextStyle(
-                        fontSize: 40,
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: isOpen ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isOpen ? 'Aperto' : 'Chiuso',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isOpen ? Colors.green : Colors.red,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (getTodayOpeningHours(hours).isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            getTodayOpeningHours(hours),
+                            style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500, fontSize: 13),
+                          ),
+                        ]
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 80),
+            // --- REWARD LIST UI ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: RewardList(
+                userPoints: points,
+                rewards: [
+                  RewardItem(
+                    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
+                    title: 'Free Topping for Icecream',
+                    price: 100,
+                  ),
+                  RewardItem(
+                    imageUrl: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
+                    title: 'Free Topping for Icecream',
+                    price: 200,
+                  ),
+                  RewardItem(
+                    imageUrl: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=400&q=80',
+                    title: 'Free Coffee',
+                    price: 300,
+                  ),
+                  RewardItem(
+                    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
+                    title: 'Free Cookie',
+                    price: 400,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Info business (ex Center)
+            Column(
+              children: [
+                const Icon(Icons.store, color: Colors.red, size: 64),
+                const SizedBox(height: 24),
+                Text(
+                  businessName,
+                  style: const TextStyle(
+                      fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Punti: $points',
+                  style: const TextStyle(
+                      fontSize: 40,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
