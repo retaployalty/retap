@@ -15,6 +15,9 @@ class RewardList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
+    // Ordina i premi per prezzo crescente
+    final sortedRewards = List<RewardItem>.from(rewards)..sort((a, b) => a.price.compareTo(b.price));
+    
     return Center(
       child: Container(
         width: width,
@@ -86,12 +89,12 @@ class RewardList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(width: 24),
-                    for (int i = 0; i < rewards.length; i++)
+                    for (int i = 0; i < sortedRewards.length; i++)
                       Padding(
                         padding: EdgeInsets.only(right: 18),
                         child: _RewardCard(
-                          reward: rewards[i],
-                          unlocked: userPoints >= rewards[i].price,
+                          reward: sortedRewards[i],
+                          unlocked: userPoints >= sortedRewards[i].price,
                           width: 200,
                           height: 340,
                         ),
