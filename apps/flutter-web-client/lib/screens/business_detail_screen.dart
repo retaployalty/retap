@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../shared_utils/business_hours.dart';
+import '../components/reward_list.dart';
+import '../components/checkpoint_rewards_progress.dart';
 
-class BusinessDetailScreen extends StatelessWidget {
+class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
   final int points;
   final String logoUrl;
   final List<String> coverImageUrls;
   final bool isOpen;
   final dynamic hours;
+  final String merchantId;
 
   const BusinessDetailScreen({
     super.key,
@@ -17,103 +22,170 @@ class BusinessDetailScreen extends StatelessWidget {
     required this.isOpen,
     required this.hours,
     required this.coverImageUrls,
+    required this.merchantId,
   });
+
+  @override
+  State<BusinessDetailScreen> createState() => _BusinessDetailScreenState();
+}
+
+class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
+  bool isLoading = true;
+  List<RewardItem> rewards = [];
+  // checkpoint_offers: puoi aggiungere qui la struttura se vuoi mostrarli in futuro
+
+  @override
+  void initState() {
+    super.initState();
+    fetchRewardsAndCheckpoints();
+  }
+
+  Future<void> fetchRewardsAndCheckpoints() async {
+    setState(() => isLoading = true);
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}');
+    final res = await http.get(url);
+    print('API status: \\${res.statusCode}');
+    print('API body: \\${res.body}');
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      print('Decoded data: \\${data}');
+      final rewardsData = data['rewards'] as List<dynamic>;
+      final offersData = data['checkpoint_offers'] as List<dynamic>?;
+      print('rewardsData: \\${rewardsData}');
+      print('checkpoint_offers: \\${offersData}');
+      setState(() {
+        rewards = rewardsData.map((r) => RewardItem(
+          imageUrl: r['image_path'] ?? '',
+          title: r['name'] ?? '',
+          price: r['price_coins'] ?? 0,
+        )).toList();
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
+      print('API error: \\${res.statusCode} - \\${res.body}');
+      // In produzione: gestisci errore
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // The entire screen scrolls so the header collapses naturally if content grows.
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BusinessHeader(
-                  businessName: businessName,
-                  logoUrl: logoUrl,
-                  coverImageUrls: coverImageUrls,
-                  isOpen: isOpen,
-                  hours: hours,
-                ),
-                // Stato orari pillola sotto il nome merchant, centrata
-                Padding(
-                  padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 6,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.schedule,
-                              size: 16,
-                              color: isOpen ? Colors.green : Colors.red,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isOpen ? 'Aperto' : 'Chiuso',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isOpen ? Colors.green : Colors.red,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (getTodayOpeningHours(hours).isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                getTodayOpeningHours(hours),
-                                style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500, fontSize: 13),
-                              ),
-                            ]
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
+      body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.store, color: Colors.red, size: 64),
-            const SizedBox(height: 24),
-            Text(
-              businessName,
-                    style: const TextStyle(
-                        fontSize: 28, fontWeight: FontWeight.bold),
+            BusinessHeader(
+              businessName: widget.businessName,
+              logoUrl: widget.logoUrl,
+              coverImageUrls: widget.coverImageUrls,
+              isOpen: widget.isOpen,
+              hours: widget.hours,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Punti: $points',
-                    style: const TextStyle(
-                        fontSize: 40,
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.isOpen ? Colors.green : Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          widget.isOpen ? 'Aperto' : 'Chiuso',
+                          style: const TextStyle(
+                            color: Color(0xFF1A1A1A),
+                            fontSize: 16,
+                            fontFamily: 'Fredoka',
+                            fontWeight: FontWeight.w500,
+                            height: 1.40,
+                            letterSpacing: 0.48,
+                          ),
+                        ),
+                        if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            getTodayOpeningHours(widget.hours),
+                            style: const TextStyle(
+                              color: Color(0xFF1A1A1A),
+                              fontSize: 14,
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.w400,
+                              height: 1.40,
+                              letterSpacing: 0.40,
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 60),
+            // --- CHECKPOINT REWARDS PROGRESS UI ---
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: CheckpointRewardsProgress(
+                currentStep: 2,
+                totalSteps: 10,
+                rewardSteps: [5, 10],
+                labelReward: 'Free Cream',
+              ),
+            ),
+            const SizedBox(height: 20),
+            // --- REWARD LIST UI ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: isLoading
+                  ? const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                  : RewardList(
+                      userPoints: widget.points,
+                      rewards: rewards,
+                    ),
+            ),
+            const SizedBox(height: 20),
+            // Info business (ex Center)
+            Column(
+              children: [
+                const Icon(Icons.store, color: Colors.red, size: 64),
+                const SizedBox(height: 16),
+                Text(
+                  widget.businessName,
+                  style: const TextStyle(
+                      fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Punti: ${widget.points}',
+                  style: const TextStyle(
+                      fontSize: 40,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -236,7 +308,7 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                       height: 136,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.red, width: 3),
+                        border: Border.all(color: Colors.black, width: 3),
                       ),
                     ),
                     // Spazio trasparente tra bordo e immagine

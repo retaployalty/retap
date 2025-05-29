@@ -86,10 +86,10 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
       }
 
       // 3. Upload image to Supabase Storage
-      const imagePath = `${Date.now()}-${imageFile.name}`
-      const { error: uploadError } = await supabase.storage
+      const filename = `${Date.now()}-${imageFile.name}`
+      const { data, error: uploadError } = await supabase.storage
         .from("rewards")
-        .upload(imagePath, imageFile)
+        .upload(filename, imageFile)
 
       if (uploadError) {
         console.error("Storage error:", uploadError)
@@ -101,8 +101,9 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
         name,
         description,
         price_coins: price,
-        image_path: imagePath,
+        image_path: filename,
         merchant_id: merchant.id,
+        is_active: true,
       })
 
       if (insertError) {
