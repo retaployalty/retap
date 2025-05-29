@@ -83,7 +83,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
               isOpen: widget.isOpen,
               hours: widget.hours,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -140,7 +140,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 80),
+            const SizedBox(height: 60),
             // --- CHECKPOINT REWARDS PROGRESS UI ---
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12),
@@ -151,7 +151,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 labelReward: 'Free Cream',
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             // --- REWARD LIST UI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -162,18 +162,18 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       rewards: rewards,
                     ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             // Info business (ex Center)
             Column(
               children: [
                 const Icon(Icons.store, color: Colors.red, size: 64),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Text(
                   widget.businessName,
                   style: const TextStyle(
                       fontSize: 28, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   'Punti: ${widget.points}',
                   style: const TextStyle(
@@ -183,7 +183,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ),
       ),

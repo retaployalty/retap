@@ -69,7 +69,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
     final int visibleSteps = 5;
     final double minBarWidth = (visibleSteps - 1) * pxPerStep + rewardDotSize;
     final double barWidth = (widget.totalSteps - 1) * pxPerStep + rewardDotSize;
-    final double scrollBarWidth = barWidth < minBarWidth ? minBarWidth : barWidth;
+    final double scrollBarWidth = (barWidth < minBarWidth ? minBarWidth : barWidth) + 22; // Aggiungo 22px di padding alla fine
     final double dotCenterY = barTop + barHeight / 2;
     final double progressBarWidth = barWidth - 2 * barHPadding;
     final double progressBarHeight = barHeight - 2 * barVPadding;
@@ -170,7 +170,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
                     child: SingleChildScrollView(
                       controller: _scrollController,
                       scrollDirection: Axis.horizontal,
-                      child: SizedBox(
+                      child: Container(
                         width: scrollBarWidth,
                         child: Stack(
                           children: [
