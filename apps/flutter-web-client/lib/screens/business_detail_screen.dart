@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../shared_utils/business_hours.dart';
 import '../components/reward_list.dart';
+import '../components/checkpoint_rewards_progress.dart';
 
 class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
@@ -89,40 +90,48 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 16,
-                          color: widget.isOpen ? Colors.green : Colors.red,
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.isOpen ? Colors.green : Colors.red,
+                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 8),
                         Text(
                           widget.isOpen ? 'Aperto' : 'Chiuso',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: widget.isOpen ? Colors.green : Colors.red,
-                            fontSize: 14,
+                          style: const TextStyle(
+                            color: Color(0xFF1A1A1A),
+                            fontSize: 16,
+                            fontFamily: 'Fredoka',
+                            fontWeight: FontWeight.w500,
+                            height: 1.40,
+                            letterSpacing: 0.48,
                           ),
                         ),
                         if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             getTodayOpeningHours(widget.hours),
-                            style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500, fontSize: 13),
+                            style: const TextStyle(
+                              color: Color(0xFF1A1A1A),
+                              fontSize: 14,
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.w400,
+                              height: 1.40,
+                              letterSpacing: 0.40,
+                            ),
                           ),
                         ]
                       ],
@@ -132,6 +141,17 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
               ),
             ),
             const SizedBox(height: 80),
+            // --- CHECKPOINT REWARDS PROGRESS UI ---
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: CheckpointRewardsProgress(
+                currentStep: 2,
+                totalSteps: 10,
+                rewardSteps: [5, 10],
+                labelReward: 'Free Cream',
+              ),
+            ),
+            const SizedBox(height: 24),
             // --- REWARD LIST UI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -288,7 +308,7 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                       height: 136,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.red, width: 3),
+                        border: Border.all(color: Colors.black, width: 3),
                       ),
                     ),
                     // Spazio trasparente tra bordo e immagine
