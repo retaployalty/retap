@@ -30,6 +30,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center space-x-4">
+          <Link href="/auth" className="text-[#1A1A1A] font-medium hover:text-[#FF3131] transition-colors">Merchant Login</Link>
           <Button asChild variant="default" className="h-12 px-5 rounded-lg font-medium text-base shadow flex items-center justify-center bg-[#1A1A1A] hover:bg-[#FF3131] text-white">
             <Link href="/auth" target="_blank" rel="noopener noreferrer">Get Started</Link>
           </Button>
