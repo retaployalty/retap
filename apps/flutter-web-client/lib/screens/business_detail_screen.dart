@@ -149,7 +149,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 60),
+            const SizedBox(height: 40),
             // --- CHECKPOINT REWARDS PROGRESS UI ---
             if (checkpointOffers.isNotEmpty)
               Padding(
@@ -182,27 +182,6 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     ),
             ),
             const SizedBox(height: 20),
-            // Info business (ex Center)
-            Column(
-              children: [
-                const Icon(Icons.store, color: Colors.red, size: 64),
-                const SizedBox(height: 16),
-                Text(
-                  widget.businessName,
-                  style: const TextStyle(
-                      fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Punti: ${widget.points}',
-                  style: const TextStyle(
-                      fontSize: 40,
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
