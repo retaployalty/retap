@@ -5,11 +5,15 @@ import '../theme/text_styles.dart';
 class RewardList extends StatelessWidget {
   final int userPoints;
   final List<RewardItem> rewards;
+  final List<CheckpointOffer> checkpointOffers;
+  final int currentCheckpointStep;
 
   const RewardList({
     Key? key,
     required this.userPoints,
     required this.rewards,
+    required this.checkpointOffers,
+    required this.currentCheckpointStep,
   }) : super(key: key);
 
   @override
@@ -21,8 +25,7 @@ class RewardList extends StatelessWidget {
     return Center(
       child: Container(
         width: width,
-        height: 420,
-        clipBehavior: Clip.antiAlias,
+        height: 440,
         margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: ShapeDecoration(
           color: AppColors.primary,
@@ -85,22 +88,26 @@ class RewardList extends StatelessWidget {
               bottom: 0,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(width: 24),
-                    for (int i = 0; i < sortedRewards.length; i++)
-                      Padding(
-                        padding: EdgeInsets.only(right: 18),
-                        child: _RewardCard(
-                          reward: sortedRewards[i],
-                          unlocked: userPoints >= sortedRewards[i].price,
-                          width: 200,
-                          height: 340,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(width: 24),
+                      // Mostra solo i rewards normali
+                      for (int i = 0; i < sortedRewards.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 18),
+                          child: _RewardCard(
+                            reward: sortedRewards[i],
+                            unlocked: userPoints >= sortedRewards[i].price,
+                            width: 200,
+                            height: 340,
+                          ),
                         ),
-                      ),
-                    const SizedBox(width: 24),
-                  ],
+                      const SizedBox(width: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -111,13 +118,18 @@ class RewardList extends StatelessWidget {
   }
 }
 
-class _RewardCard extends StatelessWidget {
-  final RewardItem reward;
-  final bool unlocked;
+class _CheckpointOfferCard extends StatelessWidget {
+  final CheckpointOffer offer;
+  final int currentStep;
   final double width;
   final double height;
 
-  const _RewardCard({required this.reward, required this.unlocked, this.width = 153, this.height = 264});
+  const _CheckpointOfferCard({
+    required this.offer,
+    required this.currentStep,
+    this.width = 153,
+    this.height = 264,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,16 +166,156 @@ class _RewardCard extends StatelessWidget {
                       width: 140,
                       height: 140,
                       decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 2),
+                      ),
+                      child: const Icon(Icons.card_giftcard, size: 64, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Titolo
+          Positioned(
+            left: 18,
+            top: width+18,
+            child: SizedBox(
+              width: width-36,
+              child: Text(
+                offer.name,
+                style: const TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 18,
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w600,
+                  height: 1.10,
+                  letterSpacing: 0.48,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          // Progresso
+          Positioned(
+            left: 18,
+            top: width+60,
+            child: Row(
+              children: [
+                Text(
+                  '$currentStep/${offer.totalSteps}',
+                  style: const TextStyle(
+                    color: Color(0xFF1A1A1A),
+                    fontSize: 14,
+                    fontFamily: 'Roboto',
+                    fontWeight: FontWeight.w400,
+                    height: 1.33,
+                    letterSpacing: 0.40,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.card_giftcard, size: 20, color: Color(0xFF1A1A1A)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardCard extends StatefulWidget {
+  final RewardItem reward;
+  final bool unlocked;
+  final double width;
+  final double height;
+
+  const _RewardCard({required this.reward, required this.unlocked, this.width = 153, this.height = 264});
+
+  @override
+  State<_RewardCard> createState() => _RewardCardState();
+}
+
+class _RewardCardState extends State<_RewardCard> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.unlocked) {
+      _pulseController = AnimationController(
+        duration: const Duration(milliseconds: 1000),
+        vsync: this,
+      );
+
+      _pulseAnimation = Tween<double>(
+        begin: 1.0,
+        end: 1.05,
+      ).animate(CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ));
+
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.unlocked) {
+      _pulseController.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget card = Container(
+      width: widget.width,
+      height: widget.height,
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Immagine
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              width: widget.width,
+              height: widget.width,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: (widget.width-140)/2,
+                    top: 18,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
                         image: DecorationImage(
-                          image: NetworkImage(reward.fullImageUrl),
+                          image: NetworkImage(widget.reward.fullImageUrl),
                           fit: BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
-                  if (!unlocked)
+                  if (!widget.unlocked)
                     Positioned(
-                      left: (width-60)/2,
+                      left: (widget.width-60)/2,
                       top: 60,
                       child: Container(
                         width: 60,
@@ -185,11 +337,11 @@ class _RewardCard extends StatelessWidget {
           // Titolo
           Positioned(
             left: 18,
-            top: width+18,
+            top: widget.width+18,
             child: SizedBox(
-              width: width-36,
+              width: widget.width-36,
               child: Text(
-                reward.title,
+                widget.reward.title,
                 style: const TextStyle(
                   color: Color(0xFF1A1A1A),
                   fontSize: 18,
@@ -206,11 +358,11 @@ class _RewardCard extends StatelessWidget {
           // Prezzo
           Positioned(
             left: 18,
-            top: width+60,
+            top: widget.width+60,
             child: Row(
               children: [
                 Text(
-                  reward.price.toString(),
+                  widget.reward.price.toString(),
                   style: const TextStyle(
                     color: Color(0xFF1A1A1A),
                     fontSize: 14,
@@ -228,6 +380,36 @@ class _RewardCard extends StatelessWidget {
         ],
       ),
     );
+
+    if (widget.unlocked) {
+      return AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _pulseAnimation.value,
+            child: child,
+          );
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              // TODO: Implementare il riscatto
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Premio disponibile per il riscatto!'),
+                  backgroundColor: Color(0xFFFF6565),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(28),
+            child: card,
+          ),
+        ),
+      );
+    }
+
+    return card;
   }
 }
 
@@ -239,4 +421,78 @@ class RewardItem {
   RewardItem({required this.imageUrl, required this.title, required this.price});
 
   String get fullImageUrl => 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imageUrl';
+}
+
+class CheckpointOffer {
+  final String id;
+  final String name;
+  final String description;
+  final int totalSteps;
+  final List<CheckpointStep> steps;
+
+  CheckpointOffer({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.totalSteps,
+    required this.steps,
+  });
+
+  factory CheckpointOffer.fromJson(Map<String, dynamic> json) {
+    return CheckpointOffer(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      totalSteps: json['total_steps'],
+      steps: (json['steps'] as List<dynamic>)
+          .map((step) => CheckpointStep.fromJson(step))
+          .toList(),
+    );
+  }
+}
+
+class CheckpointStep {
+  final String id;
+  final int stepNumber;
+  final String? rewardId;
+  final CheckpointReward? reward;
+
+  CheckpointStep({
+    required this.id,
+    required this.stepNumber,
+    this.rewardId,
+    this.reward,
+  });
+
+  factory CheckpointStep.fromJson(Map<String, dynamic> json) {
+    return CheckpointStep(
+      id: json['id'],
+      stepNumber: json['step_number'],
+      rewardId: json['reward_id'],
+      reward: json['reward'] != null ? CheckpointReward.fromJson(json['reward']) : null,
+    );
+  }
+}
+
+class CheckpointReward {
+  final String id;
+  final String name;
+  final String description;
+  final String icon;
+
+  CheckpointReward({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+  });
+
+  factory CheckpointReward.fromJson(Map<String, dynamic> json) {
+    return CheckpointReward(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      icon: json['icon'],
+    );
+  }
 } 
