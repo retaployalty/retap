@@ -34,6 +34,8 @@ class BusinessCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        width: 300,
+        height: 320,
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -46,22 +48,17 @@ class BusinessCard extends StatelessWidget {
             ),
           ],
         ),
-        constraints: const BoxConstraints(
-          minWidth: 260,
-          maxWidth: 320,
-          minHeight: 500,
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 6),
             // Immagine con pillola categoria
             Stack(
+              clipBehavior: Clip.none,
               children: [
                 Container(
                   height: 160,
-                  width: double.infinity,
+                  width: 300,
                   decoration: const BoxDecoration(
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(28),
@@ -104,6 +101,7 @@ class BusinessCard extends StatelessWidget {
                       ],
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(categoryIcon, color: Colors.black87, size: 20),
                         const SizedBox(width: 6),
@@ -121,85 +119,97 @@ class BusinessCard extends StatelessWidget {
                 ),
               ],
             ),
+            // Contenuto principale
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Text(
-                name,
-                style: AppTextStyles.titleMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Row(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Nome business
                   Text(
-                    isOpen ? 'Open' : 'Closed',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: isOpen ? Colors.green : Colors.red,
-                    ),
+                    name,
+                    style: AppTextStyles.titleMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (!isOpen && hours != null && getTodayOpeningHours(hours).isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: Text(
-                        getTodayOpeningHours(hours),
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  // Stato apertura
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isOpen ? Colors.green : Colors.red,
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(18),
+                      const SizedBox(width: 6),
+                      Text(
+                        isOpen ? 'Open' : 'Closed',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: isOpen ? Colors.green : Colors.red,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.card_giftcard, color: Colors.white, size: 15),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$checkpointsCurrent/$checkpointsTotal',
-                            style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+                      if (!isOpen && hours != null && getTodayOpeningHours(hours).isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          getTodayOpeningHours(hours),
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.attach_money, color: Colors.white, size: 15),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$points',
-                            style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+                  const SizedBox(height: 12),
+                  // Stats
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.card_giftcard, color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$checkpointsCurrent/$checkpointsTotal',
+                                style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.attach_money, color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$points',
+                                style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
