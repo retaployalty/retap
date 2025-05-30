@@ -144,16 +144,54 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
               Positioned(
                 left: 22,
                 top: 50,
-                child: Text(
-                  widget.offerDescription,
-                  style: const TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 16,
-                    fontFamily: 'Fredoka',
-                    fontWeight: FontWeight.w500,
-                    height: 1.40,
-                    letterSpacing: 0.48,
-                  ),
+                child: Row(
+                  children: [
+                    Text(
+                      widget.offerDescription,
+                      style: const TextStyle(
+                        color: Color(0xFF1A1A1A),
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w500,
+                        height: 1.40,
+                        letterSpacing: 0.48,
+                      ),
+                    ),
+                    if (widget.currentStep < widget.totalSteps) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: ShapeDecoration(
+                          color: const Color(0xFFFF6565),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.trending_up,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_getNextRewardStep() - widget.currentStep} to go',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontFamily: 'Fredoka',
+                                fontWeight: FontWeight.w500,
+                                height: 1.40,
+                                letterSpacing: 0.40,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               // Progresso numerico e icona in alto a destra
@@ -195,7 +233,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                       controller: _scrollController,
                       scrollDirection: Axis.horizontal,
                       child: Container(
-                        width: scrollBarWidth,
+                        width: scrollBarWidth + 40, // Aggiungo padding a destra
                         child: Stack(
                           children: [
                             // Barra background (bianca)
@@ -254,6 +292,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                 + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
                                 - dotSize / 2;
                               final bool isRewardAvailable = step <= widget.currentStep;
+                              final bool isNextReward = step == _getNextRewardStep();
                               return Positioned(
                                 left: left + dotSize / 2 - 53.5,
                                 top: barHeight + 10,
@@ -352,34 +391,62 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                         ),
                                       )
                                     else
-                                      Container(
-                                        width: 107,
-                                        height: 48,
-                                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                                        decoration: ShapeDecoration(
-                                          color: const Color(0xFFF5F5F5),
-                                          shape: RoundedRectangleBorder(
-                                            side: const BorderSide(
-                                              width: 1,
-                                              color: Color(0xFFE6E6E6),
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Container(
+                                            width: 107,
+                                            height: 48,
+                                            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                            decoration: ShapeDecoration(
+                                              color: const Color(0xFFF5F5F5),
+                                              shape: RoundedRectangleBorder(
+                                                side: const BorderSide(
+                                                  width: 1,
+                                                  color: Color(0xFFE6E6E6),
+                                                ),
+                                                borderRadius: BorderRadius.circular(32),
+                                              ),
                                             ),
-                                            borderRadius: BorderRadius.circular(32),
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            widget.labelReward,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              color: Color(0xFF1A1A1A),
-                                              fontSize: 15,
-                                              fontFamily: 'Fredoka',
-                                              fontWeight: FontWeight.w600,
-                                              height: 1.1,
-                                              letterSpacing: 0.48,
+                                            child: Center(
+                                              child: Text(
+                                                widget.labelReward,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF1A1A1A),
+                                                  fontSize: 15,
+                                                  fontFamily: 'Fredoka',
+                                                  fontWeight: FontWeight.w600,
+                                                  height: 1.1,
+                                                  letterSpacing: 0.48,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                          if (isNextReward)
+                                            Positioned(
+                                              right: -4,
+                                              top: -4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFFFF6565),
+                                                  shape: BoxShape.rectangle,
+                                                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                                                ),
+                                                child: Text(
+                                                  '${step - widget.currentStep} steps',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontFamily: 'Fredoka',
+                                                    fontWeight: FontWeight.w600,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                   ],
                                 ),
@@ -397,6 +464,16 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
         ),
       ],
     );
+  }
+
+  int _getNextRewardStep() {
+    // Trova il prossimo step che ha un reward
+    final nextRewardStep = widget.rewardSteps
+        .where((step) => step > widget.currentStep)
+        .firstOrNull;
+    
+    // Se non ci sono più reward, usa l'ultimo step
+    return nextRewardStep ?? widget.totalSteps;
   }
 }
 
