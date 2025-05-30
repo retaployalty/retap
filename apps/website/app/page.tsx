@@ -19,7 +19,7 @@ const fredoka = Fredoka({
 const FAQS = [
   {
     q: "Do I need to download an app?",
-    a: "No app needed. Just use your NFC card or digital pass.",
+    a: "No, there's no need to download anything. ReTap works through a web app—accessible instantly via your browser.",
   },
   {
     q: "What if I lose my card?",
@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: "How do I check my points?",
-    a: "Scan your card online or in-store to see your balance and rewards.",
+    a: "You can check your points anytime through the ReTap web app—no installation needed.",
   },
   {
     q: "Is my data safe?",
@@ -49,6 +49,10 @@ const FAQS = [
     q: "How do I contact support?",
     a: "You can contact us anytime at info@retap.com or via WhatsApp.",
   },
+  {
+    q: "Can I use the points earned in one store at another?",
+    a: "No, points can only be redeemed at the store where they were earned. Each business has its own rewards system within ReTap.",
+  },
 ];
 
 const SUBSCRIPTION = {
@@ -57,11 +61,11 @@ const SUBSCRIPTION = {
   activationFee: 99,
   annualDiscount: 0.10, // 10%
   features: [
-    "Up to 1000 cards/month",
+    "POS device included",
+    "Up to 100 physical cards/month",
     "Full dashboard",
     "Advanced statistics",
-    "Priority support",
-    "API access"
+    "Early access to new features"
   ]
 };
 
@@ -69,35 +73,109 @@ export default function Home() {
   const [open, setOpen] = useState<number | null>(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const annualPrice = Math.round(SUBSCRIPTION.monthlyPrice * 12 * (1 - SUBSCRIPTION.annualDiscount));
+
+  const scrollToWhatIsRetap = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const whatIsRetapSection = document.querySelector('section:nth-of-type(2)');
+    if (whatIsRetapSection) {
+      const navbarHeight = 80; // altezza approssimativa della navbar
+      const sectionPosition = whatIsRetapSection.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
+      
+      window.scrollTo({
+        top: sectionPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <main className={fredoka.className + " antialiased bg-background min-h-screen"}>
         <Navbar />
         {/* Hero Section */}
       <section className="scroll-mt-24 flex items-center justify-center min-h-screen pt-24 pb-12 px-4 bg-background border-b border-border relative overflow-hidden" id="home">
+        {/* Background pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f8494c]/5 via-transparent to-transparent"></div>
+        
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-center h-full max-w-7xl gap-16 relative z-10">
           {/* Colonna sinistra: testo e bottoni */}
           <div className="w-full md:w-1/2 flex flex-col items-start justify-center text-left md:pr-8">
-            <h1 className="text-5xl md:text-7xl font-extrabold mb-8 text-textPrimary leading-tight" style={{lineHeight: '1.1'}}>
+            <h1 className="text-5xl md:text-7xl font-extrabold mb-6 text-textPrimary leading-tight" style={{lineHeight: '1.1'}}>
               Your universal<br />
               <span className="bg-[#f8494c] text-white px-4 rounded-lg">loyalty card</span>
             </h1>
-            <p className="text-2xl md:text-3xl text-textSecondary mb-10 max-w-xl leading-snug">
+            <p className="text-2xl md:text-3xl text-textSecondary mb-8 max-w-xl leading-snug">
               One NFC card for all your favorite shops. Earn points everywhere you go with ReTap.
             </p>
-            <a 
-              href="/auth" 
-              className="bg-[#1A1A1A] text-white h-16 px-10 rounded-xl font-bold text-xl shadow hover:bg-[#FF3131] transition-colors flex items-center justify-center mt-2"
-              style={{ minWidth: 0 }}
-            >
-              Get Started
-            </a>
+            
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-8 mb-10 w-full">
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-[#f8494c]">500+</span>
+                <span className="text-sm text-textSecondary">Partner stores</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-[#f8494c]">50K+</span>
+                <span className="text-sm text-textSecondary">Active users</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-[#f8494c]">1M+</span>
+                <span className="text-sm text-textSecondary">Points earned</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <a 
+                href="/auth" 
+                className="bg-[#1A1A1A] text-white h-16 px-10 rounded-xl font-bold text-xl shadow hover:bg-[#FF3131] transition-colors flex items-center justify-center"
+                style={{ minWidth: 0 }}
+              >
+                Get Started
+              </a>
+              <a 
+                href="#what-is-retap" 
+                onClick={scrollToWhatIsRetap}
+                className="h-16 px-10 rounded-xl font-bold text-xl border-2 border-[#1A1A1A] hover:border-[#FF3131] hover:text-[#FF3131] transition-colors flex items-center justify-center"
+                style={{ minWidth: 0 }}
+              >
+                Learn More
+              </a>
+            </div>
           </div>
-          {/* Colonna destra: immagine carta */}
+
+          {/* Colonna destra: immagine carta con animazione */}
           <div className="w-full md:w-1/2 flex justify-center items-center mt-12 md:mt-0">
-            <img src="/retapG1.png" alt="ReTap Card" className="w-full max-w-3xl h-auto drop-shadow-xl" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-[#f8494c]/20 rounded-3xl blur-2xl transform -rotate-6"></div>
+              <img 
+                src="/retapG1.png" 
+                alt="ReTap Card" 
+                className="w-full max-w-3xl h-auto drop-shadow-xl relative" 
+              />
+            </div>
           </div>
         </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <svg className="w-6 h-6 text-textSecondary" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
+        </div>
       </section>
+
+      <style jsx global>{`
+        @keyframes float {
+          0% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-20px);
+          }
+          100% {
+            transform: translateY(0px);
+          }
+        }
+      `}</style>
 
       {/* Titolo e descrizione sopra il video */}
       <section className="w-full flex flex-col items-center justify-center py-24 bg-gray-50">
@@ -247,8 +325,8 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-4">
-                  {SUBSCRIPTION.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
+                  {SUBSCRIPTION.features.map((feature, index) => (
+                    <li key={feature} className={`flex items-center gap-2 ${index === 4 && !isAnnual ? 'hidden' : ''}`}>
                       <Check className="h-4 w-4 text-[#FF3131]" />
                       <span className="text-sm text-textSecondary">{feature}</span>
                     </li>
