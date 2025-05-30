@@ -5,12 +5,16 @@ class CheckpointRewardsProgress extends StatefulWidget {
   final int totalSteps;
   final List<int> rewardSteps; // es: [5, 10]
   final String labelReward;
+  final String offerName;
+  final String offerDescription;
 
   const CheckpointRewardsProgress({
     super.key,
     required this.currentStep,
     required this.totalSteps,
     required this.rewardSteps,
+    required this.offerName,
+    required this.offerDescription,
     this.labelReward = 'Free Cream',
   });
 
@@ -101,12 +105,12 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
           child: Stack(
             children: [
               // Titolo
-              const Positioned(
+              Positioned(
                 left: 22,
                 top: 20,
                 child: Text(
-                  'Our Specialities',
-                  style: TextStyle(
+                  widget.offerName,
+                  style: const TextStyle(
                     color: Color(0xFF1A1A1A),
                     fontSize: 22,
                     fontFamily: 'Fredoka',
@@ -117,12 +121,12 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
                 ),
               ),
               // Sottotitolo
-              const Positioned(
+              Positioned(
                 left: 22,
                 top: 50,
                 child: Text(
-                  'Each 10 icecream you get 1 for Free',
-                  style: TextStyle(
+                  widget.offerDescription,
+                  style: const TextStyle(
                     color: Color(0xFF1A1A1A),
                     fontSize: 16,
                     fontFamily: 'Fredoka',

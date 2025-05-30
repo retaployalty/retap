@@ -5,11 +5,15 @@ import '../theme/text_styles.dart';
 class RewardList extends StatelessWidget {
   final int userPoints;
   final List<RewardItem> rewards;
+  final List<CheckpointOffer> checkpointOffers;
+  final int currentCheckpointStep;
 
   const RewardList({
     Key? key,
     required this.userPoints,
     required this.rewards,
+    required this.checkpointOffers,
+    required this.currentCheckpointStep,
   }) : super(key: key);
 
   @override
@@ -89,9 +93,21 @@ class RewardList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(width: 24),
+                    // Mostra prima i checkpoint offers
+                    for (final offer in checkpointOffers)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 18),
+                        child: _CheckpointOfferCard(
+                          offer: offer,
+                          currentStep: currentCheckpointStep,
+                          width: 200,
+                          height: 340,
+                        ),
+                      ),
+                    // Poi mostra i rewards normali
                     for (int i = 0; i < sortedRewards.length; i++)
                       Padding(
-                        padding: EdgeInsets.only(right: 18),
+                        padding: const EdgeInsets.only(right: 18),
                         child: _RewardCard(
                           reward: sortedRewards[i],
                           unlocked: userPoints >= sortedRewards[i].price,
@@ -106,6 +122,114 @@ class RewardList extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CheckpointOfferCard extends StatelessWidget {
+  final CheckpointOffer offer;
+  final int currentStep;
+  final double width;
+  final double height;
+
+  const _CheckpointOfferCard({
+    required this.offer,
+    required this.currentStep,
+    this.width = 153,
+    this.height = 264,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Immagine
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              width: width,
+              height: width,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: (width-140)/2,
+                    top: 18,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary, width: 2),
+                      ),
+                      child: const Icon(Icons.card_giftcard, size: 64, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Titolo
+          Positioned(
+            left: 18,
+            top: width+18,
+            child: SizedBox(
+              width: width-36,
+              child: Text(
+                offer.name,
+                style: const TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 18,
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w600,
+                  height: 1.10,
+                  letterSpacing: 0.48,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          // Progresso
+          Positioned(
+            left: 18,
+            top: width+60,
+            child: Row(
+              children: [
+                Text(
+                  '$currentStep/${offer.totalSteps}',
+                  style: const TextStyle(
+                    color: Color(0xFF1A1A1A),
+                    fontSize: 14,
+                    fontFamily: 'Roboto',
+                    fontWeight: FontWeight.w400,
+                    height: 1.33,
+                    letterSpacing: 0.40,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.card_giftcard, size: 20, color: Color(0xFF1A1A1A)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -239,4 +363,78 @@ class RewardItem {
   RewardItem({required this.imageUrl, required this.title, required this.price});
 
   String get fullImageUrl => 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imageUrl';
+}
+
+class CheckpointOffer {
+  final String id;
+  final String name;
+  final String description;
+  final int totalSteps;
+  final List<CheckpointStep> steps;
+
+  CheckpointOffer({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.totalSteps,
+    required this.steps,
+  });
+
+  factory CheckpointOffer.fromJson(Map<String, dynamic> json) {
+    return CheckpointOffer(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      totalSteps: json['total_steps'],
+      steps: (json['steps'] as List<dynamic>)
+          .map((step) => CheckpointStep.fromJson(step))
+          .toList(),
+    );
+  }
+}
+
+class CheckpointStep {
+  final String id;
+  final int stepNumber;
+  final String? rewardId;
+  final CheckpointReward? reward;
+
+  CheckpointStep({
+    required this.id,
+    required this.stepNumber,
+    this.rewardId,
+    this.reward,
+  });
+
+  factory CheckpointStep.fromJson(Map<String, dynamic> json) {
+    return CheckpointStep(
+      id: json['id'],
+      stepNumber: json['step_number'],
+      rewardId: json['reward_id'],
+      reward: json['reward'] != null ? CheckpointReward.fromJson(json['reward']) : null,
+    );
+  }
+}
+
+class CheckpointReward {
+  final String id;
+  final String name;
+  final String description;
+  final String icon;
+
+  CheckpointReward({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+  });
+
+  factory CheckpointReward.fromJson(Map<String, dynamic> json) {
+    return CheckpointReward(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      icon: json['icon'],
+    );
+  }
 } 

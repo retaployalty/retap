@@ -32,7 +32,8 @@ class BusinessDetailScreen extends StatefulWidget {
 class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   bool isLoading = true;
   List<RewardItem> rewards = [];
-  // checkpoint_offers: puoi aggiungere qui la struttura se vuoi mostrarli in futuro
+  List<CheckpointOffer> checkpointOffers = [];
+  int currentCheckpointStep = 1;
 
   @override
   void initState() {
@@ -44,26 +45,34 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
     setState(() => isLoading = true);
     final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}');
     final res = await http.get(url);
-    print('API status: \\${res.statusCode}');
-    print('API body: \\${res.body}');
+    print('API status: ${res.statusCode}');
+    print('API body: ${res.body}');
     if (res.statusCode == 200) {
       final data = json.decode(res.body);
-      print('Decoded data: \\${data}');
+      print('Decoded data: ${data}');
       final rewardsData = data['rewards'] as List<dynamic>;
       final offersData = data['checkpoint_offers'] as List<dynamic>?;
-      print('rewardsData: \\${rewardsData}');
-      print('checkpoint_offers: \\${offersData}');
+      print('rewardsData: ${rewardsData}');
+      print('checkpoint_offers: ${offersData}');
       setState(() {
         rewards = rewardsData.map((r) => RewardItem(
           imageUrl: r['image_path'] ?? '',
           title: r['name'] ?? '',
           price: r['price_coins'] ?? 0,
         )).toList();
+        
+        checkpointOffers = (offersData ?? []).map((o) => CheckpointOffer.fromJson(o)).toList();
+        
+        // Per ora prendiamo il primo offer come esempio
+        if (checkpointOffers.isNotEmpty) {
+          currentCheckpointStep = 2; // Questo dovrebbe venire dall'API
+        }
+        
         isLoading = false;
       });
     } else {
       setState(() => isLoading = false);
-      print('API error: \\${res.statusCode} - \\${res.body}');
+      print('API error: ${res.statusCode} - ${res.body}');
       // In produzione: gestisci errore
     }
   }
@@ -142,15 +151,23 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
             ),
             const SizedBox(height: 60),
             // --- CHECKPOINT REWARDS PROGRESS UI ---
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: CheckpointRewardsProgress(
-                currentStep: 2,
-                totalSteps: 10,
-                rewardSteps: [5, 10],
-                labelReward: 'Free Cream',
+            if (checkpointOffers.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: CheckpointRewardsProgress(
+                  currentStep: currentCheckpointStep,
+                  totalSteps: checkpointOffers.first.totalSteps,
+                  rewardSteps: checkpointOffers.first.steps
+                      .where((step) => step.reward != null)
+                      .map((step) => step.stepNumber)
+                      .toList(),
+                  labelReward: checkpointOffers.first.steps
+                      .firstWhere((step) => step.reward != null, orElse: () => checkpointOffers.first.steps.first)
+                      .reward?.name ?? 'Free Reward',
+                  offerName: checkpointOffers.first.name,
+                  offerDescription: checkpointOffers.first.description,
+                ),
               ),
-            ),
             const SizedBox(height: 20),
             // --- REWARD LIST UI ---
             Padding(
@@ -160,6 +177,8 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                   : RewardList(
                       userPoints: widget.points,
                       rewards: rewards,
+                      checkpointOffers: checkpointOffers,
+                      currentCheckpointStep: currentCheckpointStep,
                     ),
             ),
             const SizedBox(height: 20),
