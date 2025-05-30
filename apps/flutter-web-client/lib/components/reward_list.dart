@@ -93,18 +93,7 @@ class RewardList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(width: 24),
-                    // Mostra prima i checkpoint offers
-                    for (final offer in checkpointOffers)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 18),
-                        child: _CheckpointOfferCard(
-                          offer: offer,
-                          currentStep: currentCheckpointStep,
-                          width: 200,
-                          height: 340,
-                        ),
-                      ),
-                    // Poi mostra i rewards normali
+                    // Mostra solo i rewards normali
                     for (int i = 0; i < sortedRewards.length; i++)
                       Padding(
                         padding: const EdgeInsets.only(right: 18),

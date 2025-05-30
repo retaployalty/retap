@@ -22,22 +22,42 @@ class CheckpointRewardsProgress extends StatefulWidget {
   State<CheckpointRewardsProgress> createState() => _CheckpointRewardsProgressState();
 }
 
-class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
+class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   double _progress = 0.0;
   double _minProgress = 0.0;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+
+    // Setup dell'animazione di pulsazione
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Avvia l'animazione in loop
+    _pulseController.repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -233,6 +253,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
                               final double left = barHPadding + firstDotOffset
                                 + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
                                 - dotSize / 2;
+                              final bool isRewardAvailable = step <= widget.currentStep;
                               return Positioned(
                                 left: left + dotSize / 2 - 53.5,
                                 top: barHeight + 10,
@@ -247,36 +268,119 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Container(
-                                      width: 107,
-                                      height: 48,
-                                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                                      clipBehavior: Clip.antiAlias,
-                                      decoration: ShapeDecoration(
-                                        color: const Color(0xFFFF6565),
-                                        shape: RoundedRectangleBorder(
-                                          side: const BorderSide(
-                                            width: 1,
-                                            color: Color(0xFFE6E6E6),
+                                    if (isRewardAvailable)
+                                      AnimatedBuilder(
+                                        animation: _pulseAnimation,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                            scale: _pulseAnimation.value,
+                                            child: child,
+                                          );
+                                        },
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  // TODO: Implementare il riscatto
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Premio disponibile per il riscatto!'),
+                                                      backgroundColor: Color(0xFFFF6565),
+                                                    ),
+                                                  );
+                                                },
+                                                borderRadius: BorderRadius.circular(32),
+                                                child: Ink(
+                                                  width: 107,
+                                                  height: 48,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                  decoration: ShapeDecoration(
+                                                    color: const Color(0xFFFF6565),
+                                                    shape: RoundedRectangleBorder(
+                                                      side: const BorderSide(
+                                                        width: 1,
+                                                        color: Color(0xFFFF6565),
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(32),
+                                                    ),
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      widget.labelReward,
+                                                      textAlign: TextAlign.center,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 15,
+                                                        fontFamily: 'Fredoka',
+                                                        fontWeight: FontWeight.w600,
+                                                        height: 1.1,
+                                                        letterSpacing: 0.48,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              right: -8,
+                                              top: -8,
+                                              child: Container(
+                                                width: 24,
+                                                height: 24,
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.white,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Color(0xFFFF6565),
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Icon(
+                                                  Icons.card_giftcard,
+                                                  size: 16,
+                                                  color: Color(0xFFFF6565),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        width: 107,
+                                        height: 48,
+                                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                        decoration: ShapeDecoration(
+                                          color: const Color(0xFFF5F5F5),
+                                          shape: RoundedRectangleBorder(
+                                            side: const BorderSide(
+                                              width: 1,
+                                              color: Color(0xFFE6E6E6),
+                                            ),
+                                            borderRadius: BorderRadius.circular(32),
                                           ),
-                                          borderRadius: BorderRadius.circular(32),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            widget.labelReward,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              color: Color(0xFF1A1A1A),
+                                              fontSize: 15,
+                                              fontFamily: 'Fredoka',
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.1,
+                                              letterSpacing: 0.48,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      child: Center(
-                                        child: Text(
-                                          widget.labelReward,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 15,
-                                            fontFamily: 'Fredoka',
-                                            fontWeight: FontWeight.w600,
-                                            height: 1.1,
-                                            letterSpacing: 0.48,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
                                   ],
                                 ),
                               );
