@@ -18,9 +18,10 @@ class AppTextStyles {
   );
   static final displaySmall = GoogleFonts.fredoka(
     fontSize: 36,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     letterSpacing: 0,
+    height: 1.0,
   );
 
   // Headline
