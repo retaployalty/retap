@@ -74,16 +74,12 @@ export default function Home() {
         <Navbar />
         {/* Hero Section */}
       <section className="scroll-mt-24 flex items-center justify-center min-h-screen pt-24 pb-12 px-4 bg-background border-b border-border relative overflow-hidden" id="home">
-        <img 
-          src="/coins.png" 
-          alt="ReTap Coins" 
-          className="absolute top-8 left-8 w-[220px] h-auto opacity-20 pointer-events-none select-none"
-        />
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-center h-full max-w-7xl gap-16 relative z-10">
           {/* Colonna sinistra: testo e bottoni */}
           <div className="w-full md:w-1/2 flex flex-col items-start justify-center text-left md:pr-8">
             <h1 className="text-5xl md:text-7xl font-extrabold mb-8 text-textPrimary leading-tight" style={{lineHeight: '1.1'}}>
-              Your universal<br />loyalty card
+              Your universal<br />
+              <span className="bg-[#f8494c] text-white px-4 rounded-lg">loyalty card</span>
             </h1>
             <p className="text-2xl md:text-3xl text-textSecondary mb-10 max-w-xl leading-snug">
               One NFC card for all your favorite shops. Earn points everywhere you go with ReTap.
@@ -104,7 +100,7 @@ export default function Home() {
       </section>
 
       {/* Titolo e descrizione sopra il video */}
-      <section className="w-full flex flex-col items-center justify-center py-24 bg-background">
+      <section className="w-full flex flex-col items-center justify-center py-24 bg-gray-50">
         <h2 className="text-4xl md:text-6xl font-bold mb-4 text-textPrimary text-center">What is ReTap?</h2>
         <p className="text-xl md:text-2xl text-textSecondary mb-12 max-w-3xl text-center">
           Find out how ReTap works and why it is the simplest and most universal loyalty solution for your customers.
@@ -206,22 +202,7 @@ export default function Home() {
       <hr className="border-t border-border w-full" />
 
       {/* Pricing Section */}
-      <section id="pricing" className="scroll-mt-24 flex items-center justify-center min-h-screen bg-surface px-4 py-20 border-b border-border relative overflow-hidden">
-        <img
-          src="/retapCircle.png"
-          alt="Decorazione ReTap"
-          className="absolute top-0 left-0 w-[700px] max-w-none opacity-30 pointer-events-none select-none z-0 -translate-x-1/4 -translate-y-1/4"
-        />
-        <img
-          src="/coins.png"
-          alt="Monete ReTap"
-          className="absolute bottom-0 right-0 w-[320px] opacity-20 pointer-events-none select-none z-0 translate-x-1/4 translate-y-1/4"
-        />
-        <img
-          src="/retapCircle.png"
-          alt="Decorazione Cerchio Piccolo"
-          className="absolute top-0 right-0 w-[180px] opacity-20 pointer-events-none select-none z-0 translate-x-1/4 -translate-y-1/4"
-        />
+      <section id="pricing" className="scroll-mt-24 flex items-center justify-center min-h-screen bg-gray-50 px-4 py-20 border-b border-border relative overflow-hidden">
         <div className="container mx-auto px-4 py-8 relative z-10">
           <div className="mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-10 text-textPrimary text-center">
