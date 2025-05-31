@@ -3,104 +3,90 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_theme.dart';
 
 class AppTextStyles {
+  static TextStyle _getFredoka({
+    required double fontSize,
+    required FontWeight fontWeight,
+    double? height,
+  }) {
+    return GoogleFonts.fredoka(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: AppColors.textPrimary,
+      letterSpacing: 0,
+      height: height,
+    ).copyWith(
+      fontFamilyFallback: const ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+    );
+  }
+
   // Display
-  static final displayLarge = GoogleFonts.fredoka(
+  static final displayLarge = _getFredoka(
     fontSize: 57,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
-  static final displayMedium = GoogleFonts.fredoka(
+  static final displayMedium = _getFredoka(
     fontSize: 45,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
-  static final displaySmall = GoogleFonts.fredoka(
+  static final displaySmall = _getFredoka(
     fontSize: 36,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
     height: 1.0,
   );
 
   // Headline
-  static final headlineLarge = GoogleFonts.fredoka(
+  static final headlineLarge = _getFredoka(
     fontSize: 32,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
-  static final headlineMedium = GoogleFonts.fredoka(
+  static final headlineMedium = _getFredoka(
     fontSize: 28,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
-  static final headlineSmall = GoogleFonts.fredoka(
+  static final headlineSmall = _getFredoka(
     fontSize: 24,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
 
   // Title
-  static final titleLarge = GoogleFonts.fredoka(
+  static final titleLarge = _getFredoka(
     fontSize: 22,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0,
   );
-  static final titleMedium = GoogleFonts.fredoka(
+  static final titleMedium = _getFredoka(
     fontSize: 16,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
   );
-  static final titleSmall = GoogleFonts.fredoka(
+  static final titleSmall = _getFredoka(
     fontSize: 14,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
   );
 
   // Body
-  static final bodyLarge = GoogleFonts.fredoka(
+  static final bodyLarge = _getFredoka(
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.15,
   );
-  static final bodyMedium = GoogleFonts.fredoka(
+  static final bodyMedium = _getFredoka(
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.15,
   );
-  static final bodySmall = GoogleFonts.fredoka(
+  static final bodySmall = _getFredoka(
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
   );
 
   // Label
-  static final labelLarge = GoogleFonts.fredoka(
+  static final labelLarge = _getFredoka(
     fontSize: 14,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.1,
   );
-  static final labelMedium = GoogleFonts.fredoka(
+  static final labelMedium = _getFredoka(
     fontSize: 12,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.5,
   );
-  static final labelSmall = GoogleFonts.fredoka(
+  static final labelSmall = _getFredoka(
     fontSize: 11,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.5,
   );
 } 
