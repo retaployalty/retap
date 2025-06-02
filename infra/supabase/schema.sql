@@ -142,7 +142,7 @@ DECLARE
 BEGIN
     -- Get or create customer checkpoint
     INSERT INTO customer_checkpoints (customer_id, merchant_id, current_step)
-    VALUES (p_customer_id, p_merchant_id, 1)
+    VALUES (p_customer_id, p_merchant_id, 0)  -- Changed from 1 to 0
     ON CONFLICT (customer_id, merchant_id) DO NOTHING;
 
     -- Get current step and total steps from the offer
@@ -200,7 +200,42 @@ $$;
 ALTER FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_offer_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "checkpoints_current" integer, "checkpoints_total" integer)
+CREATE OR REPLACE FUNCTION "public"."create_customer_checkpoint"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  offer_record RECORD;
+BEGIN
+  -- Get all active offers for this merchant
+  FOR offer_record IN 
+    SELECT id FROM public.checkpoint_offers 
+    WHERE merchant_id = NEW.merchant_id
+  LOOP
+    -- Insert a record in customer_checkpoints for each offer
+    INSERT INTO public.customer_checkpoints (
+      customer_id, 
+      merchant_id, 
+      offer_id,
+      current_step
+    )
+    VALUES (
+      NEW.customer_id, 
+      NEW.merchant_id, 
+      offer_record.id,
+      0
+    )
+    ON CONFLICT (customer_id, merchant_id, offer_id) DO NOTHING;
+  END LOOP;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_customer_checkpoint"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[])
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
 BEGIN
@@ -225,19 +260,29 @@ BEGIN
     SELECT
       cp.merchant_id as cp_merchant_id,
       cp.current_step,
-      co.total_steps
+      co.total_steps,
+      co.id as offer_id
     FROM public.customer_checkpoints cp
     JOIN public.cards c ON c.customer_id = cp.customer_id
     JOIN public.checkpoint_offers co ON co.merchant_id = cp.merchant_id
     WHERE c.id = $1
   ),
   best_checkpoint AS (
-    SELECT cp_merchant_id, current_step, total_steps
+    SELECT cp_merchant_id, current_step, total_steps, offer_id
     FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY cp_merchant_id ORDER BY current_step DESC) as rn
       FROM checkpoints
     ) ranked
     WHERE rn = 1
+  ),
+  reward_steps AS (
+    SELECT 
+      bc.cp_merchant_id,
+      ARRAY_AGG(cs.step_number ORDER BY cs.step_number) as steps
+    FROM best_checkpoint bc
+    JOIN public.checkpoint_steps cs ON cs.offer_id = bc.offer_id
+    WHERE cs.reward_id IS NOT NULL
+    GROUP BY bc.cp_merchant_id
   )
   SELECT 
     mb.mb_merchant_id as merchant_id,
@@ -248,9 +293,11 @@ BEGIN
     mb.logo_url,
     mb.hours,
     COALESCE(bc.current_step, 0) as checkpoints_current,
-    COALESCE(bc.total_steps, 0) as checkpoints_total
+    COALESCE(bc.total_steps, 0) as checkpoints_total,
+    COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps
   FROM merchant_balances mb
   LEFT JOIN best_checkpoint bc ON bc.cp_merchant_id = mb.mb_merchant_id
+  LEFT JOIN reward_steps rs ON rs.cp_merchant_id = mb.mb_merchant_id
   ORDER BY mb.balance DESC;
 END;
 $_$;
@@ -485,6 +532,45 @@ $_$;
 
 ALTER FUNCTION "public"."has_active_subscription"("profile_id" "uuid") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+declare
+  v_balance integer;
+  v_price_coins integer;
+begin
+  -- Get the current balance
+  select balance into v_balance
+  from get_card_balance(p_merchant_id);
+
+  -- Get the reward price
+  select price_coins into v_price_coins
+  from rewards
+  where id = p_reward_id
+    and merchant_id = p_merchant_id;
+
+  -- Check if user has enough points
+  if v_balance < v_price_coins then
+    raise exception 'Insufficient points to redeem this reward';
+  end if;
+
+  -- Create the redemption transaction
+  insert into reward_redemptions (
+    merchant_id,
+    reward_id,
+    points_spent
+  ) values (
+    p_merchant_id,
+    p_reward_id,
+    v_price_coins
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -598,9 +684,10 @@ CREATE TABLE IF NOT EXISTS "public"."customer_checkpoints" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "customer_id" "uuid" NOT NULL,
     "merchant_id" "uuid" NOT NULL,
-    "current_step" integer DEFAULT 1 NOT NULL,
+    "current_step" integer DEFAULT 0 NOT NULL,
     "last_updated" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "customer_checkpoints_step_valid" CHECK (("current_step" > 0))
+    "offer_id" "uuid",
+    CONSTRAINT "customer_checkpoints_step_valid" CHECK (("current_step" >= 0))
 );
 
 
@@ -825,7 +912,7 @@ ALTER TABLE ONLY "public"."checkpoint_steps"
 
 
 ALTER TABLE ONLY "public"."customer_checkpoints"
-    ADD CONSTRAINT "customer_checkpoints_customer_merchant_unique" UNIQUE ("customer_id", "merchant_id");
+    ADD CONSTRAINT "customer_checkpoints_customer_merchant_offer_unique" UNIQUE ("customer_id", "merchant_id", "offer_id");
 
 
 
@@ -871,6 +958,10 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE OR REPLACE TRIGGER "on_card_merchant_created" AFTER INSERT ON "public"."card_merchants" FOR EACH ROW EXECUTE FUNCTION "public"."create_customer_checkpoint"();
 
 
 
@@ -958,6 +1049,11 @@ ALTER TABLE ONLY "public"."customer_checkpoints"
 
 ALTER TABLE ONLY "public"."customer_checkpoints"
     ADD CONSTRAINT "customer_checkpoints_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."customer_checkpoints"
+    ADD CONSTRAINT "customer_checkpoints_offer_id_fkey" FOREIGN KEY ("offer_id") REFERENCES "public"."checkpoint_offers"("id") ON DELETE CASCADE;
 
 
 
@@ -1311,12 +1407,6 @@ CREATE POLICY "Users can view their own subscriptions" ON "public"."subscription
 ALTER TABLE "public"."merchants" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."redeemed_checkpoint_rewards" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."redeemed_rewards" ENABLE ROW LEVEL SECURITY;
-
-
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
@@ -1509,6 +1599,12 @@ GRANT ALL ON FUNCTION "public"."advance_customer_checkpoint"("p_customer_id" "uu
 
 
 
+GRANT ALL ON FUNCTION "public"."create_customer_checkpoint"() TO "anon";
+GRANT ALL ON FUNCTION "public"."create_customer_checkpoint"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_customer_checkpoint"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "service_role";
@@ -1566,6 +1662,12 @@ GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "service_role";
 
 
 

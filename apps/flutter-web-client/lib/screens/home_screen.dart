@@ -268,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 isOpen: isOpen,
                                                 hours: hours,
                                                 merchantId: business['merchant_id'],
+                                                cardId: cardId!,
                                               ),
                                             ),
                                           );
