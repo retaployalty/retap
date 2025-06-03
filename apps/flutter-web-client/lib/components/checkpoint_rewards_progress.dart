@@ -98,11 +98,10 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     final double progressBarWidth = barWidth - 2 * barHPadding;
     final double progressBarHeight = barHeight - 2 * barVPadding;
 
-    // Calcolo la progress minima per arrivare al centro del secondo checkpoint
-    final bool isSecondReward = widget.rewardSteps.contains(2);
-    final double secondDotSize = isSecondReward ? rewardDotSize : normalDotSize;
-    final double secondDotPos = barHPadding + firstDotOffset + (barWidth - firstDotOffset - lastDotOffset) * 1 / (widget.totalSteps - 1);
-    final double minRedBarLength = secondDotPos - barHPadding + (secondDotSize / 2) + 8;
+    // Calcolo la progress minima per arrivare al centro dello step corrente
+    final double currentStepPos = barHPadding + firstDotOffset + (barWidth - firstDotOffset - lastDotOffset) * (widget.currentStep - 1) / (widget.totalSteps - 1);
+    final double currentDotSize = widget.rewardSteps.contains(widget.currentStep) ? rewardDotSize : normalDotSize;
+    final double minRedBarLength = currentStepPos - barHPadding + (currentDotSize / 2) + 8;
     final double maxRedBarLength = (barWidth - 2 * barHPadding);
     _minProgress = (minRedBarLength / maxRedBarLength).clamp(0.0, 1.0);
 

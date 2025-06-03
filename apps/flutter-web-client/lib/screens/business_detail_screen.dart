@@ -13,6 +13,7 @@ class BusinessDetailScreen extends StatefulWidget {
   final bool isOpen;
   final dynamic hours;
   final String merchantId;
+  final String cardId;
 
   const BusinessDetailScreen({
     super.key,
@@ -23,6 +24,7 @@ class BusinessDetailScreen extends StatefulWidget {
     required this.hours,
     required this.coverImageUrls,
     required this.merchantId,
+    required this.cardId,
   });
 
   @override
@@ -43,7 +45,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
 
   Future<void> fetchRewardsAndCheckpoints() async {
     setState(() => isLoading = true);
-    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}');
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}&cardId=${widget.cardId}');
     final res = await http.get(url);
     print('API status: ${res.statusCode}');
     print('API body: ${res.body}');
@@ -63,9 +65,9 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         
         checkpointOffers = (offersData ?? []).map((o) => CheckpointOffer.fromJson(o)).toList();
         
-        // Per ora prendiamo il primo offer come esempio
+        // Use the current step from the API response
         if (checkpointOffers.isNotEmpty) {
-          currentCheckpointStep = 2; // Questo dovrebbe venire dall'API
+          currentCheckpointStep = data['current_step'] ?? 0;
         }
         
         isLoading = false;
