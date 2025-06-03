@@ -704,6 +704,19 @@ CREATE TABLE IF NOT EXISTS "public"."customers" (
 ALTER TABLE "public"."customers" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."merchant_images" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "image_path" "text" NOT NULL,
+    "is_primary" boolean DEFAULT false,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."merchant_images" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
@@ -718,7 +731,9 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "google_maps_url" "text",
     "hours" "jsonb",
     "annual_closures" "jsonb",
-    "gallery_images" "jsonb"
+    "gallery_images" "jsonb",
+    "image_path" "text",
+    "opening_hours" "jsonb"
 );
 
 
@@ -750,6 +765,10 @@ COMMENT ON COLUMN "public"."merchants"."annual_closures" IS 'Chiusure annuali in
 
 
 COMMENT ON COLUMN "public"."merchants"."gallery_images" IS 'Array di URL immagini aggiuntive (galleria)';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."opening_hours" IS 'JSONB object with opening hours for each day of the week. Format: {"monday": {"open": "09:00", "close": "20:00"}, ...}';
 
 
 
@@ -926,6 +945,11 @@ ALTER TABLE ONLY "public"."customers"
 
 
 
+ALTER TABLE ONLY "public"."merchant_images"
+    ADD CONSTRAINT "merchant_images_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."merchants"
     ADD CONSTRAINT "merchants_pkey" PRIMARY KEY ("id");
 
@@ -958,6 +982,14 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_merchant_images_merchant_id" ON "public"."merchant_images" USING "btree" ("merchant_id");
+
+
+
+CREATE INDEX "idx_merchant_images_primary" ON "public"."merchant_images" USING "btree" ("merchant_id", "is_primary") WHERE ("is_primary" = true);
 
 
 
@@ -1057,6 +1089,11 @@ ALTER TABLE ONLY "public"."customer_checkpoints"
 
 
 
+ALTER TABLE ONLY "public"."merchant_images"
+    ADD CONSTRAINT "merchant_images_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."merchants"
     ADD CONSTRAINT "merchants_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -1114,6 +1151,14 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_card_merchant_id_fkey" FOREIGN KEY ("card_merchant_id") REFERENCES "public"."card_merchants"("id") ON DELETE CASCADE;
+
+
+
+CREATE POLICY "Anyone can view hours and image" ON "public"."merchants" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Anyone can view merchant images" ON "public"."merchant_images" FOR SELECT USING (true);
 
 
 
@@ -1288,6 +1333,10 @@ CREATE POLICY "Merchants can insert their own profile" ON "public"."merchants" F
 
 
 
+CREATE POLICY "Merchants can manage their own images" ON "public"."merchant_images" USING (("auth"."uid"() = "merchant_id")) WITH CHECK (("auth"."uid"() = "merchant_id"));
+
+
+
 CREATE POLICY "Merchants can update their customers' checkpoints" ON "public"."customer_checkpoints" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -1315,6 +1364,10 @@ CREATE POLICY "Merchants can update their own checkpoint rewards" ON "public"."c
 CREATE POLICY "Merchants can update their own checkpoint steps" ON "public"."checkpoint_steps" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can update their own hours and image" ON "public"."merchants" FOR UPDATE USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
 
 
 
@@ -1402,6 +1455,9 @@ CREATE POLICY "Users can update their own subscriptions" ON "public"."subscripti
 
 CREATE POLICY "Users can view their own subscriptions" ON "public"."subscriptions" FOR SELECT USING (("auth"."uid"() = "profile_id"));
 
+
+
+ALTER TABLE "public"."merchant_images" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."merchants" ENABLE ROW LEVEL SECURITY;
@@ -1731,6 +1787,12 @@ GRANT ALL ON TABLE "public"."customer_checkpoints" TO "service_role";
 GRANT ALL ON TABLE "public"."customers" TO "anon";
 GRANT ALL ON TABLE "public"."customers" TO "authenticated";
 GRANT ALL ON TABLE "public"."customers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."merchant_images" TO "anon";
+GRANT ALL ON TABLE "public"."merchant_images" TO "authenticated";
+GRANT ALL ON TABLE "public"."merchant_images" TO "service_role";
 
 
 

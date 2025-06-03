@@ -294,20 +294,36 @@ serve(async (req) => {
 
     // GET /merchants
     if (path === 'merchants' && req.method === 'GET') {
-      const { data, error } = await supabaseClient
+      const { data: merchants, error: merchantsError } = await supabaseClient
         .from('merchants')
-        .select('id, name, industry, address, country, created_at')
+        .select('id, name, industry, address, country, created_at, opening_hours, cover_image_url')
         .order('name', { ascending: true })
 
-      if (error) {
+      if (merchantsError) {
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: merchantsError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
+      // Aggiungi l'immagine primaria a ogni merchant
+      const merchantsWithImages = merchants.map(merchant => ({
+        ...merchant,
+        image_path: merchant.cover_image_url?.[0] || null, // Prendi la prima immagine come primaria
+        _debug: {
+          merchant_id: merchant.id,
+          has_image: !!merchant.cover_image_url?.length
+        }
+      }))
+
       return new Response(
-        JSON.stringify({ merchants: data }),
+        JSON.stringify({ 
+          merchants: merchantsWithImages,
+          _debug: {
+            total_merchants: merchants.length,
+            merchants_with_images: merchantsWithImages.filter(m => m.image_path).length
+          }
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

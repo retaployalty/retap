@@ -33,10 +33,10 @@ class CategoryFilters extends StatelessWidget {
               onTap: () => onCategorySelected(isAll ? null : category),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(32),
+                  borderRadius: BorderRadius.circular(28),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
@@ -53,16 +53,16 @@ class CategoryFilters extends StatelessWidget {
                       Icon(
                         icon,
                         color: isSelected ? Colors.white : Colors.grey,
-                        size: 26,
+                        size: 22,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                     ],
                     Text(
                       category,
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.grey,
                         fontWeight: FontWeight.w600,
-                        fontSize: 18,
+                        fontSize: 15,
                         letterSpacing: 0.2,
                       ),
                     ),
