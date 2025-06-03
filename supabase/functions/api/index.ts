@@ -296,7 +296,7 @@ serve(async (req) => {
     if (path === 'merchants' && req.method === 'GET') {
       const { data: merchants, error: merchantsError } = await supabaseClient
         .from('merchants')
-        .select('id, name, industry, address, country, created_at, opening_hours, cover_image_url')
+        .select('id, name, industry, address, country, created_at, hours, cover_image_url')
         .order('name', { ascending: true })
 
       if (merchantsError) {
@@ -306,22 +306,83 @@ serve(async (req) => {
         )
       }
 
-      // Aggiungi l'immagine primaria a ogni merchant
-      const merchantsWithImages = merchants.map(merchant => ({
-        ...merchant,
-        image_path: merchant.cover_image_url?.[0] || null, // Prendi la prima immagine come primaria
-        _debug: {
-          merchant_id: merchant.id,
-          has_image: !!merchant.cover_image_url?.length
+      // Per ogni merchant, recupera rewards e checkpoint offers
+      const merchantsWithData = await Promise.all(merchants.map(async (merchant) => {
+        // Recupera i rewards
+        const { data: rewards, error: rewardsError } = await supabaseClient
+          .from('rewards')
+          .select('id, name, description, image_path, price_coins, is_active')
+          .eq('merchant_id', merchant.id)
+          .eq('is_active', true);
+
+        if (rewardsError) {
+          console.error('Error fetching rewards:', rewardsError);
         }
-      }))
+
+        // Recupera i checkpoint offers
+        const { data: offers, error: offersError } = await supabaseClient
+          .from('checkpoint_offers')
+          .select('id, name, description, total_steps')
+          .eq('merchant_id', merchant.id);
+
+        if (offersError) {
+          console.error('Error fetching checkpoint offers:', offersError);
+        }
+
+        // Per ogni offer, recupera i steps e i rewards
+        const offersWithSteps = await Promise.all((offers || []).map(async (offer) => {
+          const { data: steps, error: stepsError } = await supabaseClient
+            .from('checkpoint_steps')
+            .select('id, step_number, reward_id, offer_id')
+            .eq('offer_id', offer.id)
+            .order('step_number', { ascending: true });
+
+          if (stepsError) {
+            console.error('Error fetching steps:', stepsError);
+            return { ...offer, steps: [] };
+          }
+
+          // Per ogni step, se ha un reward_id, recupera i dettagli del reward
+          const stepsWithReward = await Promise.all((steps || []).map(async (step) => {
+            let reward = null;
+            if (step.reward_id) {
+              const { data: rewardData, error: rewardError } = await supabaseClient
+                .from('checkpoint_rewards')
+                .select('id, name, description, icon')
+                .eq('id', step.reward_id)
+                .single();
+              if (!rewardError) {
+                reward = rewardData;
+              }
+            }
+            return { ...step, reward };
+          }));
+
+          return { ...offer, steps: stepsWithReward };
+        }));
+
+        return {
+          ...merchant,
+          image_path: merchant.cover_image_url?.[0] || null,
+          rewards: rewards || [],
+          checkpoint_offers: offersWithSteps || [],
+          _debug: {
+            merchant_id: merchant.id,
+            has_image: !!merchant.cover_image_url?.length,
+            rewards_count: rewards?.length || 0,
+            checkpoint_offers_count: offers?.length || 0
+          }
+        };
+      }));
 
       return new Response(
         JSON.stringify({ 
-          merchants: merchantsWithImages,
+          merchants: merchantsWithData,
           _debug: {
             total_merchants: merchants.length,
-            merchants_with_images: merchantsWithImages.filter(m => m.image_path).length
+            merchants_with_images: merchantsWithData.filter(m => m.image_path).length,
+            merchants_with_rewards: merchantsWithData.filter(m => m.rewards.length > 0).length,
+            merchants_with_checkpoints: merchantsWithData.filter(m => m.checkpoint_offers.length > 0).length
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

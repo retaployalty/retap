@@ -1,33 +1,52 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../shared_utils/business_hours.dart';
 
 class BusinessListCard extends StatelessWidget {
   final String name;
-  final String? country;
   final String? industry;
   final String? address;
   final String imageUrl;
-  final String checkpointRewardTitle;
-  final int totalCheckpointRewards;
-  final int totalPointsRewards;
-  final bool isOpen;
-  final String? hours;
+  final Map<String, dynamic>? openingHours;
+  final List<dynamic>? rewards;
+  final List<dynamic>? checkpointOffers;
   final VoidCallback? onTap;
 
   const BusinessListCard({
     Key? key,
     required this.name,
-    this.country,
     this.industry,
     this.address,
     required this.imageUrl,
-    required this.checkpointRewardTitle,
-    required this.totalCheckpointRewards,
-    required this.totalPointsRewards,
-    required this.isOpen,
-    this.hours,
+    this.openingHours,
+    this.rewards,
+    this.checkpointOffers,
     this.onTap,
   }) : super(key: key);
+
+  bool get isOpen => isBusinessOpen(openingHours);
+  String get formattedHours => getTodayOpeningHours(openingHours);
+
+  int get totalPointsRewards => rewards?.where((r) => r['is_active'] == true).length ?? 0;
+
+  String get checkpointRewardTitle {
+    if (checkpointOffers == null || checkpointOffers!.isEmpty) return 'No Checkpoint Rewards';
+    
+    // Prendi il primo checkpoint offer attivo
+    final activeOffer = checkpointOffers!.firstWhere(
+      (offer) => offer['is_active'] == true,
+      orElse: () => checkpointOffers!.first,
+    );
+    
+    return activeOffer['name'] ?? 'Checkpoint Reward';
+  }
+
+  int get totalCheckpointRewards {
+    if (checkpointOffers == null || checkpointOffers!.isEmpty) return 0;
+    
+    // Conta i checkpoint offers attivi
+    return checkpointOffers!.where((offer) => offer['is_active'] == true).length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,14 +178,14 @@ class BusinessListCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (hours != null) ...[
+                      if (formattedHours.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Row(
                           children: [
                             Icon(Icons.access_time, color: Colors.grey[600], size: 14),
                             const SizedBox(width: 6),
                             Text(
-                              hours!,
+                              formattedHours,
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 12,

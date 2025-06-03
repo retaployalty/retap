@@ -93,7 +93,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
 
   // Funzione per determinare se il business è aperto
   bool _isBusinessOpen(Map<String, dynamic> business) {
-    final openingHours = business['opening_hours'];
+    final openingHours = business['hours'];
     if (openingHours == null) return false;
 
     final now = DateTime.now();
@@ -117,7 +117,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
 
   // Funzione per ottenere gli orari formattati
   String _getFormattedHours(Map<String, dynamic> business) {
-    final openingHours = business['opening_hours'];
+    final openingHours = business['hours'];
     if (openingHours == null) return 'Orari non disponibili';
 
     final now = DateTime.now();
@@ -310,17 +310,14 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                             itemCount: _filteredBusinesses.length,
                             itemBuilder: (context, index) {
                               final business = _filteredBusinesses[index];
-                              final imageUrl = _imageUrls[index % _imageUrls.length];
                               return BusinessListCard(
                                 name: business['name'] ?? '',
                                 industry: business['industry'],
                                 address: business['address'],
                                 imageUrl: _getBusinessImage(business),
-                                checkpointRewardTitle: 'Buy 5 Get 1 Free',
-                                totalCheckpointRewards: 1,
-                                totalPointsRewards: 3,
-                                isOpen: _isBusinessOpen(business),
-                                hours: _getFormattedHours(business),
+                                openingHours: business['hours'],
+                                rewards: business['rewards'],
+                                checkpointOffers: business['checkpoint_offers'],
                                 onTap: () {
                                   // TODO: Naviga al dettaglio business
                                 },
