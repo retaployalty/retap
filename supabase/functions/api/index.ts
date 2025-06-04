@@ -61,11 +61,19 @@ serve(async (req) => {
         )
       }
 
+      const uid = params.uid;
+      if (!uid) {
+        return new Response(
+          JSON.stringify({ error: 'Missing UID parameter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // Prima verifichiamo se la carta esiste senza filtri
       const { data: allCards, error: allCardsError } = await supabaseClient
         .from('cards')
         .select('*')
-        .eq('uid', params.uid);
+        .eq('uid', uid);
 
       if (allCardsError) {
         return new Response(
@@ -294,98 +302,35 @@ serve(async (req) => {
 
     // GET /merchants
     if (path === 'merchants' && req.method === 'GET') {
-      const { data: merchants, error: merchantsError } = await supabaseClient
+      const { data: merchants, error } = await supabaseClient
         .from('merchants')
-        .select('id, name, industry, address, country, created_at, hours, cover_image_url')
-        .order('name', { ascending: true })
+        .select(`
+          id,
+          name,
+          industry,
+          address,
+          logo_url,
+          cover_image_url,
+          hours,
+          rewards (*),
+          checkpoint_offers (
+            *,
+            steps:checkpoint_steps (
+              *,
+              reward:checkpoint_rewards (*)
+            )
+          )
+        `)
+        .order('name')
 
-      if (merchantsError) {
-        return new Response(
-          JSON.stringify({ error: merchantsError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Per ogni merchant, recupera rewards e checkpoint offers
-      const merchantsWithData = await Promise.all(merchants.map(async (merchant) => {
-        // Recupera i rewards
-        const { data: rewards, error: rewardsError } = await supabaseClient
-          .from('rewards')
-          .select('id, name, description, image_path, price_coins, is_active')
-          .eq('merchant_id', merchant.id)
-          .eq('is_active', true);
-
-        if (rewardsError) {
-          console.error('Error fetching rewards:', rewardsError);
-        }
-
-        // Recupera i checkpoint offers
-        const { data: offers, error: offersError } = await supabaseClient
-          .from('checkpoint_offers')
-          .select('id, name, description, total_steps')
-          .eq('merchant_id', merchant.id);
-
-        if (offersError) {
-          console.error('Error fetching checkpoint offers:', offersError);
-        }
-
-        // Per ogni offer, recupera i steps e i rewards
-        const offersWithSteps = await Promise.all((offers || []).map(async (offer) => {
-          const { data: steps, error: stepsError } = await supabaseClient
-            .from('checkpoint_steps')
-            .select('id, step_number, reward_id, offer_id')
-            .eq('offer_id', offer.id)
-            .order('step_number', { ascending: true });
-
-          if (stepsError) {
-            console.error('Error fetching steps:', stepsError);
-            return { ...offer, steps: [] };
-          }
-
-          // Per ogni step, se ha un reward_id, recupera i dettagli del reward
-          const stepsWithReward = await Promise.all((steps || []).map(async (step) => {
-            let reward = null;
-            if (step.reward_id) {
-              const { data: rewardData, error: rewardError } = await supabaseClient
-                .from('checkpoint_rewards')
-                .select('id, name, description, icon')
-                .eq('id', step.reward_id)
-                .single();
-              if (!rewardError) {
-                reward = rewardData;
-              }
-            }
-            return { ...step, reward };
-          }));
-
-          return { ...offer, steps: stepsWithReward };
-        }));
-
-        return {
-          ...merchant,
-          image_path: merchant.cover_image_url?.[0] || null,
-          rewards: rewards || [],
-          checkpoint_offers: offersWithSteps || [],
-          _debug: {
-            merchant_id: merchant.id,
-            has_image: !!merchant.cover_image_url?.length,
-            rewards_count: rewards?.length || 0,
-            checkpoint_offers_count: offers?.length || 0
-          }
-        };
-      }));
+      if (error) throw error
 
       return new Response(
-        JSON.stringify({ 
-          merchants: merchantsWithData,
-          _debug: {
-            total_merchants: merchants.length,
-            merchants_with_images: merchantsWithData.filter(m => m.image_path).length,
-            merchants_with_rewards: merchantsWithData.filter(m => m.rewards.length > 0).length,
-            merchants_with_checkpoints: merchantsWithData.filter(m => m.checkpoint_offers.length > 0).length
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ merchants }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
       )
     }
 
@@ -759,6 +704,71 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // GET /merchant-details?merchantId=XXX&cardId=XXX
+    if (path === 'merchant-details' && req.method === 'GET') {
+      const merchantId = params.merchantId
+      const cardId = params.cardId
+
+      if (!merchantId) {
+        throw new Error('Merchant ID is required')
+      }
+
+      // Get merchant details
+      const { data: merchant, error: merchantError } = await supabaseClient
+        .from('merchants')
+        .select(`
+          *,
+          rewards (*),
+          checkpoint_offers (
+            *,
+            steps:checkpoint_steps (
+              *,
+              reward:checkpoint_rewards (*)
+            )
+          )
+        `)
+        .eq('id', merchantId)
+        .single()
+
+      if (merchantError) throw merchantError
+
+      // If cardId is provided, get balance and checkpoint progress
+      let balance = 0
+      let currentStep = 0
+      let rewardSteps: number[] = []
+
+      if (cardId) {
+        // Get card balance
+        const { data: balanceData, error: balanceError } = await supabaseClient
+          .rpc('get_card_balance', { card_id: cardId })
+
+        if (balanceError) throw balanceError
+
+        if (balanceData) {
+          // Find the balance for this merchant
+          const merchantBalance = balanceData.find((b: any) => b.merchant_id === merchantId)
+          if (merchantBalance) {
+            balance = merchantBalance.balance
+            currentStep = merchantBalance.checkpoints_current
+            rewardSteps = merchantBalance.reward_steps
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          merchant,
+          balance,
+          currentStep,
+          rewardSteps
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      )
     }
 
     return new Response(

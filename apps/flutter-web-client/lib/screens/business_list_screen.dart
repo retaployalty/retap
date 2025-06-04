@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../components/business_list_card.dart';
 import '../components/category_filters.dart';
+import '../screens/business_detail_screen.dart';
+import '../shared_utils/business_hours.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -37,6 +40,8 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
   List<dynamic> _businesses = [];
   String? _selectedCategory;
   final TextEditingController _searchController = TextEditingController();
+  String? cardId;
+  static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
   final List<String> _imageUrls = [
@@ -51,6 +56,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
   void initState() {
     super.initState();
     _loadBusinesses();
+    _loadCardId();
   }
 
   @override
@@ -85,34 +91,11 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
     }
   }
 
-  // Funzione per convertire l'ora in minuti
-  int _timeToMinutes(String time) {
-    final parts = time.split(':');
-    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
-  }
-
-  // Funzione per determinare se il business è aperto
-  bool _isBusinessOpen(Map<String, dynamic> business) {
-    final openingHours = business['hours'];
-    if (openingHours == null) return false;
-
-    final now = DateTime.now();
-    final dayOfWeek = now.weekday - 1; // 0 = Monday, 6 = Sunday
-    final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    final currentDay = days[dayOfWeek];
-
-    final dayHours = openingHours[currentDay];
-    if (dayHours == null) return false;
-
-    final openTime = dayHours['open'];
-    final closeTime = dayHours['close'];
-    if (openTime == null || closeTime == null) return false;
-
-    final currentMinutes = now.hour * 60 + now.minute;
-    final openMinutes = _timeToMinutes(openTime);
-    final closeMinutes = _timeToMinutes(closeTime);
-
-    return currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
+  Future<void> _loadCardId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      cardId = prefs.getString(_cardIdKey);
+    });
   }
 
   // Funzione per ottenere gli orari formattati
@@ -137,15 +120,25 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
 
   // Funzione per ottenere l'immagine del business
   String _getBusinessImage(Map<String, dynamic> business) {
-    print('Debug - Business: ${business['name']}, Image Path: ${business['image_path']}'); // Debug log
+    print('Debug - Business: ${business['name']}, Cover Images: ${business['cover_image_url']}'); // Debug log
     
-    // Se il business ha un'immagine primaria, usala
-    if (business['image_path'] != null) {
-      return business['image_path'];
+    // Prima controlla se ha immagini di copertina
+    final coverImages = business['cover_image_url'];
+    if (coverImages is List && coverImages.isNotEmpty) {
+      final firstImage = coverImages[0];
+      if (firstImage != null && firstImage.toString().isNotEmpty) {
+        return firstImage.toString();
+      }
+    }
+
+    // Se non ha immagini di copertina, prova con il logo
+    final logoUrl = business['logo_url'];
+    if (logoUrl != null && logoUrl.toString().isNotEmpty) {
+      return logoUrl.toString();
     }
 
     // Altrimenti usa un'immagine di default basata sull'industria
-    final industry = business['industry']?.toLowerCase() ?? '';
+    final industry = (business['industry'] ?? '').toString().toLowerCase();
     print('Debug - Using default image for industry: $industry'); // Debug log
     
     // Mappa delle immagini di default per categoria
@@ -314,12 +307,66 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                                 name: business['name'] ?? '',
                                 industry: business['industry'],
                                 address: business['address'],
-                                imageUrl: _getBusinessImage(business),
+                                imageUrl: (business['cover_image_url'] is List && (business['cover_image_url'] as List).isNotEmpty) 
+                                    ? business['cover_image_url'][0].toString()
+                                    : _getBusinessImage(business),
                                 openingHours: business['hours'],
                                 rewards: business['rewards'],
                                 checkpointOffers: business['checkpoint_offers'],
-                                onTap: () {
-                                  // TODO: Naviga al dettaglio business
+                                onTap: () async {
+                                  if (cardId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Card not found. Please try again later.')),
+                                    );
+                                    return;
+                                  }
+
+                                  // Get merchant details including points
+                                  try {
+                                    final response = await http.get(
+                                      Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchant-details?merchantId=${business['id']}&cardId=$cardId'),
+                                    );
+                                    
+                                    int points = 0;
+                                    if (response.statusCode == 200) {
+                                      final data = jsonDecode(response.body);
+                                      points = data['balance'] ?? 0;
+                                    }
+                                    
+                                    if (!mounted) return;
+                                    
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => BusinessDetailScreen(
+                                          businessName: business['name'] ?? '',
+                                          points: points,
+                                          logoUrl: business['logo_url'] ?? '',
+                                          coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                          isOpen: isBusinessOpen(business['hours']),
+                                          hours: business['hours'],
+                                          merchantId: business['id'],
+                                          cardId: cardId!,
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    // If there's an error, still open the screen with 0 points
+                                    if (!mounted) return;
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => BusinessDetailScreen(
+                                          businessName: business['name'] ?? '',
+                                          points: 0,
+                                          logoUrl: business['logo_url'] ?? '',
+                                          coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                          isOpen: isBusinessOpen(business['hours']),
+                                          hours: business['hours'],
+                                          merchantId: business['id'],
+                                          cardId: cardId!,
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               );
                             },

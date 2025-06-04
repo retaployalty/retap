@@ -252,6 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       rewardSteps: rewardSteps,
                                       hours: hours,
                                       onTap: () {
+                                        print('HomeScreen - Business data: $business'); // Debug log
+                                        print('HomeScreen - Cover images: ${business['cover_image_url']}'); // Debug log
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) => BusinessDetailScreen(
