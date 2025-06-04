@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../theme/app_theme.dart';
 import '../components/business_list_card.dart';
 import '../components/category_filters.dart';
+import '../screens/business_detail_screen.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -137,15 +138,25 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
 
   // Funzione per ottenere l'immagine del business
   String _getBusinessImage(Map<String, dynamic> business) {
-    print('Debug - Business: ${business['name']}, Image Path: ${business['image_path']}'); // Debug log
+    print('Debug - Business: ${business['name']}, Cover Images: ${business['cover_image_url']}'); // Debug log
     
-    // Se il business ha un'immagine primaria, usala
-    if (business['image_path'] != null) {
-      return business['image_path'];
+    // Prima controlla se ha immagini di copertina
+    final coverImages = business['cover_image_url'];
+    if (coverImages is List && coverImages.isNotEmpty) {
+      final firstImage = coverImages[0];
+      if (firstImage != null && firstImage.toString().isNotEmpty) {
+        return firstImage.toString();
+      }
+    }
+
+    // Se non ha immagini di copertina, prova con il logo
+    final logoUrl = business['logo_url'];
+    if (logoUrl != null && logoUrl.toString().isNotEmpty) {
+      return logoUrl.toString();
     }
 
     // Altrimenti usa un'immagine di default basata sull'industria
-    final industry = business['industry']?.toLowerCase() ?? '';
+    final industry = (business['industry'] ?? '').toString().toLowerCase();
     print('Debug - Using default image for industry: $industry'); // Debug log
     
     // Mappa delle immagini di default per categoria
@@ -314,12 +325,27 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                                 name: business['name'] ?? '',
                                 industry: business['industry'],
                                 address: business['address'],
-                                imageUrl: _getBusinessImage(business),
+                                imageUrl: (business['cover_image_url'] is List && (business['cover_image_url'] as List).isNotEmpty) 
+                                    ? business['cover_image_url'][0].toString()
+                                    : _getBusinessImage(business),
                                 openingHours: business['hours'],
                                 rewards: business['rewards'],
                                 checkpointOffers: business['checkpoint_offers'],
                                 onTap: () {
-                                  // TODO: Naviga al dettaglio business
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => BusinessDetailScreen(
+                                        businessName: business['name'] ?? '',
+                                        points: 0, // We'll get this from the API
+                                        logoUrl: business['logo_url'] ?? '',
+                                        coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                        isOpen: _isBusinessOpen(business),
+                                        hours: business['hours'],
+                                        merchantId: business['id'],
+                                        cardId: '', // We'll need to get this from somewhere
+                                      ),
+                                    ),
+                                  );
                                 },
                               );
                             },

@@ -45,17 +45,18 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
 
   Future<void> fetchRewardsAndCheckpoints() async {
     setState(() => isLoading = true);
-    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/rewards-and-checkpoints?merchantId=${widget.merchantId}&cardId=${widget.cardId}');
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchant-details?merchantId=${widget.merchantId}&cardId=${widget.cardId}');
     final res = await http.get(url);
     print('API status: ${res.statusCode}');
     print('API body: ${res.body}');
     if (res.statusCode == 200) {
       final data = json.decode(res.body);
       print('Decoded data: ${data}');
-      final rewardsData = data['rewards'] as List<dynamic>;
-      final offersData = data['checkpoint_offers'] as List<dynamic>?;
-      print('rewardsData: ${rewardsData}');
-      print('checkpoint_offers: ${offersData}');
+      
+      final merchant = data['merchant'];
+      final rewardsData = merchant['rewards'] as List<dynamic>;
+      final offersData = merchant['checkpoint_offers'] as List<dynamic>?;
+      
       setState(() {
         rewards = rewardsData.map((r) => RewardItem(
           imageUrl: r['image_path'] ?? '',
@@ -66,9 +67,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         checkpointOffers = (offersData ?? []).map((o) => CheckpointOffer.fromJson(o)).toList();
         
         // Use the current step from the API response
-        if (checkpointOffers.isNotEmpty) {
-          currentCheckpointStep = data['current_step'] ?? 0;
-        }
+        currentCheckpointStep = data['currentStep'] ?? 0;
         
         isLoading = false;
       });
