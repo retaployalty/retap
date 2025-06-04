@@ -61,11 +61,19 @@ serve(async (req) => {
         )
       }
 
+      const uid = params.uid;
+      if (!uid) {
+        return new Response(
+          JSON.stringify({ error: 'Missing UID parameter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // Prima verifichiamo se la carta esiste senza filtri
       const { data: allCards, error: allCardsError } = await supabaseClient
         .from('cards')
         .select('*')
-        .eq('uid', params.uid);
+        .eq('uid', uid);
 
       if (allCardsError) {
         return new Response(
@@ -735,15 +743,17 @@ serve(async (req) => {
         // Get card balance
         const { data: balanceData, error: balanceError } = await supabaseClient
           .rpc('get_card_balance', { card_id: cardId })
-          .eq('merchant_id', merchantId)
-          .single()
 
         if (balanceError) throw balanceError
 
         if (balanceData) {
-          balance = balanceData.balance
-          currentStep = balanceData.checkpoints_current
-          rewardSteps = balanceData.reward_steps
+          // Find the balance for this merchant
+          const merchantBalance = balanceData.find((b: any) => b.merchant_id === merchantId)
+          if (merchantBalance) {
+            balance = merchantBalance.balance
+            currentStep = merchantBalance.checkpoints_current
+            rewardSteps = merchantBalance.reward_steps
+          }
         }
       }
 
