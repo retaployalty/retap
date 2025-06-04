@@ -36,10 +36,13 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   List<RewardItem> rewards = [];
   List<CheckpointOffer> checkpointOffers = [];
   int currentCheckpointStep = 1;
+  List<String> coverImageUrls = [];
 
   @override
   void initState() {
     super.initState();
+    print('BusinessDetailScreen - Cover Images: ${widget.coverImageUrls}'); // Debug log
+    coverImageUrls = widget.coverImageUrls;
     fetchRewardsAndCheckpoints();
   }
 
@@ -54,6 +57,9 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
       print('Decoded data: ${data}');
       
       final merchant = data['merchant'];
+      print('Merchant data: $merchant'); // Debug log
+      print('Merchant cover images: ${merchant['cover_image_url']}'); // Debug log
+      
       final rewardsData = merchant['rewards'] as List<dynamic>;
       final offersData = merchant['checkpoint_offers'] as List<dynamic>?;
       
@@ -65,6 +71,11 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         )).toList();
         
         checkpointOffers = (offersData ?? []).map((o) => CheckpointOffer.fromJson(o)).toList();
+        
+        // Update cover images from API response
+        if (merchant['cover_image_url'] is List) {
+          coverImageUrls = List<String>.from(merchant['cover_image_url']);
+        }
         
         // Use the current step from the API response
         currentCheckpointStep = data['currentStep'] ?? 0;
@@ -89,7 +100,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
             BusinessHeader(
               businessName: widget.businessName,
               logoUrl: widget.logoUrl,
-              coverImageUrls: widget.coverImageUrls,
+              coverImageUrls: coverImageUrls,
               isOpen: widget.isOpen,
               hours: widget.hours,
             ),
@@ -220,6 +231,7 @@ class _BusinessHeaderState extends State<BusinessHeader> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    print('BusinessHeader - Cover Images: ${widget.coverImageUrls}'); // Debug log
   }
 
   @override
@@ -232,6 +244,7 @@ class _BusinessHeaderState extends State<BusinessHeader> {
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
     final covers = widget.coverImageUrls;
+    print('BusinessHeader - Building with covers: $covers'); // Debug log
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -248,8 +261,16 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemBuilder: (context, i) {
                   final url = covers[i];
+                  print('BusinessHeader - Rendering cover $i: $url'); // Debug log
                   return url.isNotEmpty
-                      ? Image.network(url, fit: BoxFit.cover)
+                      ? Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            print('BusinessHeader - Error loading image $url: $error'); // Debug log
+                            return Container(color: Colors.grey[200]);
+                          },
+                        )
                       : Container(color: Colors.grey[200]);
                 },
               ),
