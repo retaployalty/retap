@@ -22,12 +22,17 @@ class CheckpointRewardsProgress extends StatefulWidget {
   State<CheckpointRewardsProgress> createState() => _CheckpointRewardsProgressState();
 }
 
-class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> with SingleTickerProviderStateMixin {
+class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   double _progress = 0.0;
   double _minProgress = 0.0;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  bool _showScrollIndicator = true;
+  late AnimationController _scrollIndicatorController;
+  late Animation<double> _scrollIndicatorAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -49,6 +54,34 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
       curve: Curves.easeInOut,
     ));
 
+    // Setup dell'animazione dell'indicatore di scroll
+    _scrollIndicatorController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _scrollIndicatorAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scrollIndicatorController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Setup dell'animazione di fade
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+
     // Avvia l'animazione in loop
     _pulseController.repeat(reverse: true);
   }
@@ -58,6 +91,8 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _pulseController.dispose();
+    _scrollIndicatorController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -71,6 +106,20 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     }
     // La barra parte già dal secondo checkpoint
     progress = _minProgress + (1 - _minProgress) * progress;
+    
+    // Nascondi l'indicatore quando siamo alla fine
+    final isAtEnd = currentScroll >= maxScroll - 1;
+    if (_showScrollIndicator != !isAtEnd) {
+      setState(() {
+        _showScrollIndicator = !isAtEnd;
+      });
+      if (isAtEnd) {
+        _fadeController.forward();
+      } else {
+        _fadeController.reverse();
+      }
+    }
+    
     setState(() {
       _progress = progress;
     });
@@ -221,242 +270,293 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                 left: barLeft,
                 top: 85,
                 right: 0,
-                child: SizedBox(
-                  height: 140,
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      _onScroll();
-                      return false;
-                    },
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      scrollDirection: Axis.horizontal,
-                      child: Container(
-                        width: scrollBarWidth + 40, // Aggiungo padding a destra
-                        child: Stack(
-                          children: [
-                            // Barra background (bianca)
-                            Container(
-                              width: barWidth,
-                              height: barHeight,
-                              decoration: ShapeDecoration(
-                                color: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                              ),
-                            ),
-                            // Barra progress (rossa, cresce con lo scroll)
-                            Positioned(
-                              left: barHPadding,
-                              top: barVPadding,
-                              child: Container(
-                                width: redBarLength,
-                                height: progressBarHeight,
-                                decoration: ShapeDecoration(
-                                  color: const Color(0xFFFF6565),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
+                child: Stack(
+                  children: [
+                    SizedBox(
+                      height: 140,
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          _onScroll();
+                          return false;
+                        },
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          child: Container(
+                            width: scrollBarWidth + 40,
+                            child: Stack(
+                              children: [
+                                // Barra background (bianca)
+                                Container(
+                                  width: barWidth,
+                                  height: barHeight,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            // Pallini checkpoint sopra la barra rossa
-                            ...List.generate(widget.totalSteps, (i) {
-                              final step = i + 1;
-                              final isCompleted = step <= widget.currentStep;
-                              final isReward = widget.rewardSteps.contains(step);
-                              final double dotSize = isReward ? rewardDotSize : normalDotSize;
-                              final double left = barHPadding + firstDotOffset
-                                + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
-                                - dotSize / 2;
-                              return Positioned(
-                                left: left,
-                                top: (barHeight - dotSize) / 2,
-                                child: _CheckpointDot(
-                                  isActive: isCompleted,
-                                  isReward: isReward,
-                                  showIceCream: isReward,
-                                  size: dotSize,
-                                ),
-                              );
-                            }),
-                            // Pillola reward sotto ogni dot reward
-                            ...List.generate(widget.totalSteps, (i) {
-                              final step = i + 1;
-                              if (!widget.rewardSteps.contains(step)) return const SizedBox.shrink();
-                              final isReward = true;
-                              final double dotSize = isReward ? rewardDotSize : normalDotSize;
-                              final double left = barHPadding + firstDotOffset
-                                + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
-                                - dotSize / 2;
-                              final bool isRewardAvailable = step <= widget.currentStep;
-                              final bool isNextReward = step == _getNextRewardStep();
-                              final String rewardLabel = widget.rewardLabels[step] ?? 'Free Reward';
-                              return Positioned(
-                                left: left + dotSize / 2 - 53.5,
-                                top: barHeight + 10,
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 20,
-                                      decoration: ShapeDecoration(
-                                        color: const Color(0xFFFF6565),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                // Barra progress (rossa, cresce con lo scroll)
+                                Positioned(
+                                  left: barHPadding,
+                                  top: barVPadding,
+                                  child: Container(
+                                    width: redBarLength,
+                                    height: progressBarHeight,
+                                    decoration: ShapeDecoration(
+                                      color: const Color(0xFFFF6565),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(25),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    if (isRewardAvailable)
-                                      AnimatedBuilder(
-                                        animation: _pulseAnimation,
-                                        builder: (context, child) {
-                                          return Transform.scale(
-                                            scale: _pulseAnimation.value,
-                                            child: child,
-                                          );
-                                        },
-                                        child: Stack(
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            Material(
-                                              color: Colors.transparent,
-                                              child: InkWell(
-                                                onTap: () {
-                                                  // TODO: Implementare il riscatto
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Premio disponibile per il riscatto!'),
-                                                      backgroundColor: Color(0xFFFF6565),
-                                                    ),
-                                                  );
-                                                },
-                                                borderRadius: BorderRadius.circular(32),
-                                                child: Ink(
-                                                  width: 107,
-                                                  height: 48,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(0xFFFF6565),
-                                                    shape: RoundedRectangleBorder(
-                                                      side: const BorderSide(
-                                                        width: 1,
-                                                        color: Color(0xFFFF6565),
+                                  ),
+                                ),
+                                // Pallini checkpoint sopra la barra rossa
+                                ...List.generate(widget.totalSteps, (i) {
+                                  final step = i + 1;
+                                  final isCompleted = step <= widget.currentStep;
+                                  final isReward = widget.rewardSteps.contains(step);
+                                  final double dotSize = isReward ? rewardDotSize : normalDotSize;
+                                  final double left = barHPadding + firstDotOffset
+                                    + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
+                                    - dotSize / 2;
+                                  return Positioned(
+                                    left: left,
+                                    top: (barHeight - dotSize) / 2,
+                                    child: _CheckpointDot(
+                                      isActive: isCompleted,
+                                      isReward: isReward,
+                                      showIceCream: isReward,
+                                      size: dotSize,
+                                    ),
+                                  );
+                                }),
+                                // Pillola reward sotto ogni dot reward
+                                ...List.generate(widget.totalSteps, (i) {
+                                  final step = i + 1;
+                                  if (!widget.rewardSteps.contains(step)) return const SizedBox.shrink();
+                                  final isReward = true;
+                                  final double dotSize = isReward ? rewardDotSize : normalDotSize;
+                                  final double left = barHPadding + firstDotOffset
+                                    + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
+                                    - dotSize / 2;
+                                  final bool isRewardAvailable = step <= widget.currentStep;
+                                  final bool isNextReward = step == _getNextRewardStep();
+                                  final String rewardLabel = widget.rewardLabels[step] ?? 'Free Reward';
+                                  return Positioned(
+                                    left: left + dotSize / 2 - 53.5,
+                                    top: barHeight + 10,
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 20,
+                                          decoration: ShapeDecoration(
+                                            color: const Color(0xFFFF6565),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (isRewardAvailable)
+                                          AnimatedBuilder(
+                                            animation: _pulseAnimation,
+                                            builder: (context, child) {
+                                              return Transform.scale(
+                                                scale: _pulseAnimation.value,
+                                                child: child,
+                                              );
+                                            },
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Material(
+                                                  color: Colors.transparent,
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      // TODO: Implementare il riscatto
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Premio disponibile per il riscatto!'),
+                                                          backgroundColor: Color(0xFFFF6565),
+                                                        ),
+                                                      );
+                                                    },
+                                                    borderRadius: BorderRadius.circular(32),
+                                                    child: Ink(
+                                                      width: 107,
+                                                      height: 48,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                      decoration: ShapeDecoration(
+                                                        color: const Color(0xFFFF6565),
+                                                        shape: RoundedRectangleBorder(
+                                                          side: const BorderSide(
+                                                            width: 1,
+                                                            color: Color(0xFFFF6565),
+                                                          ),
+                                                          borderRadius: BorderRadius.circular(32),
+                                                        ),
                                                       ),
-                                                      borderRadius: BorderRadius.circular(32),
+                                                      child: Center(
+                                                        child: Text(
+                                                          rewardLabel,
+                                                          textAlign: TextAlign.center,
+                                                          style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 15,
+                                                            fontFamily: 'Fredoka',
+                                                            fontWeight: FontWeight.w600,
+                                                            height: 1.1,
+                                                            letterSpacing: 0.48,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ),
                                                   ),
-                                                  child: Center(
+                                                ),
+                                                Positioned(
+                                                  right: -8,
+                                                  top: -8,
+                                                  child: Container(
+                                                    width: 24,
+                                                    height: 24,
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.white,
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Color(0xFFFF6565),
+                                                          blurRadius: 4,
+                                                          offset: Offset(0, 2),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.card_giftcard,
+                                                      size: 16,
+                                                      color: Color(0xFFFF6565),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        else
+                                          Stack(
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              Container(
+                                                width: 107,
+                                                height: 48,
+                                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                decoration: ShapeDecoration(
+                                                  color: const Color(0xFFF5F5F5),
+                                                  shape: RoundedRectangleBorder(
+                                                    side: const BorderSide(
+                                                      width: 1,
+                                                      color: Color(0xFFE6E6E6),
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(32),
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    rewardLabel,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF1A1A1A),
+                                                      fontSize: 15,
+                                                      fontFamily: 'Fredoka',
+                                                      fontWeight: FontWeight.w600,
+                                                      height: 1.1,
+                                                      letterSpacing: 0.48,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isNextReward)
+                                                Positioned(
+                                                  right: -4,
+                                                  top: -4,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: const BoxDecoration(
+                                                      color: Color(0xFFFF6565),
+                                                      shape: BoxShape.rectangle,
+                                                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                                                    ),
                                                     child: Text(
-                                                      rewardLabel,
-                                                      textAlign: TextAlign.center,
+                                                      '${step - widget.currentStep} steps',
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 15,
+                                                        fontSize: 11,
                                                         fontFamily: 'Fredoka',
                                                         fontWeight: FontWeight.w600,
-                                                        height: 1.1,
-                                                        letterSpacing: 0.48,
+                                                        height: 1.0,
                                                       ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                            Positioned(
-                                              right: -8,
-                                              top: -8,
-                                              child: Container(
-                                                width: 24,
-                                                height: 24,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Color(0xFFFF6565),
-                                                      blurRadius: 4,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: const Icon(
-                                                  Icons.card_giftcard,
-                                                  size: 16,
-                                                  color: Color(0xFFFF6565),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    else
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Container(
-                                            width: 107,
-                                            height: 48,
-                                            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                                            decoration: ShapeDecoration(
-                                              color: const Color(0xFFF5F5F5),
-                                              shape: RoundedRectangleBorder(
-                                                side: const BorderSide(
-                                                  width: 1,
-                                                  color: Color(0xFFE6E6E6),
-                                                ),
-                                                borderRadius: BorderRadius.circular(32),
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                rewardLabel,
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF1A1A1A),
-                                                  fontSize: 15,
-                                                  fontFamily: 'Fredoka',
-                                                  fontWeight: FontWeight.w600,
-                                                  height: 1.1,
-                                                  letterSpacing: 0.48,
-                                                ),
-                                              ),
-                                            ),
+                                            ],
                                           ),
-                                          if (isNextReward)
-                                            Positioned(
-                                              right: -4,
-                                              top: -4,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: const BoxDecoration(
-                                                  color: Color(0xFFFF6565),
-                                                  shape: BoxShape.rectangle,
-                                                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                                                ),
-                                                child: Text(
-                                                  '${step - widget.currentStep} steps',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 11,
-                                                    fontFamily: 'Fredoka',
-                                                    fontWeight: FontWeight.w600,
-                                                    height: 1.0,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    // Indicatore scroll elegante
+                    if (_showScrollIndicator)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        height: barHeight,
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: Container(
+                            width: 80,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Colors.white.withOpacity(0),
+                                  Colors.white.withOpacity(0.7),
+                                  Colors.white.withOpacity(0.98),
+                                ],
+                                stops: const [0.0, 0.6, 1.0],
+                              ),
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.chevron_right,
+                                  color: Color(0xFFFF6565),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
