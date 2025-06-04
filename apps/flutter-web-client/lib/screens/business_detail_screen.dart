@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import '../shared_utils/business_hours.dart';
 import '../components/reward_list.dart';
 import '../components/checkpoint_rewards_progress.dart';
+import '../components/merchant_history.dart';
+import '../components/merchant_info.dart';
 
 class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
@@ -37,13 +39,68 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   List<CheckpointOffer> checkpointOffers = [];
   int currentCheckpointStep = 1;
   List<String> coverImageUrls = [];
+  List<TransactionHistory> history = [];
+  Map<String, dynamic>? merchantData;
 
   @override
   void initState() {
     super.initState();
-    print('BusinessDetailScreen - Cover Images: ${widget.coverImageUrls}'); // Debug log
+    print('BusinessDetailScreen - Cover Images: ${widget.coverImageUrls}');
     coverImageUrls = widget.coverImageUrls;
     fetchRewardsAndCheckpoints();
+    fetchMerchantHistory();
+  }
+
+  Future<void> fetchMerchantHistory() async {
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchant-history?merchantId=${widget.merchantId}&cardId=${widget.cardId}');
+    final res = await http.get(url);
+    
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      final transactions = data['transactions'] as List<dynamic>;
+      final checkpoints = data['checkpoints'] as List<dynamic>;
+      
+      final List<TransactionHistory> historyItems = [];
+      
+      // Add transactions
+      for (var tx in transactions) {
+        historyItems.add(TransactionHistory(
+          date: DateTime.parse(tx['created_at']),
+          points: tx['points'],
+          type: 'transaction',
+        ));
+      }
+      
+      // Add checkpoints
+      for (var cp in checkpoints) {
+        if (cp['type'] == 'checkpoint_reward') {
+          historyItems.add(TransactionHistory(
+            date: DateTime.parse(cp['redeemed_at']),
+            points: 0,
+            type: 'checkpoint_reward',
+            rewardName: cp['reward_name'],
+            stepNumber: cp['step_number'],
+            offerName: cp['offer_name'],
+          ));
+        } else if (cp['type'] == 'checkpoint_advancement') {
+          historyItems.add(TransactionHistory(
+            date: DateTime.parse(cp['date']),
+            points: 0,
+            type: 'checkpoint_advancement',
+            stepNumber: cp['step_number'],
+            offerName: cp['offer_name'],
+            totalSteps: cp['total_steps'],
+          ));
+        }
+      }
+      
+      // Sort by date, most recent first
+      historyItems.sort((a, b) => b.date.compareTo(a.date));
+      
+      setState(() {
+        history = historyItems;
+      });
+    }
   }
 
   Future<void> fetchRewardsAndCheckpoints() async {
@@ -64,6 +121,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
       final offersData = merchant['checkpoint_offers'] as List<dynamic>?;
       
       setState(() {
+        merchantData = merchant;
         rewards = rewardsData.map((r) => RewardItem(
           imageUrl: r['image_path'] ?? '',
           title: r['name'] ?? '',
@@ -92,115 +150,180 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The entire screen scrolls so the header collapses naturally if content grows.
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BusinessHeader(
-              businessName: widget.businessName,
-              logoUrl: widget.logoUrl,
-              coverImageUrls: coverImageUrls,
-              isOpen: widget.isOpen,
-              hours: widget.hours,
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: widget.isOpen ? Colors.green : Colors.red,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BusinessHeader(
+                  businessName: widget.businessName,
+                  logoUrl: widget.logoUrl,
+                  coverImageUrls: coverImageUrls,
+                  isOpen: widget.isOpen,
+                  hours: widget.hours,
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: ShapeDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(32),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          widget.isOpen ? 'Aperto' : 'Chiuso',
-                          style: const TextStyle(
-                            color: Color(0xFF1A1A1A),
-                            fontSize: 16,
-                            fontFamily: 'Fredoka',
-                            fontWeight: FontWeight.w500,
-                            height: 1.40,
-                            letterSpacing: 0.48,
-                          ),
-                        ),
-                        if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            getTodayOpeningHours(widget.hours),
-                            style: const TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 14,
-                              fontFamily: 'Fredoka',
-                              fontWeight: FontWeight.w400,
-                              height: 1.40,
-                              letterSpacing: 0.40,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: widget.isOpen ? Colors.green : Colors.red,
+                              ),
                             ),
-                          ),
-                        ]
-                      ],
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.isOpen ? 'Aperto' : 'Chiuso',
+                              style: const TextStyle(
+                                color: Color(0xFF1A1A1A),
+                                fontSize: 16,
+                                fontFamily: 'Fredoka',
+                                fontWeight: FontWeight.w500,
+                                height: 1.40,
+                                letterSpacing: 0.48,
+                              ),
+                            ),
+                            if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                getTodayOpeningHours(widget.hours),
+                                style: const TextStyle(
+                                  color: Color(0xFF1A1A1A),
+                                  fontSize: 14,
+                                  fontFamily: 'Fredoka',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.40,
+                                  letterSpacing: 0.40,
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                // --- CHECKPOINT REWARDS PROGRESS UI ---
+                if (checkpointOffers.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: CheckpointRewardsProgress(
+                      currentStep: currentCheckpointStep,
+                      totalSteps: checkpointOffers.first.totalSteps,
+                      rewardSteps: checkpointOffers.first.steps
+                          .where((step) => step.reward != null)
+                          .map((step) => step.stepNumber)
+                          .toList(),
+                      rewardLabels: Map.fromEntries(
+                        checkpointOffers.first.steps
+                            .where((step) => step.reward != null)
+                            .map((step) => MapEntry(
+                                  step.stepNumber,
+                                  step.reward?.name ?? 'Free Reward',
+                                )),
+                      ),
+                      offerName: checkpointOffers.first.name,
+                      offerDescription: checkpointOffers.first.description,
                     ),
+                  ),
+                const SizedBox(height: 20),
+                // --- REWARD LIST UI ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: isLoading
+                      ? const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RewardList(
+                              userPoints: widget.points,
+                              rewards: rewards,
+                              checkpointOffers: checkpointOffers,
+                              currentCheckpointStep: currentCheckpointStep,
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 20),
+                // History and Info section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // History section
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (isLoading)
+                              const Center(child: CircularProgressIndicator())
+                            else
+                              MerchantHistory(history: history),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Info section
+                      Expanded(
+                        flex: 1,
+                        child: MerchantInfo(
+                          name: widget.businessName,
+                          address: merchantData?['address'] ?? '',
+                          phone: merchantData?['phone'],
+                          googleMapsUrl: merchantData?['google_maps_url'],
+                          hours: widget.hours,
+                          industry: merchantData?['industry'] ?? '',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Floating back button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 40),
-            // --- CHECKPOINT REWARDS PROGRESS UI ---
-            if (checkpointOffers.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: CheckpointRewardsProgress(
-                  currentStep: currentCheckpointStep,
-                  totalSteps: checkpointOffers.first.totalSteps,
-                  rewardSteps: checkpointOffers.first.steps
-                      .where((step) => step.reward != null)
-                      .map((step) => step.stepNumber)
-                      .toList(),
-                  rewardLabels: Map.fromEntries(
-                    checkpointOffers.first.steps
-                        .where((step) => step.reward != null)
-                        .map((step) => MapEntry(
-                              step.stepNumber,
-                              step.reward?.name ?? 'Free Reward',
-                            )),
-                  ),
-                  offerName: checkpointOffers.first.name,
-                  offerDescription: checkpointOffers.first.description,
-                ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.of(context).maybePop(),
               ),
-            const SizedBox(height: 20),
-            // --- REWARD LIST UI ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: isLoading
-                  ? const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-                  : RewardList(
-                      userPoints: widget.points,
-                      rewards: rewards,
-                      checkpointOffers: checkpointOffers,
-                      currentCheckpointStep: currentCheckpointStep,
-                    ),
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -292,15 +415,6 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                       ],
                     ),
                   ),
-                ),
-              ),
-              // Back button
-              Positioned(
-                top: topPadding + 8,
-                left: 16,
-                child: _CircleButton(
-                  icon: Icons.arrow_back,
-                  onPressed: () => Navigator.of(context).maybePop(),
                 ),
               ),
               // Page indicators dinamici

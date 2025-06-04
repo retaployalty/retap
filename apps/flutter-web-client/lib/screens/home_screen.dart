@@ -222,56 +222,53 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             )
                           : SingleChildScrollView(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _filteredMerchantBalances.length,
-                                  itemBuilder: (context, index) {
-                                    final business = _filteredMerchantBalances[index];
-                                    final category = business['industry'] ?? 'Other';
-                                    final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
-                                    final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
-                                    final name = business['merchant_name'] ?? '';
-                                    final hours = business['hours'];
-                                    final isOpen = isBusinessOpen(hours);
-                                    final checkpointsCurrent = business['checkpoints_current'] ?? 0;
-                                    final checkpointsTotal = business['checkpoints_total'] ?? 0;
-                                    final points = business['balance'] ?? 0;
-                                    final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
-                                    return BusinessCard(
-                                      category: category,
-                                      categoryIcon: categoryIcon,
-                                      logoUrl: logoUrl,
-                                      name: name,
-                                      isOpen: isOpen,
-                                      checkpointsCurrent: checkpointsCurrent,
-                                      checkpointsTotal: checkpointsTotal,
-                                      points: points,
-                                      rewardSteps: rewardSteps,
-                                      hours: hours,
-                                      onTap: () {
-                                        print('HomeScreen - Business data: $business'); // Debug log
-                                        print('HomeScreen - Cover images: ${business['cover_image_url']}'); // Debug log
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) => BusinessDetailScreen(
-                                              businessName: name,
-                                              points: points,
-                                              logoUrl: logoUrl,
-                                              coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
-                                              isOpen: isOpen,
-                                              hours: hours,
-                                              merchantId: business['merchant_id'],
-                                              cardId: cardId!,
-                                            ),
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _filteredMerchantBalances.length,
+                                itemBuilder: (context, index) {
+                                  final business = _filteredMerchantBalances[index];
+                                  final category = business['industry'] ?? 'Other';
+                                  final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
+                                  final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
+                                  final name = business['merchant_name'] ?? '';
+                                  final hours = business['hours'];
+                                  final isOpen = isBusinessOpen(hours);
+                                  final checkpointsCurrent = business['checkpoints_current'] ?? 0;
+                                  final checkpointsTotal = business['checkpoints_total'] ?? 0;
+                                  final points = business['balance'] ?? 0;
+                                  final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+                                  return BusinessCard(
+                                    category: category,
+                                    categoryIcon: categoryIcon,
+                                    logoUrl: logoUrl,
+                                    name: name,
+                                    isOpen: isOpen,
+                                    checkpointsCurrent: checkpointsCurrent,
+                                    checkpointsTotal: checkpointsTotal,
+                                    points: points,
+                                    rewardSteps: rewardSteps,
+                                    hours: hours,
+                                    onTap: () {
+                                      print('HomeScreen - Business data: $business'); // Debug log
+                                      print('HomeScreen - Cover images: ${business['cover_image_url']}'); // Debug log
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => BusinessDetailScreen(
+                                            businessName: name,
+                                            points: points,
+                                            logoUrl: logoUrl,
+                                            coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                            isOpen: isOpen,
+                                            hours: hours,
+                                            merchantId: business['merchant_id'],
+                                            cardId: cardId!,
                                           ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
                             ),
             ),
