@@ -173,9 +173,14 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       .where((step) => step.reward != null)
                       .map((step) => step.stepNumber)
                       .toList(),
-                  labelReward: checkpointOffers.first.steps
-                      .firstWhere((step) => step.reward != null, orElse: () => checkpointOffers.first.steps.first)
-                      .reward?.name ?? 'Free Reward',
+                  rewardLabels: Map.fromEntries(
+                    checkpointOffers.first.steps
+                        .where((step) => step.reward != null)
+                        .map((step) => MapEntry(
+                              step.stepNumber,
+                              step.reward?.name ?? 'Free Reward',
+                            )),
+                  ),
                   offerName: checkpointOffers.first.name,
                   offerDescription: checkpointOffers.first.description,
                 ),

@@ -4,7 +4,7 @@ class CheckpointRewardsProgress extends StatefulWidget {
   final int currentStep;
   final int totalSteps;
   final List<int> rewardSteps; // es: [5, 10]
-  final String labelReward;
+  final Map<int, String> rewardLabels; // Map of step number to reward name
   final String offerName;
   final String offerDescription;
 
@@ -13,9 +13,9 @@ class CheckpointRewardsProgress extends StatefulWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.rewardSteps,
+    required this.rewardLabels,
     required this.offerName,
     required this.offerDescription,
-    this.labelReward = 'Free Cream',
   });
 
   @override
@@ -292,6 +292,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                 - dotSize / 2;
                               final bool isRewardAvailable = step <= widget.currentStep;
                               final bool isNextReward = step == _getNextRewardStep();
+                              final String rewardLabel = widget.rewardLabels[step] ?? 'Free Reward';
                               return Positioned(
                                 left: left + dotSize / 2 - 53.5,
                                 top: barHeight + 10,
@@ -347,7 +348,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                   ),
                                                   child: Center(
                                                     child: Text(
-                                                      widget.labelReward,
+                                                      rewardLabel,
                                                       textAlign: TextAlign.center,
                                                       style: const TextStyle(
                                                         color: Colors.white,
@@ -409,7 +410,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                             ),
                                             child: Center(
                                               child: Text(
-                                                widget.labelReward,
+                                                rewardLabel,
                                                 textAlign: TextAlign.center,
                                                 style: const TextStyle(
                                                   color: Color(0xFF1A1A1A),
