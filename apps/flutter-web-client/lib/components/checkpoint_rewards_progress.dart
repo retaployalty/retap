@@ -163,12 +163,21 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
         Container(
           width: double.infinity,
           height: 240,
+          margin: const EdgeInsets.symmetric(vertical: 8),
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
             color: const Color(0xFFF5F5F5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(33),
             ),
+            shadows: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                spreadRadius: 1,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Stack(
             children: [

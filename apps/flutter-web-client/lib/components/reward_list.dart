@@ -34,9 +34,10 @@ class RewardList extends StatelessWidget {
           ),
           shadows: [
             BoxShadow(
-              color: const Color(0x3F000000),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              spreadRadius: 1,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
