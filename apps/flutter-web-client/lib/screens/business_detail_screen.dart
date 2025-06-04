@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../shared_utils/business_hours.dart';
 import '../components/reward_list.dart';
 import '../components/checkpoint_rewards_progress.dart';
+import '../components/merchant_history.dart';
 
 class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
@@ -37,13 +38,67 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   List<CheckpointOffer> checkpointOffers = [];
   int currentCheckpointStep = 1;
   List<String> coverImageUrls = [];
+  List<TransactionHistory> history = [];
 
   @override
   void initState() {
     super.initState();
-    print('BusinessDetailScreen - Cover Images: ${widget.coverImageUrls}'); // Debug log
+    print('BusinessDetailScreen - Cover Images: ${widget.coverImageUrls}');
     coverImageUrls = widget.coverImageUrls;
     fetchRewardsAndCheckpoints();
+    fetchMerchantHistory();
+  }
+
+  Future<void> fetchMerchantHistory() async {
+    final url = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchant-history?merchantId=${widget.merchantId}&cardId=${widget.cardId}');
+    final res = await http.get(url);
+    
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      final transactions = data['transactions'] as List<dynamic>;
+      final checkpoints = data['checkpoints'] as List<dynamic>;
+      
+      final List<TransactionHistory> historyItems = [];
+      
+      // Add transactions
+      for (var tx in transactions) {
+        historyItems.add(TransactionHistory(
+          date: DateTime.parse(tx['created_at']),
+          points: tx['points'],
+          type: 'transaction',
+        ));
+      }
+      
+      // Add checkpoints
+      for (var cp in checkpoints) {
+        if (cp['type'] == 'checkpoint_reward') {
+          historyItems.add(TransactionHistory(
+            date: DateTime.parse(cp['redeemed_at']),
+            points: 0,
+            type: 'checkpoint_reward',
+            rewardName: cp['reward_name'],
+            stepNumber: cp['step_number'],
+            offerName: cp['offer_name'],
+          ));
+        } else if (cp['type'] == 'checkpoint_advancement') {
+          historyItems.add(TransactionHistory(
+            date: DateTime.parse(cp['date']),
+            points: 0,
+            type: 'checkpoint_advancement',
+            stepNumber: cp['step_number'],
+            offerName: cp['offer_name'],
+            totalSteps: cp['total_steps'],
+          ));
+        }
+      }
+      
+      // Sort by date, most recent first
+      historyItems.sort((a, b) => b.date.compareTo(a.date));
+      
+      setState(() {
+        history = historyItems;
+      });
+    }
   }
 
   Future<void> fetchRewardsAndCheckpoints() async {
@@ -198,6 +253,22 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       currentCheckpointStep: currentCheckpointStep,
                     ),
             ),
+            const SizedBox(height: 20),
+            // Add history section
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Storico attività',
+                style: TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 20,
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            MerchantHistory(history: history),
             const SizedBox(height: 20),
           ],
         ),

@@ -771,6 +771,136 @@ serve(async (req) => {
       )
     }
 
+    // GET /merchant-history?merchantId=XXX&cardId=XXX
+    if (path === 'merchant-history' && req.method === 'GET') {
+      const merchantId = params.merchantId;
+      const cardId = params.cardId;
+
+      if (!merchantId || !cardId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchantId or cardId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get card_merchant_id and customer_id
+      const { data: cardData, error: cardError } = await supabaseClient
+        .from('cards')
+        .select('customer_id')
+        .eq('id', cardId)
+        .single();
+
+      if (cardError) {
+        return new Response(
+          JSON.stringify({ error: 'Card not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get card_merchant_id
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .select('id')
+        .eq('card_id', cardId)
+        .eq('merchant_id', merchantId)
+        .single();
+
+      if (cmError) {
+        return new Response(
+          JSON.stringify({ error: 'Card merchant relationship not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get transactions
+      const { data: transactions, error: txError } = await supabaseClient
+        .from('transactions')
+        .select('points, created_at')
+        .eq('card_merchant_id', cardMerchant.id)
+        .order('created_at', { ascending: false });
+
+      if (txError) {
+        return new Response(
+          JSON.stringify({ error: txError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get historical checkpoint advancements
+      const { data: checkpointAdvancements, error: caError } = await supabaseClient
+        .from('checkpoint_advancements')
+        .select(`
+          step_number,
+          total_steps,
+          advanced_at,
+          offer:checkpoint_offers (
+            name
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .eq('customer_id', cardData.customer_id)
+        .order('advanced_at', { ascending: false });
+
+      if (caError) {
+        return new Response(
+          JSON.stringify({ error: caError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get checkpoint rewards
+      const { data: checkpoints, error: cpError } = await supabaseClient
+        .from('redeemed_checkpoint_rewards')
+        .select(`
+          redeemed_at,
+          reward:checkpoint_rewards (
+            name
+          ),
+          step:checkpoint_steps (
+            step_number,
+            offer:checkpoint_offers (
+              name
+            )
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .eq('customer_id', cardData.customer_id)
+        .order('redeemed_at', { ascending: false });
+
+      if (cpError) {
+        return new Response(
+          JSON.stringify({ error: cpError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Format checkpoint data
+      const formattedCheckpoints = checkpoints.map((cp: any) => ({
+        redeemed_at: cp.redeemed_at,
+        reward_name: cp.reward?.name,
+        step_number: cp.step?.step_number,
+        offer_name: cp.step?.offer?.name,
+        type: 'checkpoint_reward'
+      }));
+
+      // Format checkpoint advancements
+      const formattedAdvancements = checkpointAdvancements.map((ca: any) => ({
+        date: ca.advanced_at,
+        step_number: ca.step_number,
+        offer_name: ca.offer?.name,
+        total_steps: ca.total_steps,
+        type: 'checkpoint_advancement'
+      }));
+
+      return new Response(
+        JSON.stringify({
+          transactions,
+          checkpoints: [...formattedCheckpoints, ...formattedAdvancements]
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
