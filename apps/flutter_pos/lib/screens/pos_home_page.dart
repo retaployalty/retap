@@ -246,6 +246,94 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _writeMerchantCard(BuildContext context) async {
+    try {
+      debugPrint('Iniziando la scrittura della carta merchant...');
+      debugPrint('In attesa di una carta NFC...');
+      
+      // 1. Leggi il chip NFC
+      final tag = await FlutterNfcKit.poll();
+      debugPrint('Carta rilevata!');
+      debugPrint('Tipo di tag: ${tag.type}');
+      debugPrint('UID: ${tag.id}');
+
+      // Verifica se il tag supporta NDEF
+      if (tag.ndefAvailable == false) {
+        throw Exception('Questa carta non supporta NDEF');
+      }
+
+      // Verifica se il tag è scrivibile
+      if (tag.ndefWritable == false) {
+        throw Exception('Questa carta è in sola lettura');
+      }
+
+      // 2. Crea il link specifico per il merchant
+      final cardUrl = 'https://retapcard.com/m/${widget.merchantId}';
+      debugPrint('Link merchant generato: $cardUrl');
+
+      // 3. Scrivi il link sul chip in formato NDEF
+      try {
+        final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
+        await FlutterNfcKit.writeNDEFRecords([uriRecord]);
+        debugPrint('Link scritto sul chip con successo');
+
+        // 4. Blocca il chip in sola lettura (se supportato)
+        if (tag.type == NFCTagType.iso15693) {
+          try {
+            await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
+            debugPrint('Chip bloccato in sola lettura');
+          } catch (e) {
+            debugPrint('Impossibile bloccare il chip: $e');
+          }
+        }
+
+        // 5. Mostra messaggio di successo
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Carta merchant programmata con successo'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        await FlutterNfcKit.finish(iosAlertMessage: 'Fatto!');
+        debugPrint('Operazione completata con successo!');
+      } catch (e) {
+        debugPrint('ERRORE durante la scrittura NFC:');
+        debugPrint('Tipo di errore: ${e.runtimeType}');
+        debugPrint('Messaggio: $e');
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Errore nella scrittura NFC: $e'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        
+        await FlutterNfcKit.finish(iosAlertMessage: 'Errore nella scrittura NFC');
+      }
+    } catch (e) {
+      debugPrint('ERRORE durante l\'operazione:');
+      debugPrint('Tipo di errore: ${e.runtimeType}');
+      debugPrint('Messaggio: $e');
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      
+      await FlutterNfcKit.finish(iosAlertMessage: 'Errore: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,8 +351,18 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: const Text('Scrivi Carta'),
+              child: const Text('Scrivi Carta Standard'),
               onPressed: () => _writeCard(context),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Scrivi Carta Merchant'),
+              onPressed: () => _writeMerchantCard(context),
             ),
             const SizedBox(height: 32),
             Text(
