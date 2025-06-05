@@ -28,6 +28,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   List<Checkpoint> _checkpoints = [];
   String? _error;
   Map<String, int> _currentSteps = {};
+  bool _isAdvancing = false;
 
   @override
   void initState() {
@@ -62,7 +63,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   @override
   void didUpdateWidget(CheckpointOffersList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Refresh checkpoints when cardId changes or when new initial data is provided
     if (oldWidget.cardId != widget.cardId || oldWidget.initialCheckpointData != widget.initialCheckpointData) {
       if (widget.initialCheckpointData != null) {
         _initializeFromData(widget.initialCheckpointData!);
@@ -73,42 +73,33 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   }
 
   Future<void> _fetchCheckpoints() async {
+    if (!mounted) return;
+    
     try {
-      debugPrint('Fetching checkpoints for merchant ${widget.merchantId}');
-      
-      // Aggiorna i dati dal server
-      debugPrint('Fetching checkpoints from server...');
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final response = await CheckpointService.fetchOffers(widget.merchantId, cardId: widget.cardId);
       final offers = response['checkpoints'] as List<Checkpoint>;
       final currentStep = response['currentStep'] as int;
-      debugPrint('Received ${offers.length} offers from server, current step: $currentStep');
-      
-      // Se non ci sono offerte, inizializza lo step a 0
-      if (offers.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _checkpoints = [];
-          _currentSteps = {};
-          _isLoading = false;
-        });
-        return;
-      }
-      
-      // Salva i nuovi dati in cache
-      debugPrint('Caching ${offers.length} checkpoints');
-      await CacheService.cacheCheckpoints(widget.merchantId, offers);
       
       if (!mounted) return;
+      
       setState(() {
         _checkpoints = offers;
-        _currentSteps = {offers.first.id: currentStep};
+        _currentSteps = offers.isNotEmpty ? {offers.first.id: currentStep} : {};
         _isLoading = false;
       });
-    } catch (e, stackTrace) {
-      debugPrint('Error fetching checkpoints: $e');
-      debugPrint('Stack trace: $stackTrace');
+
+      // Cache in background
+      if (offers.isNotEmpty) {
+        Future.microtask(() => CacheService.cacheCheckpoints(widget.merchantId, offers));
+      }
+    } catch (e) {
+      if (!mounted) return;
       
-      // Se la chiamata al server fallisce, prova a usare la cache
       try {
         final cachedCheckpoints = await CacheService.getCachedCheckpoints(widget.merchantId);
         if (cachedCheckpoints != null && mounted) {
@@ -123,7 +114,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         debugPrint('Cache fallback failed: $cacheError');
       }
       
-      if (!mounted) return;
       setState(() {
         _error = 'Errore: $e';
         _isLoading = false;
@@ -132,10 +122,11 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   }
 
   Future<void> _advanceCheckpoint(String offerId) async {
-    if (widget.cardId == null) return;
+    if (widget.cardId == null || _isAdvancing) return;
     
     try {
-      debugPrint('Advancing checkpoint for card ${widget.cardId} and offer $offerId');
+      setState(() => _isAdvancing = true);
+      
       final response = await http.post(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/advance'),
         headers: {
@@ -148,17 +139,15 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         }),
       );
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body)[0];
-        debugPrint('Parsed response data: $data');
         setState(() {
           _currentSteps[offerId] = data['current_step'];
+          _isAdvancing = false;
         });
 
-        // Show success message if there's a reward
         if (data['reward_name'] != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -167,7 +156,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
             ),
           );
         } else {
-          // Show generic success message if no reward
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Checkpoint avanzato con successo!'),
@@ -179,7 +167,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         throw Exception('Errore ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error advancing checkpoint: $e');
+      if (!mounted) return;
+      setState(() => _isAdvancing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore: $e'),
@@ -190,10 +179,11 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   }
 
   Future<void> _rewindCheckpoint(String offerId) async {
-    if (widget.cardId == null) return;
+    if (widget.cardId == null || _isAdvancing) return;
     
     try {
-      debugPrint('Rewinding checkpoint for card ${widget.cardId} and offer $offerId');
+      setState(() => _isAdvancing = true);
+      
       final response = await http.post(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/rewind'),
         headers: {
@@ -206,14 +196,13 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         }),
       );
 
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body)[0];
-        debugPrint('Parsed response data: $data');
         setState(() {
           _currentSteps[offerId] = data['current_step'];
+          _isAdvancing = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +215,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         throw Exception('Errore ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error rewinding checkpoint: $e');
+      if (!mounted) return;
+      setState(() => _isAdvancing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore: $e'),
@@ -279,7 +269,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // List of offers with details
             ..._checkpoints.map((checkpoint) {
               final currentStep = _currentSteps[checkpoint.id] ?? 1;
               final progress = (currentStep / checkpoint.totalSteps).clamp(0.0, 1.0);
@@ -288,7 +277,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Progress indicator
                   Row(
                     children: [
                       Expanded(
@@ -313,7 +301,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Steps timeline
                   if (checkpoint.steps != null && checkpoint.steps!.isNotEmpty)
                     ...checkpoint.steps!.map<Widget>((step) {
                       final isCurrentStep = step.stepNumber == currentStep;
@@ -407,7 +394,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
             const SizedBox(height: 16),
 
-            // Large advance button at the bottom
             if (widget.cardId != null && _checkpoints.isNotEmpty)
               Row(
                 children: [
@@ -416,7 +402,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     child: SizedBox(
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: () => _rewindCheckpoint(_checkpoints.first.id),
+                        onPressed: _isAdvancing ? null : () => _rewindCheckpoint(_checkpoints.first.id),
                         icon: const Icon(Icons.remove, size: 24),
                         label: const Text(
                           'Togli',
@@ -436,7 +422,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     child: SizedBox(
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: () => _advanceCheckpoint(_checkpoints.first.id),
+                        onPressed: _isAdvancing ? null : () => _advanceCheckpoint(_checkpoints.first.id),
                         icon: const Icon(Icons.add, size: 24),
                         label: const Text(
                           'Avanza Checkpoint',
