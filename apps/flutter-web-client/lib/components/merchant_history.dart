@@ -32,7 +32,7 @@ class MerchantHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
       decoration: ShapeDecoration(
         color: AppColors.surface,
         shape: RoundedRectangleBorder(
@@ -46,6 +46,9 @@ class MerchantHistory extends StatelessWidget {
             offset: const Offset(0, 2),
           ),
         ],
+      ),
+      constraints: const BoxConstraints(
+        maxHeight: 340,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,15 +68,15 @@ class MerchantHistory extends StatelessWidget {
           const Text(
             'Tutte le tue attività con questo negozio',
             style: TextStyle(
-              color: Color(0xFF666666),
-              fontSize: 14,
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
               fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               height: 1.40,
-              letterSpacing: 0.40,
+              letterSpacing: 0.48,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           if (history.isEmpty)
             const Center(
               child: Padding(
@@ -82,22 +85,24 @@ class MerchantHistory extends StatelessWidget {
                   'Nessuna attività da mostrare',
                   style: TextStyle(
                     color: Color(0xFF666666),
-                    fontSize: 14,
+                    fontSize: 15,
                     fontFamily: 'Fredoka',
                   ),
                 ),
               ),
             )
           else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: history.length,
-              separatorBuilder: (context, index) => const Divider(height: 16, color: Colors.transparent),
-              itemBuilder: (context, index) {
-                final item = history[index];
-                return _HistoryItem(item: item);
-              },
+            Expanded(
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: history.length,
+                separatorBuilder: (context, index) => const Divider(height: 14, color: Colors.transparent),
+                itemBuilder: (context, index) {
+                  final item = history[index];
+                  return _HistoryItem(item: item);
+                },
+              ),
             ),
         ],
       ),
@@ -112,105 +117,91 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+    return Row(
+      children: [
+        // Data pill
+        Container(
+          constraints: const BoxConstraints(minWidth: 100, maxWidth: 130),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          height: 36,
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatDate(item.date),
+                style: const TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 15,
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Text(
+                ' / ',
+                style: TextStyle(
+                  color: Color(0xFF666666),
+                  fontSize: 15,
+                  fontFamily: 'Fredoka',
+                ),
+              ),
+              Text(
+                _formatTime(item.date),
+                style: const TextStyle(
+                  color: Color(0xFF666666),
+                  fontSize: 15,
+                  fontFamily: 'Fredoka',
+                ),
+              ),
+            ],
+          ),
         ),
-        shadows: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+        const SizedBox(width: 14),
+        // Reward/points pill
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          height: 36,
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Data
-          Container(
-            constraints: const BoxConstraints(minWidth: 90, maxWidth: 120),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: ShapeDecoration(
-              color: const Color(0xFFF5F5F5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _getIcon(item.type),
+                  color: _getPillIconColor(item.type),
+                  size: 20,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _formatDate(item.date),
-                  style: const TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 13,
-                    fontFamily: 'Fredoka',
-                    fontWeight: FontWeight.w500,
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                _getValue(item),
+                style: TextStyle(
+                  color: _getPillTextColor(item.type),
+                  fontSize: 16,
+                  fontFamily: 'Fredoka',
+                  fontWeight: FontWeight.w600,
                 ),
-                const Text(
-                  ' · ',
-                  style: TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 13,
-                    fontFamily: 'Fredoka',
-                  ),
-                ),
-                Text(
-                  _formatTime(item.date),
-                  style: const TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 13,
-                    fontFamily: 'Fredoka',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Icona e numero
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: ShapeDecoration(
-              color: _getIconColor(item.type).withOpacity(0.1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: _getIconColor(item.type).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    _getIcon(item.type),
-                    color: _getIconColor(item.type),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _getValue(item),
-                  style: TextStyle(
-                    color: _getValueColor(item),
-                    fontSize: 16,
-                    fontFamily: 'Fredoka',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -246,16 +237,19 @@ class _HistoryItem extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(String type) {
-    switch (type) {
-      case 'transaction':
-        return AppColors.primary;
-      case 'checkpoint_reward':
-        return AppColors.success;
-      case 'checkpoint_advancement':
-        return const Color(0xFF2196F3);
-      default:
-        return AppColors.textSecondary;
+  Color _getPillIconColor(String type) {
+    if (type == 'transaction') {
+      return AppColors.primary;
+    } else {
+      return Colors.black;
+    }
+  }
+
+  Color _getPillTextColor(String type) {
+    if (type == 'transaction') {
+      return AppColors.primary;
+    } else {
+      return Colors.black;
     }
   }
 
@@ -269,19 +263,6 @@ class _HistoryItem extends StatelessWidget {
         return '+1';
       default:
         return '';
-    }
-  }
-
-  Color _getValueColor(TransactionHistory item) {
-    switch (item.type) {
-      case 'transaction':
-        return item.points > 0 ? AppColors.success : AppColors.primary;
-      case 'checkpoint_reward':
-        return AppColors.success;
-      case 'checkpoint_advancement':
-        return const Color(0xFF2196F3);
-      default:
-        return AppColors.textSecondary;
     }
   }
 } 
