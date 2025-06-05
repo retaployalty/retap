@@ -25,9 +25,15 @@ class _MerchantSelectionScreenState extends State<MerchantSelectionScreen> {
 
   Future<void> _loadMerchants() async {
     try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
       final response = await Supabase.instance.client
           .from('merchants')
           .select()
+          .eq('profile_id', user.id)
           .order('name');
 
       setState(() {

@@ -32,39 +32,61 @@ class _RewardsListState extends State<RewardsList> {
   List<Reward> _rewards = [];
   String? _error;
   int _userPoints = 0;
+  bool _isRedeeming = false;
 
   @override
   void initState() {
     super.initState();
+    _userPoints = widget.userPoints;
     _fetchRewards();
   }
 
-  Future<void> _fetchRewards() async {
-    try {
-      // Prima prova a recuperare i dati dalla cache
-      final cachedRewards = await CacheService.getCachedRewards(widget.merchantId);
-      
-      if (cachedRewards != null) {
-        if (!mounted) return;
-        setState(() {
-          _rewards = cachedRewards;
-          _isLoading = false;
-        });
-      }
+  @override
+  void didUpdateWidget(RewardsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userPoints != widget.userPoints) {
+      setState(() => _userPoints = widget.userPoints);
+    }
+  }
 
-      // In ogni caso, aggiorna i dati dal server
+  Future<void> _fetchRewards() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final rewards = await RewardService.fetchRewards(widget.merchantId);
       
-      // Salva i nuovi dati in cache
-      await CacheService.cacheRewards(widget.merchantId, rewards);
-      
       if (!mounted) return;
+      
       setState(() {
         _rewards = rewards;
         _isLoading = false;
       });
+
+      // Cache in background
+      if (rewards.isNotEmpty) {
+        Future.microtask(() => CacheService.cacheRewards(widget.merchantId, rewards));
+      }
     } catch (e) {
       if (!mounted) return;
+      
+      try {
+        final cachedRewards = await CacheService.getCachedRewards(widget.merchantId);
+        if (cachedRewards != null && mounted) {
+          setState(() {
+            _rewards = cachedRewards;
+            _isLoading = false;
+          });
+          return;
+        }
+      } catch (cacheError) {
+        debugPrint('Cache fallback failed: $cacheError');
+      }
+      
       setState(() {
         _error = 'Errore: $e';
         _isLoading = false;
@@ -73,21 +95,20 @@ class _RewardsListState extends State<RewardsList> {
   }
 
   Future<void> _redeemReward(Reward reward) async {
-    if (widget.card == null || widget.card!.customerId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Carta o cliente non trovato'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (widget.card == null || widget.card!.customerId == null || _isRedeeming) {
+      if (!_isRedeeming) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Carta o cliente non trovato'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     try {
-      print('Starting reward redemption...');
-      print('Card data: id=${widget.card!.id}, customerId=${widget.card!.customerId}');
-      print('Reward data: id=${reward.id}, name=${reward.name}, price=${reward.priceCoins}');
-      print('Merchant ID: ${widget.merchantId}');
+      setState(() => _isRedeeming = true);
 
       final redeemedReward = await RewardService.redeemReward(
         customerId: widget.card!.customerId!,
@@ -100,8 +121,10 @@ class _RewardsListState extends State<RewardsList> {
 
       // Aggiorna i punti dopo il riscatto
       final newPoints = await PointsService.getCardBalance(widget.card!.id!, widget.merchantId);
+      
       setState(() {
         _userPoints = newPoints;
+        _isRedeeming = false;
       });
 
       // Notifica il parent component del cambiamento dei punti
@@ -114,8 +137,8 @@ class _RewardsListState extends State<RewardsList> {
         ),
       );
     } catch (e) {
-      print('ERROR in reward redemption: $e');
       if (!mounted) return;
+      setState(() => _isRedeeming = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore nel riscatto del premio: $e'),
@@ -168,7 +191,6 @@ class _RewardsListState extends State<RewardsList> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header with points
             Row(
               children: [
                 Icon(
@@ -178,7 +200,7 @@ class _RewardsListState extends State<RewardsList> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${widget.userPoints} punti disponibili',
+                  '$_userPoints punti disponibili',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -188,7 +210,6 @@ class _RewardsListState extends State<RewardsList> {
               ],
             ),
             const SizedBox(height: 16),
-            // Rewards list
             SizedBox(
               height: 120,
               child: ListView.builder(
@@ -196,7 +217,7 @@ class _RewardsListState extends State<RewardsList> {
                 itemCount: _rewards.length,
                 itemBuilder: (context, index) {
                   final reward = _rewards[index];
-                  final canRedeem = widget.userPoints >= reward.priceCoins;
+                  final canRedeem = _userPoints >= reward.priceCoins && !_isRedeeming;
                   
                   return Container(
                     width: 200,
@@ -276,7 +297,7 @@ class _RewardsListState extends State<RewardsList> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => _redeemReward(reward),
+                                onPressed: _isRedeeming ? null : () => _redeemReward(reward),
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   backgroundColor: Theme.of(context).colorScheme.primary,
