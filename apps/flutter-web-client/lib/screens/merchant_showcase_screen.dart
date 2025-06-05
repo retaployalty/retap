@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
-import '../shared_utils/business_hours.dart';
+import '../components/checkpoint_rewards_progress.dart';
+import '../components/reward_list.dart';
 
 class MerchantShowcaseScreen extends StatefulWidget {
   final String merchantId;
@@ -21,6 +22,8 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _merchantData;
+  int _userPoints = 0;
+  int _currentCheckpointStep = 0;
 
   @override
   void initState() {
@@ -46,6 +49,8 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
       final data = jsonDecode(response.body);
       setState(() {
         _merchantData = data['merchant'];
+        _userPoints = data['balance'] ?? 0;
+        _currentCheckpointStep = data['currentStep'] ?? 0;
         _isLoading = false;
       });
     } catch (e) {
@@ -54,15 +59,6 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  String? _getCoverImageUrl(dynamic coverImageUrl) {
-    if (coverImageUrl == null) return null;
-    if (coverImageUrl is String) return coverImageUrl;
-    if (coverImageUrl is List && coverImageUrl.isNotEmpty) {
-      return coverImageUrl.first.toString();
-    }
-    return null;
   }
 
   @override
@@ -86,192 +82,187 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
 
     final merchant = _merchantData!;
     final name = merchant['name'] ?? '';
-    final industry = merchant['industry'] ?? '';
-    final address = merchant['address'] ?? '';
     final logoUrl = merchant['logo_url'];
-    final coverImageUrl = _getCoverImageUrl(merchant['cover_image_url']);
-    final hours = merchant['hours'];
-    final isOpen = isBusinessOpen(hours);
     final rewards = merchant['rewards'] ?? [];
     final checkpointOffers = merchant['checkpoint_offers'] ?? [];
 
+    // Converti i rewards nel formato richiesto da RewardList
+    final rewardItems = rewards.map((r) => RewardItem(
+      imageUrl: r['image_path'] ?? '',
+      title: r['name'] ?? '',
+      price: r['price_coins'] ?? 0,
+    )).toList().cast<RewardItem>();
+
+    // Converti i checkpoint offers nel formato richiesto
+    final checkpointOfferItems = checkpointOffers
+        .map((o) => CheckpointOffer.fromJson(o))
+        .toList()
+        .cast<CheckpointOffer>();
+
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // App Bar con immagine di copertina
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: coverImageUrl != null
-                  ? Image.network(
-                      coverImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Theme.of(context).colorScheme.primary,
-                        );
-                      },
-                    )
-                  : Container(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-            ),
-          ),
-          // Contenuto principale
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Logo e nome
-                  Row(
-                    children: [
-                      if (logoUrl != null)
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundImage: NetworkImage(logoUrl),
-                        ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: AppTextStyles.headlineMedium,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            children: [
+              // Header con logo e messaggio di benvenuto
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (logoUrl != null)
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 136,
+                            height: 136,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.black, width: 3),
                             ),
-                            Text(
-                              industry,
-                              style: AppTextStyles.bodyLarge.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Indirizzo e stato
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          address,
-                          style: AppTextStyles.bodyLarge,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        isOpen ? Icons.circle : Icons.circle_outlined,
-                        color: isOpen ? Colors.green : Colors.red,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isOpen ? 'Aperto' : 'Chiuso',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: isOpen ? Colors.green : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  // Rewards
-                  if (rewards.isNotEmpty) ...[
-                    Text(
-                      'Rewards disponibili',
-                      style: AppTextStyles.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: rewards.length,
-                      itemBuilder: (context, index) {
-                        final reward = rewards[index];
-                        return Card(
-                          child: ListTile(
-                            leading: reward['image_path'] != null
-                                ? Image.network(
-                                    reward['image_path'],
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                  )
-                                : const Icon(Icons.card_giftcard),
-                            title: Text(reward['name'] ?? ''),
-                            subtitle: Text(reward['description'] ?? ''),
-                            trailing: Text(
-                              '${reward['price_coins']} punti',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                          ),
+                          Container(
+                            width: 130,
+                            height: 130,
+                            color: Colors.transparent,
+                          ),
+                          CircleAvatar(
+                            radius: 66,
+                            backgroundColor: Colors.transparent,
+                            child: ClipOval(
+                              child: Image.network(
+                                logoUrl,
+                                fit: BoxFit.cover,
+                                width: 124,
+                                height: 124,
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                  // Checkpoint offers
-                  if (checkpointOffers.isNotEmpty) ...[
-                    Text(
-                      'Checkpoint offers',
-                      style: AppTextStyles.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: checkpointOffers.length,
-                      itemBuilder: (context, index) {
-                        final offer = checkpointOffers[index];
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  offer['name'] ?? '',
-                                  style: AppTextStyles.titleMedium,
+                        ],
+                      ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Riga "Hi, welcome"
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Hi, ',
+                                style: AppTextStyles.headlineLarge.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                const SizedBox(height: 8),
-                                Text(offer['description'] ?? ''),
-                                const SizedBox(height: 16),
-                                LinearProgressIndicator(
-                                  value: 0,
-                                  backgroundColor: Colors.grey[200],
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Theme.of(context).colorScheme.primary,
-                                  ),
+                              ),
+                              Text(
+                                'welcome',
+                                style: AppTextStyles.headlineLarge.copyWith(
+                                  color: const Color(0xFFFF6B6B),
+                                  fontWeight: FontWeight.w700,
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '0/${offer['total_steps']} passi completati',
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          // Riga "da Nome!"
+                          Text(
+                            'da $name!',
+                            style: AppTextStyles.headlineLarge.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
+
+              // Checkpoint Progress
+              if (checkpointOfferItems.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Builder(
+                    builder: (context) {
+                      final steps = checkpointOfferItems.first.steps;
+                      final rewardSteps = steps
+                          .where((step) => step.reward != null)
+                          .map((step) => step.stepNumber)
+                          .toList()
+                          .cast<int>();
+
+                      // Converti esplicitamente i reward labels in Map<int, String>
+                      final rewardLabels = Map<int, String>.fromEntries(
+                        steps
+                            .where((step) => step.reward != null)
+                            .map((step) => MapEntry<int, String>(
+                                  step.stepNumber,
+                                  step.reward?.name ?? 'Free Reward',
+                                ))
+                            .toList()
+                            .cast<MapEntry<int, String>>(),
+                      );
+
+                      return CheckpointRewardsProgress(
+                        currentStep: _currentCheckpointStep,
+                        totalSteps: checkpointOfferItems.first.totalSteps,
+                        rewardSteps: rewardSteps,
+                        rewardLabels: rewardLabels,
+                        offerName: checkpointOfferItems.first.name,
+                        offerDescription: checkpointOfferItems.first.description,
+                      );
+                    },
+                  ),
+                ),
+              ],
+
+              // Rewards List
+              if (rewardItems.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: RewardList(
+                    userPoints: _userPoints,
+                    rewards: rewardItems,
+                    checkpointOffers: checkpointOfferItems,
+                    currentCheckpointStep: _currentCheckpointStep,
+                  ),
+                ),
+
+              // Grande tasto in fondo
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {}, // Non fa nulla per ora ma resta visibile
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    backgroundColor: Color(0xFFFF6B6B),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: AppTextStyles.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  child: const Text(
+                    'Riscatta premi!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
