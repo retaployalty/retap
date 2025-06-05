@@ -9,12 +9,14 @@ class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
   final String? cardId;
   final bool compactMode;
+  final Map<String, dynamic>? initialCheckpointData;
 
   const CheckpointOffersList({
     super.key,
     required this.merchantId,
     this.cardId,
     this.compactMode = false,
+    this.initialCheckpointData,
   });
 
   @override
@@ -30,49 +32,97 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   @override
   void initState() {
     super.initState();
-    _fetchCheckpoints();
+    if (widget.initialCheckpointData != null) {
+      _initializeFromData(widget.initialCheckpointData!);
+    } else {
+      _fetchCheckpoints();
+    }
+  }
+
+  void _initializeFromData(Map<String, dynamic> data) {
+    try {
+      final offers = (data['offers'] as List).map((o) => Checkpoint.fromJson(o)).toList();
+      final steps = (data['steps'] as Map<String, dynamic>).map(
+        (key, value) => MapEntry(key, value as int)
+      );
+      
+      setState(() {
+        _checkpoints = offers;
+        _currentSteps = steps;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Errore nel parsing dei dati: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(CheckpointOffersList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh checkpoints when cardId changes or when new initial data is provided
+    if (oldWidget.cardId != widget.cardId || oldWidget.initialCheckpointData != widget.initialCheckpointData) {
+      if (widget.initialCheckpointData != null) {
+        _initializeFromData(widget.initialCheckpointData!);
+      } else {
+        _fetchCheckpoints();
+      }
+    }
   }
 
   Future<void> _fetchCheckpoints() async {
     try {
-      // Prima prova a recuperare i dati dalla cache
-      final cachedCheckpoints = await CacheService.getCachedCheckpoints(widget.merchantId);
+      debugPrint('Fetching checkpoints for merchant ${widget.merchantId}');
       
-      if (cachedCheckpoints != null) {
+      // Aggiorna i dati dal server
+      debugPrint('Fetching checkpoints from server...');
+      final response = await CheckpointService.fetchOffers(widget.merchantId, cardId: widget.cardId);
+      final offers = response['checkpoints'] as List<Checkpoint>;
+      final currentStep = response['currentStep'] as int;
+      debugPrint('Received ${offers.length} offers from server, current step: $currentStep');
+      
+      // Se non ci sono offerte, inizializza lo step a 0
+      if (offers.isEmpty) {
         if (!mounted) return;
         setState(() {
-          _checkpoints = cachedCheckpoints;
+          _checkpoints = [];
+          _currentSteps = {};
           _isLoading = false;
         });
+        return;
       }
-
-      // In ogni caso, aggiorna i dati dal server
-      final offers = await CheckpointService.fetchOffers(widget.merchantId);
-      final checkpoints = offers.map((offer) => Checkpoint(
-        id: offer.id,
-        merchantId: offer.merchantId,
-        name: offer.name,
-        description: offer.description,
-        totalSteps: offer.totalSteps,
-        steps: offer.steps?.map((step) => CheckpointStep(
-          id: step.id,
-          stepNumber: step.stepNumber,
-          totalSteps: step.totalSteps,
-          rewardId: step.rewardId,
-          rewardName: step.reward?.name,
-          rewardDescription: step.reward?.description,
-        )).toList(),
-      )).toList();
       
       // Salva i nuovi dati in cache
-      await CacheService.cacheCheckpoints(widget.merchantId, checkpoints);
+      debugPrint('Caching ${offers.length} checkpoints');
+      await CacheService.cacheCheckpoints(widget.merchantId, offers);
       
       if (!mounted) return;
       setState(() {
-        _checkpoints = checkpoints;
+        _checkpoints = offers;
+        _currentSteps = {offers.first.id: currentStep};
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error fetching checkpoints: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      // Se la chiamata al server fallisce, prova a usare la cache
+      try {
+        final cachedCheckpoints = await CacheService.getCachedCheckpoints(widget.merchantId);
+        if (cachedCheckpoints != null && mounted) {
+          setState(() {
+            _checkpoints = cachedCheckpoints;
+            _currentSteps = {};
+            _isLoading = false;
+          });
+          return;
+        }
+      } catch (cacheError) {
+        debugPrint('Cache fallback failed: $cacheError');
+      }
+      
       if (!mounted) return;
       setState(() {
         _error = 'Errore: $e';

@@ -17,14 +17,14 @@ class Checkpoint {
 
   factory Checkpoint.fromJson(Map<String, dynamic> json) {
     return Checkpoint(
-      id: json['id'],
-      merchantId: json['merchant_id'],
-      name: json['name'],
-      description: json['description'],
-      totalSteps: json['total_steps'],
+      id: json['id'] as String,
+      merchantId: json['merchant_id'] as String? ?? '',
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      totalSteps: json['total_steps'] as int,
       steps: json['steps'] != null
           ? (json['steps'] as List)
-              .map((step) => CheckpointStep.fromJson(step))
+              .map((step) => CheckpointStep.fromJson(step as Map<String, dynamic>))
               .toList()
           : null,
     );
@@ -60,13 +60,14 @@ class CheckpointStep {
   });
 
   factory CheckpointStep.fromJson(Map<String, dynamic> json) {
+    final reward = json['reward'] as Map<String, dynamic>?;
     return CheckpointStep(
-      id: json['id'],
-      stepNumber: json['step_number'],
-      totalSteps: json['total_steps'],
-      rewardId: json['reward_id'],
-      rewardName: json['reward_name'],
-      rewardDescription: json['reward_description'],
+      id: json['id'] as String,
+      stepNumber: json['step_number'] as int,
+      totalSteps: json['total_steps'] as int? ?? 0,
+      rewardId: json['reward_id'] as String?,
+      rewardName: reward?['name'] as String?,
+      rewardDescription: reward?['description'] as String?,
     );
   }
 
