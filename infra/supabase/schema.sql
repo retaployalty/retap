@@ -872,6 +872,25 @@ CREATE TABLE IF NOT EXISTS "public"."transactions" (
 ALTER TABLE "public"."transactions" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."dashboard_stats" (
+    "id" "uuid" DEFAULT "uuid_generate_v4"() PRIMARY KEY,
+    "merchant_id" "uuid" REFERENCES "public"."merchants"("id"),
+    "total_customers" integer DEFAULT 0,
+    "active_cards" integer DEFAULT 0,
+    "points_issued" integer DEFAULT 0,
+    "active_promotions" integer DEFAULT 0,
+    "customer_growth" numeric DEFAULT 0,
+    "card_growth" numeric DEFAULT 0,
+    "points_growth" numeric DEFAULT 0,
+    "promotion_growth" numeric DEFAULT 0,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()),
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"())
+);
+
+
+ALTER TABLE "public"."dashboard_stats" OWNER TO "postgres";
+
+
 ALTER TABLE ONLY "public"."card_merchants"
     ADD CONSTRAINT "card_merchants_card_id_merchant_id_key" UNIQUE ("card_id", "merchant_id");
 

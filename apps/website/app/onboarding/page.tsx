@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GB, US, IT, CH, AT, FR, DE, ES, CA, AU, JP, CN, IN, BR, RU } from 'country-flag-icons/react/3x2';
+import { AlertCircle, ArrowRight } from "lucide-react";
 
 const BUSINESS_CATEGORIES = [
   "Restaurant",
@@ -108,89 +109,103 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Register your business</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm mb-4">
-              {error}
-            </div>
-          )}
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg border border-border">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">
+            Register your business
+          </h2>
+          <p className="mt-2 text-sm text-textSecondary">
+            Complete the form to start using ReTap
+          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Business Name</Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                type="text"
-                required
-                placeholder="e.g. Bella Napoli Pizzeria"
-              />
-            </div>
+        {error && (
+          <div className="bg-[#FF3131]/10 text-[#FF3131] text-sm p-4 rounded-lg flex items-center gap-2 border border-[#FF3131]/20">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
 
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Select name="country" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map((country) => {
-                    const Flag = country.flag;
-                    return (
-                      <SelectItem key={country.code} value={country.code}>
-                        <div className="flex items-center gap-2">
-                          <Flag className="w-5 h-4" />
-                          <span>{country.name}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="companyName" className="text-[#1A1A1A]">Business Name</Label>
+            <Input
+              id="companyName"
+              name="companyName"
+              type="text"
+              required
+              placeholder="e.g. Bella Napoli Pizzeria"
+              className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="industry">Business Category</Label>
-              <Select name="industry" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUSINESS_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+          <div className="space-y-2">
+            <Label htmlFor="country" className="text-[#1A1A1A]">Country</Label>
+            <Select name="country" required>
+              <SelectTrigger className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all">
+                <SelectValue placeholder="Select a country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((country) => {
+                  const Flag = country.flag;
+                  return (
+                    <SelectItem key={country.code} value={country.code}>
+                      <div className="flex items-center gap-2">
+                        <Flag className="w-5 h-4" />
+                        <span>{country.name}</span>
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Business Address</Label>
-              <Input
-                id="address"
-                name="address"
-                type="text"
-                required
-                placeholder="e.g. 123 Main St, City (business address)"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="industry" className="text-[#1A1A1A]">Business Category</Label>
+            <Select name="industry" required>
+              <SelectTrigger className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {BUSINESS_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Registering..." : "Complete Registration"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <Label htmlFor="address" className="text-[#1A1A1A]">Business Address</Label>
+            <Input
+              id="address"
+              name="address"
+              type="text"
+              required
+              placeholder="e.g. 123 Main St, City"
+              className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-12 bg-[#1A1A1A] hover:bg-[#FF3131] text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group"
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                Complete Registration
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 } 
