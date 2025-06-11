@@ -220,7 +220,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 35),
                 // --- CHECKPOINT REWARDS PROGRESS UI ---
                 if (checkpointOffers.isNotEmpty)
                   Padding(
@@ -244,7 +244,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       offerDescription: checkpointOffers.first.description,
                     ),
                   ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 // --- REWARD LIST UI ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -262,38 +262,27 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                           ],
                         ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 // History and Info section
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-                  child: Row(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // History section
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (isLoading)
-                              const Center(child: CircularProgressIndicator())
-                            else
-                              MerchantHistory(history: history),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 24),
+                      if (isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        MerchantHistory(history: history),
+                      const SizedBox(height: 24),
                       // Info section
-                      Expanded(
-                        flex: 1,
-                        child: MerchantInfo(
-                          name: widget.businessName,
-                          address: merchantData?['address'] ?? '',
-                          phone: merchantData?['phone'],
-                          googleMapsUrl: merchantData?['google_maps_url'],
-                          hours: widget.hours,
-                          industry: merchantData?['industry'] ?? '',
-                        ),
+                      MerchantInfo(
+                        name: widget.businessName,
+                        address: merchantData?['address'] ?? '',
+                        phone: merchantData?['phone'],
+                        googleMapsUrl: merchantData?['google_maps_url'],
+                        hours: widget.hours,
+                        industry: merchantData?['industry'] ?? '',
                       ),
                     ],
                   ),
@@ -447,7 +436,14 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                       height: 136,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 3),
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          ),
+                        ],
                       ),
                     ),
                     // Spazio trasparente tra bordo e immagine

@@ -204,7 +204,7 @@ class BusinessCard extends StatelessWidget {
                         if (hasRewardAvailable)
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFF6565),
                                 borderRadius: BorderRadius.circular(8),
@@ -217,13 +217,16 @@ class BusinessCard extends StatelessWidget {
                                     color: Colors.white,
                                     size: 14,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Reward Ready!',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'Reward Ready!',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -233,7 +236,7 @@ class BusinessCard extends StatelessWidget {
                         else
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
@@ -253,13 +256,16 @@ class BusinessCard extends StatelessWidget {
                                     color: AppColors.primary,
                                     size: 14,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '$stepsToNextReward to next reward',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      '$stepsToNextReward to next reward',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -269,7 +275,7 @@ class BusinessCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         // Punti
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
@@ -285,7 +291,7 @@ class BusinessCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.stars, color: AppColors.primary, size: 14),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Text(
                                 '$points',
                                 style: TextStyle(

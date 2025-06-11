@@ -32,7 +32,7 @@ class MerchantHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: ShapeDecoration(
         color: AppColors.surface,
         shape: RoundedRectangleBorder(
@@ -46,9 +46,6 @@ class MerchantHistory extends StatelessWidget {
             offset: const Offset(0, 2),
           ),
         ],
-      ),
-      constraints: const BoxConstraints(
-        maxHeight: 340,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,11 +73,11 @@ class MerchantHistory extends StatelessWidget {
               letterSpacing: 0.48,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           if (history.isEmpty)
             const Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
+                padding: EdgeInsets.all(16),
                 child: Text(
                   'Nessuna attività da mostrare',
                   style: TextStyle(
@@ -92,12 +89,12 @@ class MerchantHistory extends StatelessWidget {
               ),
             )
           else
-            Expanded(
+            SizedBox(
+              height: 120,
               child: ListView.separated(
-                shrinkWrap: true,
-                physics: const AlwaysScrollableScrollPhysics(),
+                scrollDirection: Axis.horizontal,
                 itemCount: history.length,
-                separatorBuilder: (context, index) => const Divider(height: 14, color: Colors.transparent),
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final item = history[index];
                   return _HistoryItem(item: item);
@@ -117,91 +114,68 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Data pill
-        Container(
-          constraints: const BoxConstraints(minWidth: 100, maxWidth: 130),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          height: 36,
-          decoration: ShapeDecoration(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+    return Container(
+      width: 140,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon and type indicator
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: _getPillIconColor(item.type).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _getIcon(item.type),
+              color: _getPillIconColor(item.type),
+              size: 20,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _formatDate(item.date),
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 15,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Text(
-                ' / ',
-                style: TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 15,
-                  fontFamily: 'Fredoka',
-                ),
-              ),
-              Text(
-                _formatTime(item.date),
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 15,
-                  fontFamily: 'Fredoka',
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 14),
-        // Reward/points pill
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          height: 36,
-          decoration: ShapeDecoration(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+          const SizedBox(height: 8),
+          // Date and Time
+          Text(
+            '${_formatDate(item.date)} ${_formatTime(item.date)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 13,
+              fontFamily: 'Fredoka',
+              fontWeight: FontWeight.w500,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _getIcon(item.type),
-                  color: _getPillIconColor(item.type),
-                  size: 20,
-                ),
+          const SizedBox(height: 8),
+          // Value
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getPillIconColor(item.type).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              _getValue(item),
+              style: TextStyle(
+                color: _getPillTextColor(item.type),
+                fontSize: 14,
+                fontFamily: 'Fredoka',
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 8),
-              Text(
-                _getValue(item),
-                style: TextStyle(
-                  color: _getPillTextColor(item.type),
-                  fontSize: 16,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
