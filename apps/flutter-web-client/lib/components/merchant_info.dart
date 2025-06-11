@@ -104,10 +104,16 @@ class MerchantInfo extends StatelessWidget {
               letterSpacing: 0.4,
             ),
           ),
-          const SizedBox(height: 2),
-          if (hours != null) ...[
-            ..._buildHoursList(hours),
-          ] else
+          const SizedBox(height: 12),
+          if (hours != null)
+            SizedBox(
+              height: 100,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _buildHoursList(hours),
+              ),
+            )
+          else
             const Text(
               'Orari non disponibili',
               style: TextStyle(
@@ -126,36 +132,53 @@ class MerchantInfo extends StatelessWidget {
       'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'
     ];
     final List<Widget> widgets = [];
+    final now = DateTime.now();
+    final currentDay = now.weekday - 1; // 0 = Monday, 6 = Sunday
 
     for (var i = 0; i < days.length; i++) {
       final day = days[i];
       final dayHours = hours[day.toLowerCase()];
       final isOpen = dayHours != null && dayHours['open'] != null && dayHours['close'] != null;
+      final isToday = i == currentDay;
 
       widgets.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Container(
+          width: 100,
+          margin: EdgeInsets.only(right: i < days.length - 1 ? 12 : 0),
+          decoration: BoxDecoration(
+            color: isToday ? AppColors.primary.withOpacity(0.1) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isToday ? AppColors.primary : const Color(0xFFE0E0E0),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 day,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
+                style: TextStyle(
+                  color: isToday ? AppColors.primary : const Color(0xFF1A1A1A),
                   fontSize: 14,
                   fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w500,
+                  fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 isOpen
-                    ? '${dayHours['open']} - ${dayHours['close']}'
+                    ? '${dayHours['open']}\n${dayHours['close']}'
                     : 'Chiuso',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isOpen ? const Color(0xFF1A1A1A) : const Color(0xFF666666),
-                  fontSize: 14,
+                  color: isOpen 
+                      ? (isToday ? AppColors.primary : const Color(0xFF1A1A1A))
+                      : const Color(0xFF666666),
+                  fontSize: 12,
                   fontFamily: 'Fredoka',
                   fontWeight: isOpen ? FontWeight.w500 : FontWeight.normal,
+                  height: 1.2,
                 ),
               ),
             ],
