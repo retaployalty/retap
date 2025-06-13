@@ -298,7 +298,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                             ),
                           )
                         : ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             separatorBuilder: (_, __) => const SizedBox(height: 16),
                             itemCount: _filteredBusinesses.length,
                             itemBuilder: (context, index) {

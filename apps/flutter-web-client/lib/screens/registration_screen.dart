@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:html' as html;
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
@@ -31,6 +32,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
 
   // Supabase client
   final _supabase = Supabase.instance.client;
+
+  bool _showInstallGuide = false;
 
   @override
   void initState() {
@@ -347,10 +350,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                             controller: _phoneController,
                             label: 'Numero di telefono',
                             icon: Icons.phone_outlined,
-                            keyboardType: TextInputType.phone,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Per favore inserisci il tuo numero di telefono';
+                              }
+                              if (value.length < 10 || value.length > 11) {
+                                return 'Il numero deve essere di 10 o 11 cifre';
+                              }
+                              if (!value.startsWith('3')) {
+                                return 'Il numero deve iniziare con 3';
                               }
                               return null;
                             },
@@ -408,6 +420,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
@@ -440,6 +453,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         fillColor: Colors.white,
       ),
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: validator,
     );
   }
@@ -547,163 +561,245 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
     );
   }
 
-  Widget _buildPwaStep() {
-    return Column(
+  Widget _buildInstallGuide() {
+    return Stack(
       children: [
-        Expanded(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6565).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_to_home_screen,
-                        size: 100,
-                        color: Color(0xFFFF6565),
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-                    const Text(
-                      'Installa App',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontFamily: 'Fredoka',
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Aggiungi ReTap alla schermata Home per un accesso rapido',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontFamily: 'Fredoka',
-                        color: Color(0xFF666666),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        // Overlay scuro
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(0.7),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    try {
-                      // Verifica se l'app è già installata
-                      if (html.window.matchMedia('(display-mode: standalone)').matches) {
-                        _nextStep();
-                        return;
-                      }
-
-                      // Verifica se il browser supporta l'API di installazione
-                      final beforeInstallPrompt = html.window.localStorage['beforeinstallprompt'];
-                      if (beforeInstallPrompt != null) {
-                        // Mostra il prompt di installazione
-                        html.window.dispatchEvent(html.Event('beforeinstallprompt'));
-                        
-                        // Aspetta un momento per dare tempo al prompt di apparire
-                        await Future.delayed(const Duration(milliseconds: 500));
-                        
-                        // Procedi al prossimo step
-                        _nextStep();
-                      } else {
-                        // Se non possiamo installare automaticamente, mostra un messaggio
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Per installare l\'app, usa il menu del browser e seleziona "Aggiungi alla schermata Home"',
-                              ),
-                              duration: Duration(seconds: 5),
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      // In caso di errore, procedi comunque al prossimo step
-                      _nextStep();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6565),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    elevation: 0,
-                  ),
-                  icon: const Icon(Icons.add_to_home_screen, size: 24),
-                  label: const Text(
-                    'Aggiungi alla Home',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Fredoka',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+        // Guida di installazione
+        Center(
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.phone_iphone,
+                  size: 48,
+                  color: Color(0xFFFF6565),
                 ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF666666),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      side: const BorderSide(color: Color(0xFFDDDDDD)),
-                    ),
-                    elevation: 0,
+                const SizedBox(height: 24),
+                const Text(
+                  'Come installare ReTap',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontFamily: 'Fredoka',
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: const Text(
-                    'Continua senza installare',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Fredoka',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _previousStep,
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF666666),
-                ),
-                child: const Text(
-                  'Indietro',
+                const SizedBox(height: 16),
+                const Text(
+                  '1. Tocca l\'icona di condivisione\n2. Seleziona "Aggiungi a Home"\n3. Conferma l\'installazione',
                   style: TextStyle(
                     fontSize: 16,
                     fontFamily: 'Fredoka',
+                    color: Color(0xFF666666),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showInstallGuide = false;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6565),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Ho capito',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPwaStep() {
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF6565).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.add_to_home_screen,
+                            size: 100,
+                            color: Color(0xFFFF6565),
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                        const Text(
+                          'Installa App',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontFamily: 'Fredoka',
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Aggiungi ReTap alla schermata Home per un accesso rapido',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontFamily: 'Fredoka',
+                            color: Color(0xFF666666),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          // Verifica se l'app è già installata
+                          if (html.window.matchMedia('(display-mode: standalone)').matches) {
+                            _nextStep();
+                            return;
+                          }
+
+                          // Verifica se il browser supporta l'API di installazione
+                          final beforeInstallPrompt = html.window.localStorage['beforeinstallprompt'];
+                          if (beforeInstallPrompt != null) {
+                            // Mostra il prompt di installazione
+                            html.window.dispatchEvent(html.Event('beforeinstallprompt'));
+                            
+                            // Aspetta un momento per dare tempo al prompt di apparire
+                            await Future.delayed(const Duration(milliseconds: 500));
+                            
+                            // Procedi al prossimo step
+                            _nextStep();
+                          } else {
+                            // Se non possiamo installare automaticamente, mostra la guida
+                            setState(() {
+                              _showInstallGuide = true;
+                            });
+                          }
+                        } catch (e) {
+                          // In caso di errore, mostra la guida
+                          setState(() {
+                            _showInstallGuide = true;
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6565),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.add_to_home_screen, size: 24),
+                      label: const Text(
+                        'Aggiungi alla Home',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Fredoka',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _nextStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF666666),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          side: const BorderSide(color: Color(0xFFDDDDDD)),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Continua senza installare',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Fredoka',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _previousStep,
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF666666),
+                    ),
+                    child: const Text(
+                      'Indietro',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
+        if (_showInstallGuide) _buildInstallGuide(),
       ],
     );
   }
