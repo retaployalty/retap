@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _merchantBalances = [];
   String? cardId;
   String? _selectedCategory;
+  String? _customerName;
   static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
@@ -51,6 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
     'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=256&h=256',
     'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=256&h=256',
   ];
+
+  final _supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -85,12 +89,47 @@ class _HomeScreenState extends State<HomeScreen> {
     
     // Se abbiamo un cardId valido, carichiamo i bilanci
     if (cardId != null && cardId!.isNotEmpty) {
+      await _loadCustomerData();
       _loadBalances(cardId!);
     } else {
       setState(() {
         _isLoading = false;
         _error = "Card ID non trovata nell'URL";
       });
+    }
+  }
+
+  Future<void> _loadCustomerData() async {
+    try {
+      // Prima otteniamo l'ID del cliente dalla carta
+      final cardResponse = await _supabase
+          .from('cards')
+          .select('customer_id')
+          .eq('id', cardId!)
+          .maybeSingle();
+
+      if (cardResponse == null) {
+        throw Exception('Carta non trovata');
+      }
+
+      final customerId = cardResponse['customer_id'] as String;
+
+      // Poi otteniamo i dati del cliente
+      final customerResponse = await _supabase
+          .from('customers')
+          .select('first_name')
+          .eq('id', customerId)
+          .maybeSingle();
+
+      if (customerResponse == null) {
+        throw Exception('Cliente non trovato');
+      }
+
+      setState(() {
+        _customerName = customerResponse['first_name'] as String?;
+      });
+    } catch (e) {
+      print('Error loading customer data: $e');
     }
   }
 
@@ -160,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hi Alberto',
+                    'Hi ${_customerName ?? 'there'}',
                     style: AppTextStyles.displaySmall,
                   ),
                   const SizedBox(height: 4),

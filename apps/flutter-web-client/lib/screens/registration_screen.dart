@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:html' as html;
+import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -208,39 +211,59 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Completa il tuo profilo'),
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Progress indicator
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / 3,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Theme.of(context).primaryColor,
-            ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                _error!,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Progress indicator
+            Container(
+              height: 4,
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: (_currentStep + 1) / 3,
+                  backgroundColor: const Color(0xFFF5F5F5),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF6565)),
+                ),
               ),
             ),
-          Expanded(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: _buildCurrentStep(),
+            if (_error != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6565).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Color(0xFFFF6565)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: Color(0xFFFF6565),
+                          fontSize: 14,
+                          fontFamily: 'Fredoka',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: _buildCurrentStep(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -259,240 +282,429 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
   }
 
   Widget _buildPersonalInfoStep() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Informazioni personali',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            TextFormField(
-              controller: _firstNameController,
-              decoration: InputDecoration(
-                labelText: 'Nome',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(33),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Informazioni personali',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
+                          _buildTextField(
+                            controller: _firstNameController,
+                            label: 'Nome',
+                            icon: Icons.person_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Per favore inserisci il tuo nome';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _lastNameController,
+                            label: 'Cognome',
+                            icon: Icons.person_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Per favore inserisci il tuo cognome';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _phoneController,
+                            label: 'Numero di telefono',
+                            icon: Icons.phone_outlined,
+                            keyboardType: TextInputType.phone,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Per favore inserisci il tuo numero di telefono';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                prefixIcon: const Icon(Icons.person_outline),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Per favore inserisci il tuo nome';
-                }
-                return null;
-              },
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _lastNameController,
-              decoration: InputDecoration(
-                labelText: 'Cognome',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.person_outline),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Per favore inserisci il tuo cognome';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _phoneController,
-              decoration: InputDecoration(
-                labelText: 'Numero di telefono',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.phone_outlined),
-              ),
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Per favore inserisci il tuo numero di telefono';
-                }
-                return null;
-              },
-            ),
-            const Spacer(),
-            ElevatedButton(
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(24.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
               onPressed: _isLoading ? null : _updateCustomerData,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: const Color(0xFFFF6565),
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(28),
                 ),
+                elevation: 0,
               ),
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
                     )
                   : const Text(
                       'Continua',
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
             ),
-          ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1A1A1A),
+          fontSize: 16,
+          fontFamily: 'Fredoka',
+        ),
+        prefixIcon: Icon(icon, color: const Color(0xFFFF6565)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE6E6E6)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE6E6E6)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFFF6565)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFFF6565)),
+        ),
+        filled: true,
+        fillColor: Colors.white,
       ),
+      keyboardType: keyboardType,
+      validator: validator,
     );
   }
 
   Widget _buildWalletStep() {
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6565).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.phone_android,
+                        size: 100,
+                        color: Color(0xFFFF6565),
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    const Text(
+                      'Aggiungi al Wallet',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Aggiungi la tua carta ReTap al wallet digitale del tuo dispositivo',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        color: Color(0xFF666666),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Container(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.phone_android,
-                  size: 100,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 48),
-              const Text(
-                'Aggiungi al Wallet',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Aggiungi la tua carta ReTap al wallet digitale del tuo dispositivo',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement wallet integration
-                  _nextStep();
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Implement wallet integration
+                    _nextStep();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6565),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: 0,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  icon: const Icon(Icons.add_to_home_screen, size: 24),
+                  label: const Text(
+                    'Aggiungi al Wallet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                icon: const Icon(Icons.add_to_home_screen, size: 24),
-                label: const Text(
-                  'Aggiungi al Wallet',
-                  style: TextStyle(fontSize: 18),
                 ),
               ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: _previousStep,
-                child: const Text('Indietro'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF666666),
+                ),
+                child: const Text(
+                  'Indietro',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontFamily: 'Fredoka',
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildPwaStep() {
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6565).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_to_home_screen,
+                        size: 100,
+                        color: Color(0xFFFF6565),
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    const Text(
+                      'Installa App',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Aggiungi ReTap alla schermata Home per un accesso rapido',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        color: Color(0xFF666666),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Container(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  shape: BoxShape.circle,
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      // Verifica se l'app è già installata
+                      if (html.window.matchMedia('(display-mode: standalone)').matches) {
+                        _nextStep();
+                        return;
+                      }
+
+                      // Verifica se il browser supporta l'API di installazione
+                      final beforeInstallPrompt = html.window.localStorage['beforeinstallprompt'];
+                      if (beforeInstallPrompt != null) {
+                        // Mostra il prompt di installazione
+                        html.window.dispatchEvent(html.Event('beforeinstallprompt'));
+                        
+                        // Aspetta un momento per dare tempo al prompt di apparire
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        
+                        // Procedi al prossimo step
+                        _nextStep();
+                      } else {
+                        // Se non possiamo installare automaticamente, mostra un messaggio
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Per installare l\'app, usa il menu del browser e seleziona "Aggiungi alla schermata Home"',
+                              ),
+                              duration: Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      // In caso di errore, procedi comunque al prossimo step
+                      _nextStep();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6565),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.add_to_home_screen, size: 24),
+                  label: const Text(
+                    'Aggiungi alla Home',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.add_to_home_screen,
-                  size: 100,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 48),
-              const Text(
-                'Installa App',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Aggiungi ReTap alla schermata Home per un accesso rapido',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement PWA installation
-                  _nextStep();
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF666666),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                      side: const BorderSide(color: Color(0xFFDDDDDD)),
+                    ),
+                    elevation: 0,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  child: const Text(
+                    'Continua senza installare',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                icon: const Icon(Icons.add_to_home_screen, size: 24),
-                label: const Text(
-                  'Aggiungi alla Home',
-                  style: TextStyle(fontSize: 18),
                 ),
               ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: _previousStep,
-                child: const Text('Indietro'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF666666),
+                ),
+                child: const Text(
+                  'Indietro',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontFamily: 'Fredoka',
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 } 

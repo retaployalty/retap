@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,16 +19,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Benvenuto su ReTap',
       description: 'La tua carta fedeltà universale per tutti i negozi',
       image: 'assets/images/onboarding1.png',
+      color: Color(0xFFFF5A5F), // Airbnb red
     ),
     OnboardingPage(
       title: 'Come funziona',
       description: 'Usa un\'unica carta NFC o il tuo wallet digitale in tutti i negozi affiliati',
       image: 'assets/images/onboarding2.png',
+      color: Color(0xFF00A699), // Airbnb teal
     ),
     OnboardingPage(
       title: 'Guadagna punti',
       description: 'Accumula punti in ogni negozio e riscatta premi esclusivi',
       image: 'assets/images/onboarding3.png',
+      color: Color(0xFFFFB400), // Airbnb yellow
     ),
   ];
 
@@ -39,9 +44,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
+            // Skip button
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextButton(
+                  onPressed: () => context.go('/onboarding/register'),
+                  child: Text(
+                    'Salta',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Main content
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -56,42 +80,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-            Padding(
+            // Bottom section
+            Container(
               padding: const EdgeInsets.all(24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  // Dots indicator
+                  // Progress dots
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       _pages.length,
                       (index) => Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 8,
+                        width: _currentPage == index ? 24 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _currentPage == index
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                          color: _currentPage == index 
+                              ? _pages[_currentPage].color 
+                              : Colors.grey[300],
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 32),
                   // Continue button
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_currentPage < _pages.length - 1) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      } else {
-                        context.go('/onboarding/register');
-                      }
-                    },
-                    child: Text(
-                      _currentPage < _pages.length - 1 ? 'Continua' : 'Inizia',
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_currentPage < _pages.length - 1) {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        } else {
+                          context.go('/onboarding/register');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _pages[_currentPage].color,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        _currentPage < _pages.length - 1 ? 'Continua' : 'Inizia',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -105,24 +147,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildPage(OnboardingPage page) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            page.image,
-            height: 300,
+          // Image with background
+          Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              color: page.color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Image.asset(
+                page.image,
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
+          // Title
           Text(
             page.title,
-            style: Theme.of(context).textTheme.headlineMedium,
+            style: AppTextStyles.headlineMedium.copyWith(
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
+          // Description
           Text(
             page.description,
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: Colors.black54,
+              height: 1.5,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -135,10 +198,12 @@ class OnboardingPage {
   final String title;
   final String description;
   final String image;
+  final Color color;
 
   OnboardingPage({
     required this.title,
     required this.description,
     required this.image,
+    required this.color,
   });
 } 

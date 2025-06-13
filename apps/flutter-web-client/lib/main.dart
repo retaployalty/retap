@@ -35,10 +35,14 @@ class ReTapWeb extends StatelessWidget {
   const ReTapWeb({super.key});
 
   Future<String> _getInitialRoute() async {
+    print('Starting _getInitialRoute check...'); // Debug log
+    
     // Prima prova a estrarre l'ID dall'URL
     final uri = Uri.base;
     final segments = uri.pathSegments;
     String? urlCardId;
+    
+    print('URL segments: $segments'); // Debug log
     
     if (segments.isNotEmpty && segments.first == 'c' && segments.length > 1) {
       urlCardId = segments[1];
@@ -46,52 +50,71 @@ class ReTapWeb extends StatelessWidget {
       urlCardId = segments.last;
     }
     
+    print('URL Card ID: $urlCardId'); // Debug log
+    
     // Ottieni le SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     
     // Se abbiamo trovato un ID nell'URL, lo salviamo nelle preferences
     if (urlCardId != null && urlCardId.isNotEmpty) {
       await prefs.setString('retap_card_id', urlCardId);
+      print('Saved card ID to preferences: $urlCardId'); // Debug log
     } 
     // Altrimenti, proviamo a recuperarlo dalle preferences
     else {
       urlCardId = prefs.getString('retap_card_id');
+      print('Retrieved card ID from preferences: $urlCardId'); // Debug log
     }
 
     if (urlCardId == null || urlCardId.isEmpty) {
+      print('No card ID found, redirecting to onboarding'); // Debug log
       return '/onboarding';
     }
 
     // Controlla se il cliente ha già i dati registrati
     final supabase = Supabase.instance.client;
     try {
+      print('Checking card in database: $urlCardId'); // Debug log
       final cardResponse = await supabase
           .from('cards')
           .select('customer_id')
           .eq('id', urlCardId)
           .maybeSingle();
 
+      print('Card response: $cardResponse'); // Debug log
+
       if (cardResponse == null) {
+        print('Card not found in database, redirecting to onboarding'); // Debug log
         return '/onboarding';
       }
 
       final customerId = cardResponse['customer_id'] as String;
+      print('Customer ID found: $customerId'); // Debug log
+
       final customerResponse = await supabase
           .from('customers')
           .select('first_name, last_name, phone_number')
           .eq('id', customerId)
           .maybeSingle();
 
+      print('Customer response: $customerResponse'); // Debug log
+
+      // Se il cliente non esiste o non ha i dati completi, vai all'onboarding
       if (customerResponse == null || 
           customerResponse['first_name'] == null || 
+          customerResponse['first_name'].toString().trim().isEmpty ||
           customerResponse['last_name'] == null || 
-          customerResponse['phone_number'] == null) {
+          customerResponse['last_name'].toString().trim().isEmpty ||
+          customerResponse['phone_number'] == null || 
+          customerResponse['phone_number'].toString().trim().isEmpty) {
+        print('Customer data incomplete, redirecting to onboarding'); // Debug log
         return '/onboarding';
       }
 
+      print('All checks passed, redirecting to home'); // Debug log
       return '/';
     } catch (e) {
-      print('Error checking customer data: $e');
+      print('Error checking customer data: $e'); // Debug log
       return '/onboarding';
     }
   }
@@ -105,9 +128,13 @@ class ReTapWeb extends StatelessWidget {
       routerConfig: GoRouter(
         initialLocation: '/splash',
         redirect: (context, state) async {
+          print('Router redirect called for: ${state.matchedLocation}'); // Debug log
           if (state.matchedLocation == '/splash') {
             final initialRoute = await _getInitialRoute();
-            return initialRoute;
+            print('Initial route determined: $initialRoute'); // Debug log
+            if (initialRoute != '/splash') {
+              return initialRoute;
+            }
           }
           return null;
         },
@@ -120,11 +147,17 @@ class ReTapWeb extends StatelessWidget {
           // Onboarding flow
           GoRoute(
             path: '/onboarding',
-            builder: (context, state) => const OnboardingScreen(),
+            builder: (context, state) {
+              print('Building OnboardingScreen'); // Debug log
+              return const OnboardingScreen();
+            },
           ),
           GoRoute(
             path: '/onboarding/register',
-            builder: (context, state) => const RegistrationScreen(),
+            builder: (context, state) {
+              print('Building RegistrationScreen'); // Debug log
+              return const RegistrationScreen();
+            },
           ),
           // Rotte separate senza bottom navigation bar
           GoRoute(
@@ -157,7 +190,19 @@ class ReTapWeb extends StatelessWidget {
             builder: (context, state, child) {
               debugPrint('ShellRoute builder - Current location: ${state.matchedLocation}');
               return Scaffold(
-                body: child,
+                body: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(state.matchedLocation),
+                    child: child,
+                  ),
+                ),
                 bottomNavigationBar: CustomBottomNavBar(
                   currentIndex: _calculateSelectedIndex(state),
                   onTap: (index) => _onItemTapped(context, index),
