@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? cardId;
   String? _selectedCategory;
   String? _customerName;
+  bool _showGreeting = false;
   static const String _cardIdKey = 'retap_card_id';
 
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
@@ -127,9 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _customerName = customerResponse['first_name'] as String?;
+        _showGreeting = true; // Mostra il saluto solo dopo aver caricato il nome
       });
     } catch (e) {
       print('Error loading customer data: $e');
+      setState(() {
+        _error = 'Errore nel caricamento dei dati';
+      });
     }
   }
 
@@ -198,27 +204,44 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Hi ${_customerName ?? 'there'}',
-                    style: AppTextStyles.displaySmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'good',
-                        style: AppTextStyles.displaySmall.copyWith(
-                          color: AppColors.primary,
+                  if (_customerName != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AnimatedTextKit(
+                          animatedTexts: [
+                            TypewriterAnimatedText(
+                              'Hi $_customerName',
+                              textStyle: AppTextStyles.displaySmall,
+                              speed: const Duration(milliseconds: 50),
+                              cursor: '',
+                            ),
+                          ],
+                          totalRepeatCount: 1,
+                          displayFullTextOnTap: true,
+                          onFinished: () {
+                            setState(() {
+                              _showGreeting = true;
+                            });
+                          },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'morning!',
-                        style: AppTextStyles.displaySmall,
-                      ),
-                    ],
-                  ),
+                        if (_showGreeting)
+                          AnimatedTextKit(
+                            animatedTexts: [
+                              TypewriterAnimatedText(
+                                'good morning!',
+                                textStyle: AppTextStyles.displaySmall.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                                speed: const Duration(milliseconds: 50),
+                                cursor: '',
+                              ),
+                            ],
+                            totalRepeatCount: 1,
+                            displayFullTextOnTap: true,
+                          ),
+                      ],
+                    ),
                 ],
               ),
             ),
