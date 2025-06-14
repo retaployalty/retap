@@ -4,8 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:html' as html;
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:universal_html/html.dart' as universal_html;
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
+import '../shared_utils/google_wallet_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -517,10 +521,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Implement wallet integration
-                    _nextStep();
-                  },
+                  onPressed: _addToWallet,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6565),
                     foregroundColor: Colors.white,
@@ -802,5 +803,56 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         if (_showInstallGuide) _buildInstallGuide(),
       ],
     );
+  }
+
+  Future<void> _addToWallet() async {
+    try {
+      if (_cardId == null) {
+        throw Exception('Card ID not found');
+      }
+
+      // Get card details from Supabase
+      final cardResponse = await _supabase
+          .from('cards')
+          .select('customer_id, uid')
+          .eq('id', _cardId!)
+          .single();
+
+      final customerResponse = await _supabase
+          .from('customers')
+          .select('first_name, last_name')
+          .eq('id', cardResponse['customer_id'])
+          .single();
+
+      final customerName = '${customerResponse['first_name']} ${customerResponse['last_name']}';
+      final cardUid = cardResponse['uid'];
+
+      // Create Google Wallet pass
+      final saveUrl = await GoogleWalletService.createLoyaltyCard(
+        cardId: _cardId!,
+        customerName: customerName,
+        cardUid: cardUid,
+      );
+
+      // Open the save URL in a new tab
+      html.window.open(saveUrl, '_blank');
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Carta aggiunta al wallet con successo'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Proceed to next step
+      _nextStep();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
   }
 } 
