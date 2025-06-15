@@ -2,6 +2,8 @@ import 'package:googleapis/walletobjects/v1.dart' as wallet;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:crypto/crypto.dart';
 
 class GoogleWalletService {
   static const String _issuerId = '3388000000022918092';
@@ -55,6 +57,47 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
     return wallet.WalletobjectsApi(client);
   }
 
+  static String _signJwt(String data) {
+    final key = utf8.encode(_privateKey);
+    final bytes = utf8.encode(data);
+    final hmac = Hmac(sha256, key);
+    final digest = hmac.convert(bytes);
+    return base64Url.encode(digest.bytes);
+  }
+
+  static String _generateJwt(String objectId) {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final jwt = {
+      'iss': _serviceAccountEmail,
+      'aud': 'google',
+      'origins': ['retap.it'],
+      'typ': 'savetowallet',
+      'payload': {
+        'loyaltyObjects': [
+          {
+            'id': objectId
+          }
+        ]
+      },
+      'iat': now,
+      'exp': now + 3600, // 1 ora di validità
+    };
+
+    final header = {
+      'alg': 'RS256',
+      'typ': 'JWT',
+      'kid': '3be4fed613691c1bfdae290fc499c8b2be84697e'
+    };
+
+    final encodedHeader = base64Url.encode(utf8.encode(json.encode(header)));
+    final encodedPayload = base64Url.encode(utf8.encode(json.encode(jwt)));
+    
+    final dataToSign = '$encodedHeader.$encodedPayload';
+    final signature = _signJwt(dataToSign);
+    
+    return '$encodedHeader.$encodedPayload.$signature';
+  }
+
   static Future<String> createLoyaltyCard({
     required String cardId,
     required String customerName,
@@ -63,8 +106,9 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
     try {
       print('Inizializzazione API...');
       final api = await _getWalletApi();
-      print('API inizializzata con successo');
+      print('API inizializzata');
 
+      print('Creazione classe pass...');
       // Crea la classe del pass
       final passClass = wallet.LoyaltyClass(
         id: '$_issuerId.retap_loyalty',
@@ -72,11 +116,11 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         programName: 'ReTap Loyalty',
         programLogo: wallet.Image(
           sourceUri: wallet.ImageUri(
-            uri: 'https://placehold.co/160x160/png',
+            uri: 'https://retap.it/logo.png',
           ),
         ),
-        reviewStatus: 'UNDER_REVIEW',
-        allowMultipleUsersPerObject: true,
+        reviewStatus: 'APPROVED',
+        allowMultipleUsersPerObject: false,
         locations: [
           wallet.LatLongPoint(
             latitude: 45.4642,
@@ -93,20 +137,15 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         ],
       );
 
-      print('Tentativo di recupero classe esistente...');
       // Crea o aggiorna la classe
       try {
-        final existingClass = await api.loyaltyclass.get('$_issuerId.retap_loyalty');
-        print('Classe esistente trovata: ${existingClass.id}');
+        print('Verifica classe esistente...');
+        await api.loyaltyclass.get('$_issuerId.retap_loyalty');
+        print('Classe esistente trovata');
       } catch (e) {
-        print('Classe non trovata, creazione nuova classe...');
-        try {
-          final newClass = await api.loyaltyclass.insert(passClass);
-          print('Classe creata con successo: ${newClass.id}');
-        } catch (e) {
-          print('Errore nella creazione della classe: $e');
-          throw Exception('Errore nella creazione della classe: $e');
-        }
+        print('Creazione nuova classe...');
+        final classResponse = await api.loyaltyclass.insert(passClass);
+        print('Classe creata con successo: ${classResponse.id}');
       }
 
       print('Creazione pass...');
@@ -117,7 +156,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         state: 'ACTIVE',
         heroImage: wallet.Image(
           sourceUri: wallet.ImageUri(
-            uri: 'https://placehold.co/960x320/png',
+            uri: 'https://retap.it/hero.png',
           ),
         ),
         textModulesData: [
@@ -141,35 +180,36 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
           }),
           alternateText: cardId,
         ),
+        accountId: cardId,
+        accountName: customerName,
       );
 
-      print('Tentativo di inserimento pass...');
       // Crea o aggiorna il pass
+      print('Inserimento pass...');
+      String objectId;
       try {
-        // Prima verifica se il pass esiste
-        try {
-          final existingPass = await api.loyaltyobject.get('$_issuerId.$cardId');
-          print('Pass esistente trovato, aggiornamento...');
-          final response = await api.loyaltyobject.update(pass, '$_issuerId.$cardId');
-          print('Pass aggiornato con successo: ${response.id}');
-          print('Stato del pass: ${response.state}');
-        } catch (e) {
-          print('Pass non trovato, creazione nuovo pass...');
-          final response = await api.loyaltyobject.insert(pass);
-          print('Pass creato con successo: ${response.id}');
-          print('Stato del pass: ${response.state}');
-        }
-
-        // Genera il link per aggiungere il pass al wallet
-        final saveUrl = 'https://pay.google.com/gp/v/save/$_issuerId.$cardId';
-        print('URL di salvataggio generato: $saveUrl');
-        return saveUrl;
+        // Prova prima a ottenere il pass esistente
+        final existingPass = await api.loyaltyobject.get('$_issuerId.$cardId');
+        print('Pass esistente trovato, aggiornamento...');
+        // Se esiste, aggiornalo
+        final response = await api.loyaltyobject.update(pass, '$_issuerId.$cardId');
+        objectId = response.id!;
+        print('Pass aggiornato con successo: $objectId');
       } catch (e) {
-        print('Errore dettagliato nella creazione/aggiornamento del pass: $e');
-        throw Exception('Errore nella creazione del pass: $e');
+        // Se non esiste, crealo
+        print('Pass non trovato, creazione nuovo...');
+        final response = await api.loyaltyobject.insert(pass);
+        objectId = response.id!;
+        print('Pass creato con successo: $objectId');
       }
+
+      // Genera il JWT e il link per aggiungere il pass al wallet
+      final jwt = _generateJwt(objectId);
+      final saveUrl = 'https://pay.google.com/gp/v/save/$jwt';
+      print('URL generato: $saveUrl');
+      return saveUrl;
     } catch (e) {
-      print('Errore generale: $e');
+      print('Errore dettagliato: $e');
       throw Exception('Errore nella creazione del pass: $e');
     }
   }
