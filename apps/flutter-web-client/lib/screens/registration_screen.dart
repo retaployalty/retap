@@ -4,8 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:html' as html;
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:universal_html/html.dart' as universal_html;
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
+import '../shared_utils/google_wallet_service.dart';
+import '../shared_utils/apple_wallet_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -517,10 +522,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: Implement wallet integration
-                    _nextStep();
-                  },
+                  onPressed: _addToWallet,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6565),
                     foregroundColor: Colors.white,
@@ -802,5 +804,70 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         if (_showInstallGuide) _buildInstallGuide(),
       ],
     );
+  }
+
+  Future<void> _addToWallet() async {
+    try {
+      if (_cardId == null) {
+        throw Exception('Card ID not found');
+      }
+
+      // Get card details from Supabase
+      final cardResponse = await _supabase
+          .from('cards')
+          .select('customer_id, uid')
+          .eq('id', _cardId!)
+          .single();
+
+      final customerResponse = await _supabase
+          .from('customers')
+          .select('first_name, last_name')
+          .eq('id', cardResponse['customer_id'])
+          .single();
+
+      final customerName = '${customerResponse['first_name']} ${customerResponse['last_name']}';
+      final cardUid = cardResponse['uid'];
+
+      // Determina la piattaforma
+      final userAgent = html.window.navigator.userAgent.toLowerCase();
+      final isIOS = userAgent.contains('iphone') || userAgent.contains('ipad') || userAgent.contains('ipod');
+
+      String saveUrl;
+      if (isIOS) {
+        // Crea il pass per Apple Wallet
+        saveUrl = await AppleWalletService.createPass(
+          cardId: _cardId!,
+          customerName: customerName,
+          cardUid: cardUid,
+        );
+      } else {
+        // Crea il pass per Google Wallet
+        saveUrl = await GoogleWalletService.createLoyaltyCard(
+          cardId: _cardId!,
+          customerName: customerName,
+          cardUid: cardUid,
+        );
+      }
+
+      // Apri l'URL in una nuova tab
+      html.window.open(saveUrl, '_blank');
+
+      // Mostra messaggio di successo
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Carta aggiunta al wallet con successo'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Procedi al prossimo step
+      _nextStep();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
   }
 } 

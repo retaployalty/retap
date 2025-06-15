@@ -1,0 +1,38 @@
+{
+    "formatVersion": 1,
+    "passTypeIdentifier": "pass.com.retapcard.loyalty",
+    "teamIdentifier": "78S7N29429",
+    "organizationName": "ReTap",
+    "description": "ReTap Loyalty Card",
+    "logoText": "ReTap",
+    "foregroundColor": "rgb(255, 101, 101)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "generic": {
+      "primaryFields": [
+        {
+          "key": "balance",
+          "label": "PUNTI",
+          "value": "0"
+        }
+      ],
+      "secondaryFields": [
+        {
+          "key": "name",
+          "label": "NOME",
+          "value": "Cliente"
+        }
+      ],
+      "auxiliaryFields": [
+        {
+          "key": "card_id",
+          "label": "ID CARTA",
+          "value": "ID"
+        }
+      ]
+    },
+    "barcode": {
+      "format": "PKBarcodeFormatQR",
+      "message": "retap_card",
+      "messageEncoding": "iso-8859-1"
+    }
+  }
