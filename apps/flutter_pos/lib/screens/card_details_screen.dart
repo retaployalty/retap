@@ -372,6 +372,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                             CheckpointOffersList(
                               merchantId: widget.merchantId,
                               cardId: _card!.id,
+                              customerId: _card!.customerId,
                             ),
                           const SizedBox(height: 12),
 
