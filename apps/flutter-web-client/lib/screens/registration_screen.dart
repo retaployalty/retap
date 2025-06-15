@@ -10,6 +10,7 @@ import 'package:universal_html/html.dart' as universal_html;
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../shared_utils/google_wallet_service.dart';
+import '../shared_utils/apple_wallet_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -827,17 +828,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       final customerName = '${customerResponse['first_name']} ${customerResponse['last_name']}';
       final cardUid = cardResponse['uid'];
 
-      // Create Google Wallet pass
-      final saveUrl = await GoogleWalletService.createLoyaltyCard(
-        cardId: _cardId!,
-        customerName: customerName,
-        cardUid: cardUid,
-      );
+      // Determina la piattaforma
+      final userAgent = html.window.navigator.userAgent.toLowerCase();
+      final isIOS = userAgent.contains('iphone') || userAgent.contains('ipad') || userAgent.contains('ipod');
 
-      // Open the save URL in a new tab
+      String saveUrl;
+      if (isIOS) {
+        // Crea il pass per Apple Wallet
+        saveUrl = await AppleWalletService.createPass(
+          cardId: _cardId!,
+          customerName: customerName,
+          cardUid: cardUid,
+        );
+      } else {
+        // Crea il pass per Google Wallet
+        saveUrl = await GoogleWalletService.createLoyaltyCard(
+          cardId: _cardId!,
+          customerName: customerName,
+          cardUid: cardUid,
+        );
+      }
+
+      // Apri l'URL in una nuova tab
       html.window.open(saveUrl, '_blank');
 
-      // Show success message
+      // Mostra messaggio di successo
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -847,7 +862,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         );
       }
 
-      // Proceed to next step
+      // Procedi al prossimo step
       _nextStep();
     } catch (e) {
       setState(() {

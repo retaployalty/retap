@@ -70,7 +70,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
     final jwt = {
       'iss': _serviceAccountEmail,
       'aud': 'google',
-      'origins': ['retap.it'],
+      'origins': ['retapcard.com'],
       'typ': 'savetowallet',
       'payload': {
         'loyaltyObjects': [
@@ -116,7 +116,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         programName: 'ReTap Loyalty',
         programLogo: wallet.Image(
           sourceUri: wallet.ImageUri(
-            uri: 'https://retap.it/logo.png',
+            uri: 'https://i.ibb.co/mCDvGs8M/160x160.png',
           ),
         ),
         reviewStatus: 'APPROVED',
@@ -156,7 +156,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         state: 'ACTIVE',
         heroImage: wallet.Image(
           sourceUri: wallet.ImageUri(
-            uri: 'https://retap.it/hero.png',
+            uri: 'https://i.ibb.co/ycNhdKK1/960x320.png',
           ),
         ),
         textModulesData: [
