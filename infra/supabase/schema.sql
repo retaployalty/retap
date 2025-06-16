@@ -364,7 +364,62 @@ $_$;
 ALTER FUNCTION "public"."get_current_subscription"("profile_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") RETURNS TABLE("id" "uuid", "email" "text", "created_at" timestamp with time zone, "cards_count" bigint, "total_points" bigint, "last_transaction" timestamp with time zone)
+CREATE OR REPLACE FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") RETURNS TABLE("id" "uuid", "reward_id" "uuid", "reward_name" "text", "points_spent" integer, "redeemed_at" timestamp with time zone, "status" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rr.id,
+    rr.reward_id,
+    r.name as reward_name,
+    rr.points_spent,
+    rr.redeemed_at,
+    rr.status
+  FROM public.redeemed_rewards rr
+  JOIN public.rewards r ON r.id = rr.reward_id
+  WHERE rr.customer_id = p_customer_id
+  ORDER BY rr.redeemed_at DESC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") RETURNS TABLE("id" "uuid", "points" integer, "created_at" timestamp with time zone, "merchant_id" "uuid", "reward_name" "text", "status" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.points,
+    t.created_at,
+    cm.merchant_id,
+    COALESCE(r.name, 
+      CASE 
+        WHEN t.points > 0 THEN 'Accredito punti'
+        WHEN t.points < 0 THEN 'Spesa punti'
+        ELSE 'Transazione'
+      END
+    ) as reward_name,
+    rr.status -- Mostra solo lo status reale del riscatto, altrimenti NULL
+  FROM public.transactions t
+  JOIN public.card_merchants cm ON cm.id = t.card_merchant_id
+  JOIN public.cards c ON c.id = cm.card_id
+  LEFT JOIN public.redeemed_rewards rr ON rr.customer_id = c.customer_id AND rr.points_spent = t.points AND rr.merchant_id = cm.merchant_id
+  LEFT JOIN public.rewards r ON r.id = rr.reward_id
+  WHERE c.customer_id = p_customer_id
+  ORDER BY t.created_at DESC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") RETURNS TABLE("id" "uuid", "email" "text", "first_name" "text", "last_name" "text", "created_at" timestamp with time zone, "total_points" bigint, "last_transaction" timestamp with time zone)
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 BEGIN
@@ -372,7 +427,6 @@ BEGIN
   WITH customer_stats AS (
     SELECT 
       c.id as customer_id,
-      COUNT(DISTINCT cd.id) as cards_count,
       COALESCE(SUM(t.points), 0) as total_points,
       MAX(t.created_at) as last_transaction
     FROM public.customers c
@@ -385,8 +439,9 @@ BEGIN
   SELECT 
     c.id,
     c.email,
+    c.first_name,
+    c.last_name,
     c.created_at,
-    COALESCE(cs.cards_count, 0) as cards_count,
     COALESCE(cs.total_points, 0) as total_points,
     cs.last_transaction
   FROM public.customers c
@@ -394,7 +449,7 @@ BEGIN
   JOIN public.card_merchants cm ON cm.card_id = cd.id
   JOIN customer_stats cs ON cs.customer_id = c.id
   WHERE cm.merchant_id = p_merchant_id
-  GROUP BY c.id, c.email, c.created_at, cs.cards_count, cs.total_points, cs.last_transaction
+  GROUP BY c.id, c.email, c.first_name, c.last_name, c.created_at, cs.total_points, cs.last_transaction
   ORDER BY cs.last_transaction DESC NULLS LAST;
 END;
 $$;
@@ -600,6 +655,33 @@ $_$;
 
 
 ALTER FUNCTION "public"."has_active_subscription"("profile_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Insert into redeemed_checkpoint_rewards
+  INSERT INTO public.redeemed_checkpoint_rewards (
+    customer_id,
+    merchant_id,
+    checkpoint_reward_id,
+    checkpoint_step_id,
+    status,
+    redeemed_at
+  ) VALUES (
+    p_customer_id,
+    p_merchant_id,
+    p_checkpoint_reward_id,
+    p_checkpoint_step_id,
+    'completed',
+    now()
+  );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") RETURNS "void"
@@ -1769,6 +1851,18 @@ GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") T
 
 
 
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "service_role";
@@ -1820,6 +1914,12 @@ GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "service_role";
 
 
 

@@ -116,4 +116,25 @@ class CheckpointService {
       throw Exception('Errore nel riscatto del reward: $e');
     }
   }
+
+  static Future<List<String>> fetchRedeemedCheckpointRewardIds({
+    required String customerId,
+    required String merchantId,
+  }) async {
+    final uri = Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/rest/v1/redeemed_checkpoint_rewards?customer_id=eq.$customerId&merchant_id=eq.$merchantId');
+    final response = await http.get(
+      uri,
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
+        'Authorization': 'Bearer ${Supabase.instance.client.auth.currentSession?.accessToken ?? ''}',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List;
+      // Ritorna la lista degli id dei reward riscattati
+      return data.map<String>((e) => e['checkpoint_reward_id'] as String).toList();
+    } else {
+      throw Exception('Errore nel recupero dei rewards riscattati: \\${response.statusCode}');
+    }
+  }
 } 

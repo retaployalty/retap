@@ -32,6 +32,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   String? _error;
   Map<String, int> _currentSteps = {};
   bool _isAdvancing = false;
+  List<String> _redeemedRewardIds = [];
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     } else {
       _fetchCheckpoints();
     }
+    _fetchRedeemedRewards();
   }
 
   void _initializeFromData(Map<String, dynamic> data) {
@@ -121,6 +123,22 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         _error = 'Errore: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchRedeemedRewards() async {
+    if (widget.customerId == null) return;
+    try {
+      final ids = await CheckpointService.fetchRedeemedCheckpointRewardIds(
+        customerId: widget.customerId!,
+        merchantId: widget.merchantId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _redeemedRewardIds = ids;
+      });
+    } catch (e) {
+      debugPrint('Errore fetch redeemed rewards: $e');
     }
   }
 
@@ -384,7 +402,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                             ],
                                           ),
                                         ),
-                                        if (isCurrentStep && step.rewardId != null) ...[
+                                        if (isCurrentStep && step.rewardId != null && !_redeemedRewardIds.contains(step.rewardId)) ...[
                                           const SizedBox(width: 8),
                                           SizedBox(
                                             height: 32,
@@ -426,6 +444,24 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                                 foregroundColor: Colors.white,
                                                 elevation: 2,
                                               ),
+                                            ),
+                                          ),
+                                        ],
+                                        if (isCurrentStep && step.rewardId != null && _redeemedRewardIds.contains(step.rewardId)) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            height: 32,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[300],
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                                const SizedBox(width: 4),
+                                                const Text('Già riscattato', style: TextStyle(color: Colors.black54)),
+                                              ],
                                             ),
                                           ),
                                         ],
