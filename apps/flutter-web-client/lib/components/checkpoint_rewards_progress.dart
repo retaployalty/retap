@@ -7,6 +7,7 @@ class CheckpointRewardsProgress extends StatefulWidget {
   final Map<int, String> rewardLabels; // Map of step number to reward name
   final String offerName;
   final String offerDescription;
+  final List<int> redeemedSteps; // Lista degli step riscattati
 
   const CheckpointRewardsProgress({
     super.key,
@@ -16,6 +17,7 @@ class CheckpointRewardsProgress extends StatefulWidget {
     required this.rewardLabels,
     required this.offerName,
     required this.offerDescription,
+    this.redeemedSteps = const [], // Default vuoto
   });
 
   @override
@@ -326,17 +328,19 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                   final step = i + 1;
                                   final isCompleted = step <= widget.currentStep;
                                   final isReward = widget.rewardSteps.contains(step);
+                                  final isRedeemed = isReward && widget.redeemedSteps.contains(step);
                                   final double dotSize = isReward ? rewardDotSize : normalDotSize;
                                   final double left = barHPadding + firstDotOffset
                                     + (barWidth - firstDotOffset - lastDotOffset) * i / (widget.totalSteps - 1)
                                     - dotSize / 2;
                                   return Positioned(
                                     left: left,
-                                    top: (barHeight - dotSize) / 2,
+                                    top: (barHeight - dotSize) / 2 - 1,
                                     child: _CheckpointDot(
                                       isActive: isCompleted,
                                       isReward: isReward,
                                       showIceCream: isReward,
+                                      isRedeemed: isRedeemed,
                                       size: dotSize,
                                     ),
                                   );
@@ -383,13 +387,14 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                   color: Colors.transparent,
                                                   child: InkWell(
                                                     onTap: () {
-                                                      // TODO: Implementare il riscatto
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Premio disponibile per il riscatto!'),
-                                                          backgroundColor: Color(0xFFFF6565),
-                                                        ),
-                                                      );
+                                                      if (!widget.redeemedSteps.contains(step)) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text('Premio disponibile per il riscatto!'),
+                                                            backgroundColor: Color(0xFFFF6565),
+                                                          ),
+                                                        );
+                                                      }
                                                     },
                                                     borderRadius: BorderRadius.circular(32),
                                                     child: Ink(
@@ -440,10 +445,12 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                         ),
                                                       ],
                                                     ),
-                                                    child: const Icon(
-                                                      Icons.card_giftcard,
+                                                    child: Icon(
+                                                      widget.redeemedSteps.contains(step)
+                                                          ? Icons.check_circle
+                                                          : Icons.icecream,
                                                       size: 16,
-                                                      color: Color(0xFFFF6565),
+                                                      color: const Color(0xFFFF6565),
                                                     ),
                                                   ),
                                                 ),
@@ -590,8 +597,16 @@ class _CheckpointDot extends StatelessWidget {
   final bool isActive;
   final bool isReward;
   final bool showIceCream;
+  final bool isRedeemed;
   final double size;
-  const _CheckpointDot({this.isActive = false, this.isReward = false, this.showIceCream = false, this.size = 29});
+  const _CheckpointDot({
+    this.isActive = false, 
+    this.isReward = false, 
+    this.showIceCream = false, 
+    this.isRedeemed = false,
+    this.size = 29
+  });
+  
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -600,7 +615,7 @@ class _CheckpointDot extends StatelessWidget {
         Container(
           width: size,
           height: size,
-          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 1.5),
           decoration: ShapeDecoration(
             color: isReward
                 ? const Color(0xFFFF6565)
@@ -616,7 +631,11 @@ class _CheckpointDot extends StatelessWidget {
           ),
         ),
         if (showIceCream)
-          Icon(Icons.icecream, color: Colors.white, size: size * 0.72),
+          Icon(
+            isRedeemed ? Icons.check_circle : Icons.icecream,
+            color: Colors.white,
+            size: size * 0.85
+          ),
       ],
     );
   }
