@@ -41,6 +41,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   List<String> coverImageUrls = [];
   List<TransactionHistory> history = [];
   Map<String, dynamic>? merchantData;
+  List<int> redeemedCheckpointSteps = [];
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
       final checkpoints = data['checkpoints'] as List<dynamic>;
       
       final List<TransactionHistory> historyItems = [];
+      final List<int> redeemedSteps = [];
       
       // Add transactions
       for (var tx in transactions) {
@@ -82,6 +84,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
             stepNumber: cp['step_number'],
             offerName: cp['offer_name'],
           ));
+          redeemedSteps.add(cp['step_number']);
         } else if (cp['type'] == 'checkpoint_advancement') {
           historyItems.add(TransactionHistory(
             date: DateTime.parse(cp['date']),
@@ -99,6 +102,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
       
       setState(() {
         history = historyItems;
+        redeemedCheckpointSteps = redeemedSteps;
       });
     }
   }
@@ -242,6 +246,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                       ),
                       offerName: checkpointOffers.first.name,
                       offerDescription: checkpointOffers.first.description,
+                      redeemedSteps: redeemedCheckpointSteps,
                     ),
                   ),
                 const SizedBox(height: 12),
