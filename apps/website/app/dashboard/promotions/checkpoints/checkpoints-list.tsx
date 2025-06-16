@@ -128,7 +128,7 @@ export function CheckpointsList() {
       }
     } catch (error) {
       console.error("Error loading offers:", error)
-      toast.error("Errore durante il caricamento delle offerte")
+      toast.error("Error loading offers")
     } finally {
       setLoading(false)
     }
@@ -169,7 +169,7 @@ export function CheckpointsList() {
       }
     } catch (error) {
       console.error("Error loading steps:", error)
-      toast.error("Errore durante il caricamento dei checkpoint")
+      toast.error("Error loading checkpoints")
     }
   }
 
@@ -200,7 +200,7 @@ export function CheckpointsList() {
       const totalSteps = parseInt(total_steps)
 
       if (!name || !description || !totalSteps) {
-        throw new Error("Tutti i campi sono obbligatori")
+        throw new Error("All fields are required")
       }
 
       const { data: offer, error } = await supabase
@@ -216,13 +216,13 @@ export function CheckpointsList() {
 
       if (error) throw error
 
-      toast.success("Offerta creata con successo")
+      toast.success("Offer created successfully")
       setCreateDialogOpen(false)
       setFormData({ name: "", description: "", total_steps: "8" })
       loadOffers()
     } catch (error) {
       console.error("Error creating offer:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante la creazione dell'offerta")
+      toast.error(error instanceof Error ? error.message : "Error creating offer")
     } finally {
       setLoading(false)
     }
@@ -239,7 +239,7 @@ export function CheckpointsList() {
       const totalSteps = parseInt(total_steps)
 
       if (!name || !description || !totalSteps) {
-        throw new Error("Tutti i campi sono obbligatori")
+        throw new Error("All fields are required")
       }
 
       const { error } = await supabase
@@ -253,12 +253,12 @@ export function CheckpointsList() {
 
       if (error) throw error
 
-      toast.success("Offerta aggiornata con successo")
+      toast.success("Offer updated successfully")
       setEditDialogOpen(false)
       loadOffers()
     } catch (error) {
       console.error("Error updating offer:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante l'aggiornamento dell'offerta")
+      toast.error(error instanceof Error ? error.message : "Error updating offer")
     } finally {
       setLoading(false)
     }
@@ -267,7 +267,7 @@ export function CheckpointsList() {
   async function deleteOffer() {
     if (!selectedOffer) return
 
-    if (!confirm("Sei sicuro di voler eliminare questa offerta? Questa azione non può essere annullata.")) {
+    if (!confirm("Are you sure you want to delete this offer? This action cannot be undone.")) {
       return
     }
 
@@ -281,12 +281,12 @@ export function CheckpointsList() {
 
       if (error) throw error
 
-      toast.success("Offerta eliminata con successo")
+      toast.success("Offer deleted successfully")
       setSelectedOffer(null)
       loadOffers()
     } catch (error) {
       console.error("Error deleting offer:", error)
-      toast.error("Errore durante l'eliminazione dell'offerta")
+      toast.error("Error deleting offer")
     } finally {
       setLoading(false)
     }
@@ -294,20 +294,18 @@ export function CheckpointsList() {
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   function handleEditClick() {
-    if (!selectedOffer) return
-    setFormData({
-      name: selectedOffer.name,
-      description: selectedOffer.description,
-      total_steps: selectedOffer.total_steps.toString()
-    })
-    setEditDialogOpen(true)
+    if (selectedOffer) {
+      setFormData({
+        name: selectedOffer.name,
+        description: selectedOffer.description,
+        total_steps: selectedOffer.total_steps.toString()
+      })
+      setEditDialogOpen(true)
+    }
   }
 
   if (loading) {
@@ -320,59 +318,59 @@ export function CheckpointsList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Offerte Checkpoint</h3>
+          <h3 className="text-lg font-medium">Checkpoint Offers</h3>
           <p className="text-sm text-muted-foreground">
-            Crea e gestisci le tue offerte checkpoint. Ogni offerta ha un numero specifico di step.
+            Create and manage your checkpoint offers. Each offer has a specific number of steps.
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Nuova Offerta
+              New Offer
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={createOffer}>
               <DialogHeader>
-                <DialogTitle>Nuova Offerta Checkpoint</DialogTitle>
+                <DialogTitle>Create New Offer</DialogTitle>
                 <DialogDescription>
-                  Crea una nuova offerta checkpoint. Definisci il nome, la descrizione e il numero di step.
+                  Create a new checkpoint offer with multiple steps.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Nome Offerta</Label>
+                  <Label htmlFor="name">Name</Label>
                   <Input
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="Es. Programma Fedeltà Gelateria"
+                    placeholder="Ex. Summer Promotion"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="description">Descrizione</Label>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Es. Raccogli punti ad ogni acquisto e ricevi premi speciali"
+                    placeholder="Ex. Complete all steps to get a free ice cream"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="total_steps">Numero di Step</Label>
+                  <Label htmlFor="total_steps">Total Steps</Label>
                   <Input
                     id="total_steps"
                     name="total_steps"
                     type="number"
-                    min="1"
                     value={formData.total_steps}
                     onChange={handleInputChange}
-                    placeholder="Es. 8"
+                    min="1"
+                    max="10"
                     required
                   />
                 </div>
@@ -384,10 +382,10 @@ export function CheckpointsList() {
                   onClick={() => setCreateDialogOpen(false)}
                   disabled={loading}
                 >
-                  Annulla
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Creazione..." : "Crea Offerta"}
+                  {loading ? "Creating..." : "Create Offer"}
                 </Button>
               </DialogFooter>
             </form>
@@ -398,7 +396,7 @@ export function CheckpointsList() {
       {offers.length > 0 ? (
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Label className="whitespace-nowrap">Seleziona Offerta:</Label>
+            <Label className="whitespace-nowrap">Select Offer:</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={selectedOffer?.id}
@@ -410,6 +408,7 @@ export function CheckpointsList() {
                 }
               }}
             >
+              <option value="">Select an offer</option>
               {offers.map((offer) => (
                 <option key={offer.id} value={offer.id}>
                   {offer.name} ({offer.total_steps} step)
@@ -435,13 +434,13 @@ export function CheckpointsList() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={handleEditClick}>
-                          Modifica
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive focus:text-destructive"
                           onClick={deleteOffer}
                         >
-                          Elimina
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -474,7 +473,7 @@ export function CheckpointsList() {
                                 </div>
                                 <EditCheckpointDialog step={step} onSuccess={refreshData}>
                                   <Button variant="outline" className="w-full">
-                                    Modifica Premio
+                                    Edit Reward
                                   </Button>
                                 </EditCheckpointDialog>
                               </div>
@@ -487,7 +486,7 @@ export function CheckpointsList() {
                               >
                                 <Button variant="outline" className="w-full gap-2">
                                   <Plus className="h-4 w-4" />
-                                  Aggiungi Premio
+                                  Add Reward
                                 </Button>
                               </CreateCheckpointDialog>
                             )}
@@ -507,9 +506,9 @@ export function CheckpointsList() {
             <div className="rounded-full bg-primary/10 p-3 mb-4">
               <Plus className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-lg font-medium mb-2">Nessuna offerta checkpoint creata</p>
+            <p className="text-lg font-medium mb-2">No checkpoint offer created</p>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Crea la tua prima offerta per iniziare a gestire i checkpoint del tuo programma fedeltà.
+              Create your first offer to start managing your checkpoint program.
             </p>
           </CardContent>
         </Card>
@@ -519,44 +518,44 @@ export function CheckpointsList() {
         <DialogContent>
           <form onSubmit={updateOffer}>
             <DialogHeader>
-              <DialogTitle>Modifica Offerta</DialogTitle>
+              <DialogTitle>Edit Offer</DialogTitle>
               <DialogDescription>
-                Modifica i dettagli dell'offerta checkpoint.
+                Edit the details of your checkpoint offer.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Nome Offerta</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="edit-name"
+                  id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="Es. Programma Fedeltà Gelateria"
+                  placeholder="Ex. Summer Promotion"
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-description">Descrizione</Label>
+                <Label htmlFor="description">Description</Label>
                 <Textarea
-                  id="edit-description"
+                  id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Es. Raccogli punti ad ogni acquisto e ricevi premi speciali"
+                  placeholder="Ex. Complete all steps to get a free ice cream"
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-total_steps">Numero di Step</Label>
+                <Label htmlFor="total_steps">Total Steps</Label>
                 <Input
-                  id="edit-total_steps"
+                  id="total_steps"
                   name="total_steps"
                   type="number"
-                  min="1"
                   value={formData.total_steps}
                   onChange={handleInputChange}
-                  placeholder="Es. 8"
+                  min="1"
+                  max="10"
                   required
                 />
               </div>
@@ -568,10 +567,10 @@ export function CheckpointsList() {
                 onClick={() => setEditDialogOpen(false)}
                 disabled={loading}
               >
-                Annulla
+                Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Salvataggio..." : "Salva Modifiche"}
+                {loading ? "Updating..." : "Update Offer"}
               </Button>
             </DialogFooter>
           </form>

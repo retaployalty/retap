@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Fredoka } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, ArrowRight, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -58,7 +58,7 @@ const FAQS = [
 const SUBSCRIPTION = {
   name: "SINGLE SUBSCRIPTION",
   monthlyPrice: 49,
-  activationFee: 99,
+  activationFee: 25, // Fee di attivazione solo per abbonamento mensile
   annualDiscount: 0.10, // 10%
   features: [
     "POS device included",
@@ -93,9 +93,6 @@ export default function Home() {
         <Navbar />
         {/* Hero Section */}
       <section className="scroll-mt-24 flex items-center justify-center min-h-screen pt-24 pb-12 px-4 bg-background border-b border-border relative overflow-hidden" id="home">
-        {/* Background pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f8494c]/5 via-transparent to-transparent"></div>
-        
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-center h-full max-w-7xl gap-16 relative z-10">
           {/* Colonna sinistra: testo e bottoni */}
           <div className="w-full md:w-1/2 flex flex-col items-start justify-center text-left md:pr-8">
@@ -126,18 +123,20 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               <a 
                 href="/auth" 
-                className="bg-[#1A1A1A] text-white h-16 px-10 rounded-xl font-bold text-xl shadow hover:bg-[#FF3131] transition-colors flex items-center justify-center"
+                className="bg-[#1A1A1A] text-white h-16 px-10 rounded-xl font-bold text-xl shadow hover:bg-[#FF3131] transition-colors flex items-center justify-center gap-2 group"
                 style={{ minWidth: 0 }}
               >
                 Get Started
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </a>
               <a 
                 href="#what-is-retap" 
                 onClick={scrollToWhatIsRetap}
-                className="h-16 px-10 rounded-xl font-bold text-xl border-2 border-[#1A1A1A] hover:border-[#FF3131] hover:text-[#FF3131] transition-colors flex items-center justify-center"
+                className="h-16 px-10 rounded-xl font-bold text-xl border-2 border-[#1A1A1A] hover:border-[#FF3131] hover:text-[#FF3131] transition-colors flex items-center justify-center gap-2 group"
                 style={{ minWidth: 0 }}
               >
                 Learn More
+                <ArrowDown className="h-5 w-5 transition-transform group-hover:translate-y-1" />
               </a>
             </div>
           </div>
@@ -145,7 +144,6 @@ export default function Home() {
           {/* Colonna destra: immagine carta con animazione */}
           <div className="w-full md:w-1/2 flex justify-center items-center mt-12 md:mt-0">
             <div className="relative">
-              <div className="absolute inset-0 bg-[#f8494c]/20 rounded-3xl blur-2xl transform -rotate-6"></div>
               <img 
                 src="/retapG1.png" 
                 alt="ReTap Card" 
@@ -178,7 +176,7 @@ export default function Home() {
       `}</style>
 
       {/* Titolo e descrizione sopra il video */}
-      <section className="w-full flex flex-col items-center justify-center py-24 bg-gray-50">
+      <section className="w-full flex flex-col items-center justify-center py-24 bg-white">
         <h2 className="text-4xl md:text-6xl font-bold mb-4 text-textPrimary text-center">What is ReTap?</h2>
         <p className="text-xl md:text-2xl text-textSecondary mb-12 max-w-3xl text-center">
           Find out how ReTap works and why it is the simplest and most universal loyalty solution for your customers.
@@ -186,8 +184,8 @@ export default function Home() {
         <div className="w-full max-w-7xl flex flex-col md:flex-row items-stretch justify-center gap-8 mt-8">
           {/* Colonna 1 */}
           <div className="flex flex-col items-center w-full md:w-1/3 px-4">
-            <div className="h-48 flex items-center justify-center mb-6">
-              <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-48 h-auto" />
+            <div className="h-64 flex items-center justify-center mb-6">
+              <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-64 h-auto" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-textPrimary mb-3 text-center whitespace-nowrap">Universal Loyalty Card</h3>
             <p className="text-lg text-textSecondary text-center h-16">One NFC card for all your stores—no app needed, just tap and earn.</p>
@@ -200,8 +198,8 @@ export default function Home() {
           </div>
           {/* Colonna 2 */}
           <div className="flex flex-col items-center w-full md:w-1/3 px-4">
-            <div className="h-48 flex items-center justify-center mb-6">
-              <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-48 h-auto" />
+            <div className="h-64 flex items-center justify-center mb-6">
+              <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-64 h-auto" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-textPrimary mb-3 text-center whitespace-nowrap">Instant Promotions</h3>
             <p className="text-lg text-textSecondary text-center h-16">Create tailored promotions in minutes, no tech skills required.</p>
@@ -214,8 +212,8 @@ export default function Home() {
           </div>
           {/* Colonna 3 */}
           <div className="flex flex-col items-center w-full md:w-1/3 px-4">
-            <div className="h-48 flex items-center justify-center mb-6">
-              <img src="/retapG5.png" alt="More Returning Customers" className="w-48 h-auto" />
+            <div className="h-64 flex items-center justify-center mb-6">
+              <img src="/retapG5.png" alt="More Returning Customers" className="w-64 h-auto" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-textPrimary mb-3 text-center whitespace-nowrap">Customer Retention</h3>
             <p className="text-lg text-textSecondary text-center h-16">Retain your clients and attract new ones through the ReTap network.</p>
@@ -280,7 +278,7 @@ export default function Home() {
       <hr className="border-t border-border w-full" />
 
       {/* Pricing Section */}
-      <section id="pricing" className="scroll-mt-24 flex items-center justify-center min-h-screen bg-gray-50 px-4 py-20 border-b border-border relative overflow-hidden">
+      <section id="pricing" className="scroll-mt-24 flex items-center justify-center min-h-screen px-4 py-20 border-b border-border relative overflow-hidden">
         <div className="container mx-auto px-4 py-8 relative z-10">
           <div className="mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-10 text-textPrimary text-center">
@@ -303,7 +301,7 @@ export default function Home() {
                 </Label>
                 <div className={`absolute top-8 left-1/2 -translate-x-1/2 transition-all duration-300 ${isAnnual ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
                   <div className="bg-[#1A1A1A]/5 text-[#1A1A1A] px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 border border-[#1A1A1A]/10 whitespace-nowrap">
-                    <span className="font-medium tracking-tight text-[#1A1A1A]/70">Save {(SUBSCRIPTION.monthlyPrice * 12 * SUBSCRIPTION.annualDiscount + SUBSCRIPTION.activationFee).toFixed(0)}€ first year</span>
+                    <span className="font-medium tracking-tight text-[#1A1A1A]/70">No activation fee + 10% off first year (Save {(SUBSCRIPTION.monthlyPrice * 12 * SUBSCRIPTION.annualDiscount + SUBSCRIPTION.activationFee).toFixed(0)}€)</span>
                   </div>
                 </div>
               </div>
@@ -321,6 +319,11 @@ export default function Home() {
                   <span className="text-textSecondary text-lg">
                     /{isAnnual ? "year" : "month"}
                   </span>
+                  {!isAnnual && (
+                    <span className="text-sm text-textSecondary mt-2">
+                      + {SUBSCRIPTION.activationFee}€ one-time activation fee
+                    </span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -371,9 +374,9 @@ export default function Home() {
                   </button>
                   <div
                     id={`faq-content-${idx}`}
-                    className={`overflow-hidden transition-all duration-300 ${open === idx ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+                    className={`${open === idx ? 'block' : 'hidden'}`}
                   >
-                    <p className="text-textSecondary pb-4 px-2">{item.a}</p>
+                    {item.a}
                   </div>
                 </div>
               ))}
@@ -382,22 +385,22 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-      <footer className="py-10 bg-surface text-center text-textSecondary text-sm border-t border-border">
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-4">
-          <div className="flex flex-col items-center md:items-start gap-1">
-            <span className="font-bold text-primary text-lg">ReTap S.r.l.</span>
-            <span>VAT IT12345678901</span>
-            <span className="text-xs text-textDisabled">&copy; {new Date().getFullYear()} ReTap. All rights reserved.</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="font-semibold text-textPrimary">Contacts</span>
-            <a href="mailto:info@retap.com" className="hover:text-primary transition-colors">info@retap.com</a>
-            <a href="https://wa.me/393331234567" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">WhatsApp: +39 333 1234567</a>
-          </div>
-          <div className="flex flex-col items-center md:items-end gap-1">
-            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-            <span className="text-xs text-textDisabled">ReTap - Loyalty made simple for business</span>
-          </div>
+        <footer className="py-10 bg-surface text-center text-textSecondary text-sm border-t border-border">
+          <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-4">
+            <div className="flex flex-col items-center md:items-start gap-1">
+              <span className="font-bold text-primary text-lg">ReTap S.r.l.</span>
+              <span>VAT IT12345678901</span>
+              <span className="text-xs text-textDisabled">&copy; {new Date().getFullYear()} ReTap. All rights reserved.</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-semibold text-textPrimary">Contacts</span>
+              <a href="mailto:info@retap.com" className="hover:text-primary transition-colors">info@retap.com</a>
+              <a href="https://wa.me/393331234567" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">WhatsApp: +39 333 1234567</a>
+            </div>
+            <div className="flex flex-col items-center md:items-end gap-1">
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <span className="text-xs text-textDisabled">ReTap - Loyalty made simple for business</span>
+            </div>
           </div>
         </footer>
 
@@ -411,6 +414,6 @@ export default function Home() {
         >
           <img src="/WhatsApp.webp" alt="WhatsApp" className="w-10 h-10" />
         </a>
-      </main>
+    </main>
   );
 }

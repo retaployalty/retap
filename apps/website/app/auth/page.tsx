@@ -5,22 +5,28 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Mail, Lock, User, Phone, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingForm, setBillingForm] = useState({ email: '' });
+  const [paymentMethod, setPaymentMethod] = useState({ id: '' });
+  const [stripeCustomerId, setStripeCustomerId] = useState('');
+  const [authData, setAuthData] = useState({ user: { id: '' } });
   const router = useRouter();
   
   useEffect(() => {
-    // Verifica che le variabili d'ambiente siano state caricate
+    // Check if environment variables are loaded
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setError("Le variabili d'ambiente di Supabase non sono state configurate correttamente");
+      setError("Supabase environment variables are not properly configured");
     }
   }, []);
 
-  // Inizializza il client Supabase con le variabili d'ambiente
+  // Initialize Supabase client with environment variables
   const supabase = createClientComponentClient({
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -54,13 +60,13 @@ export default function AuthPage() {
       });
 
       if (error) {
-        console.error("Errore Supabase:", error);
-        alert("Errore Supabase: " + JSON.stringify(error, null, 2));
+        console.error("Supabase error:", error);
+        alert("Supabase error: " + JSON.stringify(error, null, 2));
         setLoading(false);
         return;
       }
 
-      // Recupera il profilo dell'utente
+      // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -69,11 +75,11 @@ export default function AuthPage() {
 
       if (profileError) throw profileError;
 
-      setMessage("Login effettuato con successo!");
+      setMessage("Login successful!");
       router.push('/dashboard/tutorial');
-      router.refresh(); // Forza il refresh della pagina per aggiornare lo stato
+      router.refresh(); // Force page refresh to update state
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore durante il login");
+      setError(err instanceof Error ? err.message : "Error during login");
     } finally {
       setLoading(false);
     }
@@ -92,11 +98,11 @@ export default function AuthPage() {
     const lastName = formData.get("lastName") as string;
     const phone = formData.get("phone") as string;
 
-    console.log('Dati registrazione:', { email, firstName, lastName, phone });
+    console.log('Registration data:', { email, firstName, lastName, phone });
 
     try {
-      // 1. Registra l'utente
-      console.log('1. Inizio registrazione utente...');
+      // 1. Register user
+      console.log('1. Starting user registration...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -111,18 +117,18 @@ export default function AuthPage() {
       });
 
       if (authError) {
-        console.error('Errore registrazione:', authError);
+        console.error('Registration error:', authError);
         throw authError;
       }
       if (!authData.user) {
-        console.error('Nessun utente restituito dalla registrazione');
-        throw new Error("Errore durante la registrazione");
+        console.error('No user returned from registration');
+        throw new Error("Error during registration");
       }
 
-      console.log('Utente registrato:', authData.user);
+      console.log('User registered:', authData.user);
 
-      // 2. Crea il profilo dell'utente
-      console.log('3. Creazione profilo...');
+      // 2. Create user profile
+      console.log('3. Creating profile...');
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert([
@@ -136,16 +142,16 @@ export default function AuthPage() {
         ]);
 
       if (profileError) {
-        console.error('Errore creazione profilo:', profileError);
-        throw new Error('Errore durante la creazione del profilo: ' + profileError.message);
+        console.error('Profile creation error:', profileError);
+        throw new Error('Error during profile creation: ' + profileError.message);
       }
 
-      setMessage("Registrazione completata! Ora registra il tuo negozio.");
+      setMessage("Registration completed! Now set up your store.");
       router.push('/onboarding');
     } catch (err) {
-      console.error('Errore dettagliato:', err);
+      console.error('Detailed error:', err);
       if (err instanceof Error && err.message.includes('rate limit')) {
-        setError('Troppi tentativi di registrazione. Attendi qualche minuto prima di riprovare.');
+        setError('Too many registration attempts. Please wait a few minutes before trying again.');
       } else {
         setError(err instanceof Error ? err.message : JSON.stringify(err));
       }
@@ -165,7 +171,7 @@ export default function AuthPage() {
     const billingCycle = formData.get("billingCycle") as string;
 
     try {
-      // Recupera la subscription "pending" dell'utente
+      // Get user's "pending" subscription
       const { data: subscription, error: subError } = await supabase
         .from("subscriptions")
         .select("*")
@@ -173,9 +179,9 @@ export default function AuthPage() {
         .eq("status", "pending")
         .single();
 
-      if (subError || !subscription) throw subError || new Error("Subscription non trovata");
+      if (subError || !subscription) throw subError || new Error("Subscription not found");
 
-      // Calcola la nuova data di fine
+      // Calculate new end date
       const newEndDate = new Date();
       if (billingCycle === "monthly") {
         newEndDate.setMonth(newEndDate.getMonth() + 1);
@@ -183,7 +189,7 @@ export default function AuthPage() {
         newEndDate.setFullYear(newEndDate.getFullYear() + 1);
       }
 
-      // Aggiorna la subscription
+      // Update subscription
       const { error: updateError } = await supabase
         .from("subscriptions")
         .update({
@@ -195,29 +201,29 @@ export default function AuthPage() {
 
       if (updateError) throw updateError;
 
-      setMessage("Abbonamento attivato con successo!");
+      setMessage("Subscription activated successfully!");
       router.push('/dashboard/tutorial');
 
-      // Aggiorna la tabella payments
+      // Update payments table
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           subscription_id: subscription.id,
-          amount: billingCycle === "monthly" ? 148 : 530, // totale
+          amount: billingCycle === "monthly" ? 148 : 530, // total
           currency: "EUR",
           status: "paid",
-          stripe_customer_id: stripeCustomerId, // <-- da Stripe
-          stripe_subscription_id: stripeSubscriptionId, // <-- da Stripe
-          payment_method_id: paymentMethod.id, // <-- da Stripe
+          stripe_customer_id: stripeCustomerId, // <-- from Stripe
+          stripe_subscription_id: stripeSubscriptionId, // <-- from Stripe
+          payment_method_id: paymentMethod.id, // <-- from Stripe
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
 
       if (paymentError) throw paymentError;
     } catch (err) {
-      console.error('Errore dettagliato:', err);
+      console.error('Detailed error:', err);
       if (err instanceof Error && err.message.includes('rate limit')) {
-        setError('Troppi tentativi di attivazione. Attendi qualche minuto prima di riprovare.');
+        setError('Too many activation attempts. Please wait a few minutes before trying again.');
       } else {
         setError(err instanceof Error ? err.message : JSON.stringify(err));
       }
@@ -259,17 +265,17 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg border border-border">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">
-            {isLogin ? "Accedi" : "Registrati"}
+          <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">
+            {isLogin ? "Accedi al tuo account" : "Crea il tuo account"}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isLogin ? "Non hai un account? " : "Hai già un account? "}
+          <p className="mt-2 text-sm text-textSecondary">
+            {isLogin ? "Non hai un account?" : "Hai già un account?"}{" "}
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="font-medium text-primary hover:text-primary/80"
+              className="font-medium text-[#1A1A1A] hover:text-[#1A1A1A]/80 transition-colors"
             >
               {isLogin ? "Registrati" : "Accedi"}
             </button>
@@ -277,140 +283,131 @@ export default function AuthPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
+          <div className="bg-[#FF3131]/10 text-[#FF3131] text-sm p-4 rounded-lg flex items-center gap-2 border border-[#FF3131]/20">
+            <AlertCircle className="h-4 w-4" />
             {error}
           </div>
         )}
 
         {message && (
-          <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">
+          <div className="bg-green-500/10 text-green-500 text-sm p-4 rounded-lg flex items-center gap-2 border border-green-500/20">
+            <CheckCircle2 className="h-4 w-4" />
             {message}
           </div>
         )}
 
-        {isLogin ? (
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
+        <form onSubmit={isLogin ? handleLogin : handleSignUp} className="space-y-6">
+          {!isLogin && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="firstName" className="block text-sm font-medium text-[#1A1A1A]">
+                    Nome
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      required
+                      className="pl-10 mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="lastName" className="block text-sm font-medium text-[#1A1A1A]">
+                    Cognome
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      required
+                      className="pl-10 mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="phone" className="block text-sm font-medium text-[#1A1A1A]">
+                  Numero di telefono
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    className="pl-10 mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-[#1A1A1A]">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
               <input
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="pl-10 mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
               />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-[#1A1A1A]">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
               <input
                 id="password"
                 name="password"
                 type="password"
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="pl-10 mt-1 block w-full rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
               />
             </div>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <Link href="/forgot-password" className="font-medium text-primary hover:text-primary/80">
-                  Password dimenticata?
-                </Link>
-              </div>
-            </div>
+          <Button
+            type="submit"
+            className="w-full h-12 bg-[#1A1A1A] hover:bg-[#FF3131] text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group"
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                {isLogin ? "Accedi" : "Registrati"}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </Button>
+        </form>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Caricamento..." : "Accedi"}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleSignUp} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  Nome
-                </label>
-                <input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Cognome
-                </label>
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Numero di telefono
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? "Caricamento..." : "Crea account"}
-            </Button>
-          </form>
-        )}
+        <div className="text-center text-sm">
+          <Link 
+            href="/" 
+            className="text-[#1A1A1A] hover:text-[#FF3131] transition-colors flex items-center justify-center gap-2"
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            Torna alla home
+          </Link>
+        </div>
       </div>
     </div>
   );

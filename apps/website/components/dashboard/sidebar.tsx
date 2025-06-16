@@ -61,7 +61,7 @@ export function Sidebar() {
     <div className="flex h-full w-64 flex-col border-r bg-white">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="text-xl">ReTap</span>
+          <img src="/retapLogo.png" alt="ReTap Logo" className="h-11 w-auto" />
         </Link>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">

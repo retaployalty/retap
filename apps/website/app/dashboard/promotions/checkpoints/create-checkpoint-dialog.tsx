@@ -37,14 +37,14 @@ import {
 } from "@/components/ui/select"
 
 const ICONS = [
-  { value: "gift", label: "Regalo", icon: Gift },
-  { value: "coffee", label: "Caffè", icon: Coffee },
+  { value: "gift", label: "Gift", icon: Gift },
+  { value: "coffee", label: "Coffee", icon: Coffee },
   { value: "pizza", label: "Pizza", icon: Pizza },
-  { value: "ice-cream", label: "Gelato", icon: IceCream },
+  { value: "ice-cream", label: "Ice Cream", icon: IceCream },
   { value: "shopping", label: "Shopping", icon: ShoppingBag },
-  { value: "percent", label: "Sconto", icon: Percent },
-  { value: "ticket", label: "Biglietto", icon: Ticket },
-  { value: "star", label: "Stella", icon: Star },
+  { value: "percent", label: "Discount", icon: Percent },
+  { value: "ticket", label: "Ticket", icon: Ticket },
+  { value: "star", label: "Star", icon: Star },
 ]
 
 interface CreateCheckpointDialogProps {
@@ -88,11 +88,11 @@ export function CreateCheckpointDialog({
       
       if (userError) {
         console.error("Auth error:", userError)
-        throw new Error("Errore di autenticazione")
+        throw new Error("Authentication error")
       }
 
       if (!user) {
-        throw new Error("Utente non autenticato")
+        throw new Error("User not authenticated")
       }
 
       const { data: merchant, error: merchantError } = await supabase
@@ -103,16 +103,16 @@ export function CreateCheckpointDialog({
 
       if (merchantError) {
         console.error("Merchant error:", merchantError)
-        throw new Error("Errore durante il recupero dei dati del merchant")
+        throw new Error("Error retrieving merchant data")
       }
 
       if (!merchant) {
-        throw new Error("Nessun merchant associato al tuo account")
+        throw new Error("No merchant associated with your account")
       }
 
       // 2. Get form data
       if (!formRef.current) {
-        throw new Error("Form non trovato")
+        throw new Error("Form not found")
       }
 
       const formData = new FormData(formRef.current)
@@ -121,7 +121,7 @@ export function CreateCheckpointDialog({
 
       // Validate inputs
       if (!name || !description) {
-        throw new Error("Tutti i campi sono obbligatori")
+        throw new Error("All fields are required")
       }
 
       if (existingReward) {
@@ -137,10 +137,10 @@ export function CreateCheckpointDialog({
 
         if (updateError) {
           console.error("Update error:", updateError)
-          throw new Error("Errore durante l'aggiornamento del premio")
+          throw new Error("Error updating reward")
         }
 
-        toast.success("Premio aggiornato con successo")
+        toast.success("Reward updated successfully")
       } else {
         // Create new reward
         const { data: reward, error: rewardError } = await supabase
@@ -156,7 +156,7 @@ export function CreateCheckpointDialog({
 
         if (rewardError) {
           console.error("Reward error:", rewardError)
-          throw new Error("Errore durante il salvataggio del premio")
+          throw new Error("Error saving reward")
         }
 
         // Create step with reward
@@ -172,17 +172,17 @@ export function CreateCheckpointDialog({
 
         if (stepError) {
           console.error("Step error:", stepError)
-          throw new Error("Errore durante il salvataggio dello step")
+          throw new Error("Error saving step")
         }
 
-        toast.success("Premio creato con successo")
+        toast.success("Reward created successfully")
       }
 
       setOpen(false)
       onSuccess?.()
     } catch (error) {
       console.error("Error details:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante l'operazione")
+      toast.error(error instanceof Error ? error.message : "Error during operation")
     } finally {
       setLoading(false)
     }
@@ -195,40 +195,40 @@ export function CreateCheckpointDialog({
         <form ref={formRef} onSubmit={onSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {existingReward ? "Modifica Premio" : `Aggiungi Premio per Step ${defaultStep}`}
+              {existingReward ? "Edit Reward" : `Add Reward for Step ${defaultStep}`}
             </DialogTitle>
             <DialogDescription>
               {existingReward 
-                ? "Modifica i dettagli del premio esistente."
-                : `Aggiungi un premio per lo step ${defaultStep} di ${totalSteps}.`}
+                ? "Edit details of the existing reward."
+                : `Add a reward for step ${defaultStep} of ${totalSteps}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nome Premio</Label>
+              <Label htmlFor="name">Reward Name</Label>
               <Input
                 id="name"
                 name="name"
-                placeholder="Es. Gelato Gratis"
+                placeholder="Ex. Free Ice Cream"
                 defaultValue={existingReward?.name}
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Descrizione</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Es. Un gelato gratuito di qualsiasi gusto"
+                placeholder="Ex. A free ice cream of any flavor"
                 defaultValue={existingReward?.description}
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label>Icona</Label>
+              <Label>Icon</Label>
               <Select value={selectedIcon} onValueChange={setSelectedIcon}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleziona un'icona" />
+                  <SelectValue placeholder="Select an icon" />
                 </SelectTrigger>
                 <SelectContent>
                   {ICONS.map((icon) => {
@@ -252,10 +252,10 @@ export function CreateCheckpointDialog({
                 type="button"
                 variant="destructive"
                 onClick={onDelete}
-                disabled={loading}
+                className="mr-auto"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Elimina
+                Delete
               </Button>
             )}
             <div className="flex gap-2">
@@ -265,10 +265,10 @@ export function CreateCheckpointDialog({
                 onClick={() => setOpen(false)}
                 disabled={loading}
               >
-                Annulla
+                Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Salvataggio..." : existingReward ? "Salva Modifiche" : "Crea Premio"}
+                {loading ? "Saving..." : existingReward ? "Update Reward" : "Create Reward"}
               </Button>
             </div>
           </DialogFooter>

@@ -1,5 +1,3 @@
-
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -1035,6 +1033,25 @@ CREATE TABLE IF NOT EXISTS "public"."transactions" (
 
 
 ALTER TABLE "public"."transactions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."dashboard_stats" (
+    "id" "uuid" DEFAULT "uuid_generate_v4"() PRIMARY KEY,
+    "merchant_id" "uuid" REFERENCES "public"."merchants"("id"),
+    "total_customers" integer DEFAULT 0,
+    "active_cards" integer DEFAULT 0,
+    "points_issued" integer DEFAULT 0,
+    "active_promotions" integer DEFAULT 0,
+    "customer_growth" numeric DEFAULT 0,
+    "card_growth" numeric DEFAULT 0,
+    "points_growth" numeric DEFAULT 0,
+    "promotion_growth" numeric DEFAULT 0,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()),
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"())
+);
+
+
+ALTER TABLE "public"."dashboard_stats" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."card_merchants"
@@ -2101,3 +2118,50 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 RESET ALL;
+
+DROP FUNCTION IF EXISTS public.get_merchant_customers(uuid);
+
+CREATE OR REPLACE FUNCTION public.get_merchant_customers(p_merchant_id uuid)
+RETURNS TABLE (
+  id uuid,
+  email text,
+  first_name text,
+  last_name text,
+  created_at timestamptz,
+  total_points bigint,
+  last_transaction timestamptz
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH customer_stats AS (
+    SELECT 
+      c.id as customer_id,
+      COALESCE(SUM(t.points), 0) as total_points,
+      MAX(t.created_at) as last_transaction
+    FROM public.customers c
+    JOIN public.cards cd ON cd.customer_id = c.id
+    JOIN public.card_merchants cm ON cm.card_id = cd.id
+    LEFT JOIN public.transactions t ON t.card_merchant_id = cm.id
+    WHERE cm.merchant_id = p_merchant_id
+    GROUP BY c.id
+  )
+  SELECT 
+    c.id,
+    c.email,
+    c.first_name,
+    c.last_name,
+    c.created_at,
+    COALESCE(cs.total_points, 0) as total_points,
+    cs.last_transaction
+  FROM public.customers c
+  JOIN public.cards cd ON cd.customer_id = c.id
+  JOIN public.card_merchants cm ON cm.card_id = cd.id
+  JOIN customer_stats cs ON cs.customer_id = c.id
+  WHERE cm.merchant_id = p_merchant_id
+  GROUP BY c.id, c.email, c.first_name, c.last_name, c.created_at, cs.total_points, cs.last_transaction
+  ORDER BY cs.last_transaction DESC NULLS LAST;
+END;
+$$;

@@ -35,7 +35,7 @@ export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpoi
   async function handleDelete() {
     if (!step.reward) return
 
-    if (!confirm("Sei sicuro di voler eliminare questo premio? Questa azione non può essere annullata.")) {
+    if (!confirm("Are you sure you want to delete this reward? This action cannot be undone.")) {
       return
     }
 
@@ -50,7 +50,7 @@ export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpoi
 
       if (deleteStepError) {
         console.error("Delete step error:", deleteStepError)
-        throw new Error("Errore durante l'eliminazione dello step")
+        throw new Error("Error deleting step")
       }
 
       // Then delete reward
@@ -61,15 +61,15 @@ export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpoi
 
       if (deleteRewardError) {
         console.error("Delete reward error:", deleteRewardError)
-        throw new Error("Errore durante l'eliminazione del premio")
+        throw new Error("Error deleting reward")
       }
 
-      toast.success("Premio eliminato con successo")
+      toast.success("Reward deleted successfully")
       router.refresh()
       onSuccess?.()
     } catch (error) {
       console.error("Error:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante l'eliminazione del premio")
+      toast.error(error instanceof Error ? error.message : "Error deleting reward")
     } finally {
       setLoading(false)
     }
