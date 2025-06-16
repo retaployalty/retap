@@ -4,10 +4,12 @@ import '../services/checkpoint_service.dart';
 import '../services/cache_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
   final String? cardId;
+  final String? customerId;
   final bool compactMode;
   final Map<String, dynamic>? initialCheckpointData;
 
@@ -15,6 +17,7 @@ class CheckpointOffersList extends StatefulWidget {
     super.key,
     required this.merchantId,
     this.cardId,
+    this.customerId,
     this.compactMode = false,
     this.initialCheckpointData,
   });
@@ -29,6 +32,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   String? _error;
   Map<String, int> _currentSteps = {};
   bool _isAdvancing = false;
+  List<String> _redeemedRewardIds = [];
 
   @override
   void initState() {
@@ -38,6 +42,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     } else {
       _fetchCheckpoints();
     }
+    _fetchRedeemedRewards();
   }
 
   void _initializeFromData(Map<String, dynamic> data) {
@@ -118,6 +123,22 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         _error = 'Errore: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchRedeemedRewards() async {
+    if (widget.customerId == null) return;
+    try {
+      final ids = await CheckpointService.fetchRedeemedCheckpointRewardIds(
+        customerId: widget.customerId!,
+        merchantId: widget.merchantId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _redeemedRewardIds = ids;
+      });
+    } catch (e) {
+      debugPrint('Errore fetch redeemed rewards: $e');
     }
   }
 
@@ -352,26 +373,100 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   if (step.rewardName != null) ...[
-                                    Text(
-                                      step.rewardName!,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isCurrentStep
-                                            ? Theme.of(context).colorScheme.primary
-                                            : Theme.of(context).colorScheme.onSurface,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    if (step.rewardDescription?.isNotEmpty ?? false) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        step.rewardDescription!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                step.rewardName!,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isCurrentStep
+                                                      ? Theme.of(context).colorScheme.primary
+                                                      : Theme.of(context).colorScheme.onSurface,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              if (step.rewardDescription?.isNotEmpty ?? false) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  step.rewardDescription!,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        if (isCurrentStep && step.rewardId != null && !_redeemedRewardIds.contains(step.rewardId)) ...[
+                                          const SizedBox(width: 8),
+                                          SizedBox(
+                                            height: 32,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () async {
+                                                try {
+                                                  if (widget.customerId == null) {
+                                                    throw Exception('CustomerId non disponibile');
+                                                  }
+                                                  await CheckpointService().redeemCheckpointReward(
+                                                    customerId: widget.customerId!,
+                                                    merchantId: widget.merchantId,
+                                                    rewardId: step.rewardId!,
+                                                    stepId: step.id,
+                                                  );
+                                                  if (!mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('🎉 ${step.rewardName} riscattato con successo!'),
+                                                      backgroundColor: Colors.green,
+                                                    ),
+                                                  );
+                                                  _fetchCheckpoints();
+                                                } catch (e) {
+                                                  if (!mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('Errore: $e'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              icon: const Icon(Icons.card_giftcard, size: 16),
+                                              label: const Text('Riscatta'),
+                                              style: ElevatedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                backgroundColor: Colors.amber[700],
+                                                foregroundColor: Colors.white,
+                                                elevation: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                        if (isCurrentStep && step.rewardId != null && _redeemedRewardIds.contains(step.rewardId)) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            height: 32,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[300],
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                                const SizedBox(width: 4),
+                                                const Text('Già riscattato', style: TextStyle(color: Colors.black54)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ] else ...[
                                     Text(
                                       'Step ${step.stepNumber}',

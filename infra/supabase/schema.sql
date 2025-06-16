@@ -131,81 +131,96 @@ CREATE OR REPLACE FUNCTION "public"."advance_customer_checkpoint"("p_customer_id
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
-  v_current_step integer;
-  v_total_steps integer;
-  v_next_step integer;
-  v_reward_id uuid;
-  v_reward_name text;
-  v_reward_description text;
+    v_current_step integer;
+    v_total_steps integer;
+    v_next_step integer;
+    v_reward_id uuid;
+    v_reward_name text;
+    v_reward_description text;
 BEGIN
-  -- Get or create customer checkpoint
-  BEGIN
-    INSERT INTO customer_checkpoints (
-      customer_id,
-      merchant_id,
-      offer_id,
-      current_step
-    )
-    VALUES (
-      p_customer_id,
-      p_merchant_id,
-      p_offer_id,
-      0
+    -- Get or create customer checkpoint
+    BEGIN
+        INSERT INTO customer_checkpoints (
+            customer_id,
+            merchant_id,
+            offer_id,
+            current_step
+        )
+        VALUES (
+            p_customer_id,
+            p_merchant_id,
+            p_offer_id,
+            0
+        );
+    EXCEPTION WHEN unique_violation THEN
+        -- If insert fails due to unique constraint, do nothing
+        NULL;
+    END;
+
+    -- Get current step and total steps from the offer
+    SELECT 
+        cp.current_step,
+        co.total_steps
+    INTO 
+        v_current_step,
+        v_total_steps
+    FROM customer_checkpoints cp
+    JOIN checkpoint_offers co ON co.id = cp.offer_id
+    WHERE cp.customer_id = p_customer_id
+    AND cp.merchant_id = p_merchant_id
+    AND cp.offer_id = p_offer_id;
+
+    -- Calculate next step
+    v_next_step := v_current_step + 1;
+    IF v_next_step > v_total_steps THEN
+        v_next_step := 1;
+    END IF;
+
+    -- Record the advancement
+    INSERT INTO checkpoint_advancements (
+        customer_id,
+        merchant_id,
+        offer_id,
+        step_number,
+        total_steps
+    ) VALUES (
+        p_customer_id,
+        p_merchant_id,
+        p_offer_id,
+        v_next_step,
+        v_total_steps
     );
-  EXCEPTION WHEN unique_violation THEN
-    -- If insert fails due to unique constraint, do nothing
-    NULL;
-  END;
 
-  -- Get current step and total steps from the offer
-  SELECT 
-    cp.current_step,
-    co.total_steps
-  INTO 
-    v_current_step,
-    v_total_steps
-  FROM customer_checkpoints cp
-  JOIN checkpoint_offers co ON co.id = cp.offer_id
-  WHERE cp.customer_id = p_customer_id
-  AND cp.merchant_id = p_merchant_id
-  AND cp.offer_id = p_offer_id;
+    -- Update customer checkpoint
+    UPDATE customer_checkpoints
+    SET 
+        current_step = v_next_step,
+        last_updated = now()
+    WHERE customer_id = p_customer_id
+    AND merchant_id = p_merchant_id
+    AND offer_id = p_offer_id;
 
-  -- Calculate next step
-  v_next_step := v_current_step + 1;
-  IF v_next_step > v_total_steps THEN
-    v_next_step := 1;
-  END IF;
+    -- Check if there's a reward at this step
+    SELECT 
+        cs.reward_id,
+        cr.name,
+        cr.description
+    INTO 
+        v_reward_id,
+        v_reward_name,
+        v_reward_description
+    FROM checkpoint_steps cs
+    LEFT JOIN checkpoint_rewards cr ON cr.id = cs.reward_id
+    WHERE cs.offer_id = p_offer_id
+    AND cs.step_number = v_next_step;
 
-  -- Update customer checkpoint
-  UPDATE customer_checkpoints
-  SET 
-    current_step = v_next_step,
-    last_updated = now()
-  WHERE customer_id = p_customer_id
-  AND merchant_id = p_merchant_id
-  AND offer_id = p_offer_id;
-
-  -- Check if there's a reward at this step
-  SELECT 
-    cs.reward_id,
-    cr.name,
-    cr.description
-  INTO 
-    v_reward_id,
-    v_reward_name,
-    v_reward_description
-  FROM checkpoint_steps cs
-  LEFT JOIN checkpoint_rewards cr ON cr.id = cs.reward_id
-  WHERE cs.offer_id = p_offer_id
-  AND cs.step_number = v_next_step;
-
-  RETURN QUERY
-  SELECT 
-    v_next_step,
-    v_total_steps,
-    v_reward_id,
-    v_reward_name,
-    v_reward_description;
+    RETURN QUERY
+    SELECT 
+        v_next_step,
+        v_total_steps,
+        v_reward_id,
+        v_reward_name,
+        v_reward_description;
 END;
 $$;
 
@@ -345,6 +360,100 @@ $_$;
 
 
 ALTER FUNCTION "public"."get_current_subscription"("profile_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") RETURNS TABLE("id" "uuid", "reward_id" "uuid", "reward_name" "text", "points_spent" integer, "redeemed_at" timestamp with time zone, "status" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rr.id,
+    rr.reward_id,
+    r.name as reward_name,
+    rr.points_spent,
+    rr.redeemed_at,
+    rr.status
+  FROM public.redeemed_rewards rr
+  JOIN public.rewards r ON r.id = rr.reward_id
+  WHERE rr.customer_id = p_customer_id
+  ORDER BY rr.redeemed_at DESC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") RETURNS TABLE("id" "uuid", "points" integer, "created_at" timestamp with time zone, "merchant_id" "uuid", "reward_name" "text", "status" "text")
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    t.id,
+    t.points,
+    t.created_at,
+    cm.merchant_id,
+    COALESCE(r.name, 
+      CASE 
+        WHEN t.points > 0 THEN 'Accredito punti'
+        WHEN t.points < 0 THEN 'Spesa punti'
+        ELSE 'Transazione'
+      END
+    ) as reward_name,
+    rr.status -- Mostra solo lo status reale del riscatto, altrimenti NULL
+  FROM public.transactions t
+  JOIN public.card_merchants cm ON cm.id = t.card_merchant_id
+  JOIN public.cards c ON c.id = cm.card_id
+  LEFT JOIN public.redeemed_rewards rr ON rr.customer_id = c.customer_id AND rr.points_spent = t.points AND rr.merchant_id = cm.merchant_id
+  LEFT JOIN public.rewards r ON r.id = rr.reward_id
+  WHERE c.customer_id = p_customer_id
+  ORDER BY t.created_at DESC;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") RETURNS TABLE("id" "uuid", "email" "text", "first_name" "text", "last_name" "text", "created_at" timestamp with time zone, "total_points" bigint, "last_transaction" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  RETURN QUERY
+  WITH customer_stats AS (
+    SELECT 
+      c.id as customer_id,
+      COALESCE(SUM(t.points), 0) as total_points,
+      MAX(t.created_at) as last_transaction
+    FROM public.customers c
+    JOIN public.cards cd ON cd.customer_id = c.id
+    JOIN public.card_merchants cm ON cm.card_id = cd.id
+    LEFT JOIN public.transactions t ON t.card_merchant_id = cm.id
+    WHERE cm.merchant_id = p_merchant_id
+    GROUP BY c.id
+  )
+  SELECT 
+    c.id,
+    c.email,
+    c.first_name,
+    c.last_name,
+    c.created_at,
+    COALESCE(cs.total_points, 0) as total_points,
+    cs.last_transaction
+  FROM public.customers c
+  JOIN public.cards cd ON cd.customer_id = c.id
+  JOIN public.card_merchants cm ON cm.card_id = cd.id
+  JOIN customer_stats cs ON cs.customer_id = c.id
+  WHERE cm.merchant_id = p_merchant_id
+  GROUP BY c.id, c.email, c.first_name, c.last_name, c.created_at, cs.total_points, cs.last_transaction
+  ORDER BY cs.last_transaction DESC NULLS LAST;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") RETURNS "uuid"
@@ -546,6 +655,33 @@ $_$;
 ALTER FUNCTION "public"."has_active_subscription"("profile_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Insert into redeemed_checkpoint_rewards
+  INSERT INTO public.redeemed_checkpoint_rewards (
+    customer_id,
+    merchant_id,
+    checkpoint_reward_id,
+    checkpoint_step_id,
+    status,
+    redeemed_at
+  ) VALUES (
+    p_customer_id,
+    p_merchant_id,
+    p_checkpoint_reward_id,
+    p_checkpoint_step_id,
+    'completed',
+    now()
+  );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -638,6 +774,20 @@ CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
 ALTER TABLE "public"."checkout_billing" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."checkpoint_advancements" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "customer_id" "uuid" NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "offer_id" "uuid" NOT NULL,
+    "step_number" integer NOT NULL,
+    "total_steps" integer NOT NULL,
+    "advanced_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."checkpoint_advancements" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."checkpoint_offers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "merchant_id" "uuid" NOT NULL,
@@ -710,11 +860,26 @@ ALTER TABLE "public"."customer_checkpoints" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."customers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "email" "text",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "first_name" "text",
+    "last_name" "text",
+    "phone_number" "text"
 );
 
 
 ALTER TABLE "public"."customers" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."customers"."first_name" IS 'Nome del cliente';
+
+
+
+COMMENT ON COLUMN "public"."customers"."last_name" IS 'Cognome del cliente';
+
+
+
+COMMENT ON COLUMN "public"."customers"."phone_number" IS 'Numero di telefono del cliente';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."merchants" (
@@ -929,6 +1094,11 @@ ALTER TABLE ONLY "public"."checkout_billing"
 
 
 
+ALTER TABLE ONLY "public"."checkpoint_advancements"
+    ADD CONSTRAINT "checkpoint_advancements_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."checkpoint_offers"
     ADD CONSTRAINT "checkpoint_offers_pkey" PRIMARY KEY ("id");
 
@@ -1052,6 +1222,21 @@ ALTER TABLE ONLY "public"."cards"
 
 ALTER TABLE ONLY "public"."cards"
     ADD CONSTRAINT "cards_issuing_merchant_id_fkey" FOREIGN KEY ("issuing_merchant_id") REFERENCES "public"."merchants"("id");
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_advancements"
+    ADD CONSTRAINT "checkpoint_advancements_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_advancements"
+    ADD CONSTRAINT "checkpoint_advancements_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkpoint_advancements"
+    ADD CONSTRAINT "checkpoint_advancements_offer_id_fkey" FOREIGN KEY ("offer_id") REFERENCES "public"."checkpoint_offers"("id") ON DELETE CASCADE;
 
 
 
@@ -1330,6 +1515,20 @@ CREATE POLICY "Merchants can insert their own profile" ON "public"."merchants" F
 
 
 
+CREATE POLICY "Merchants can update customer personal info" ON "public"."customers" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM ("public"."cards" "c"
+     JOIN "public"."card_merchants" "cm" ON (("cm"."card_id" = "c"."id")))
+  WHERE (("c"."customer_id" = "customers"."id") AND ("cm"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"()))))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM ("public"."cards" "c"
+     JOIN "public"."card_merchants" "cm" ON (("cm"."card_id" = "c"."id")))
+  WHERE (("c"."customer_id" = "customers"."id") AND ("cm"."merchant_id" IN ( SELECT "merchants"."id"
+           FROM "public"."merchants"
+          WHERE ("merchants"."profile_id" = "auth"."uid"())))))));
+
+
+
 CREATE POLICY "Merchants can update their customers' checkpoints" ON "public"."customer_checkpoints" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -1375,6 +1574,12 @@ CREATE POLICY "Merchants can update their own rewards" ON "public"."rewards" FOR
 
 
 CREATE POLICY "Merchants can update their redeemed rewards" ON "public"."redeemed_rewards" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their customers' checkpoint advancements" ON "public"."checkpoint_advancements" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -1448,6 +1653,9 @@ CREATE POLICY "Users can update their own subscriptions" ON "public"."subscripti
 
 CREATE POLICY "Users can view their own subscriptions" ON "public"."subscriptions" FOR SELECT USING (("auth"."uid"() = "profile_id"));
 
+
+
+ALTER TABLE "public"."checkpoint_advancements" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -1660,6 +1868,24 @@ GRANT ALL ON FUNCTION "public"."get_current_subscription"("profile_id" "uuid") T
 
 
 
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_customer_redeemed_rewards"("p_customer_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_customer_transactions"("p_customer_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_merchant_customers"("p_merchant_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_or_create_customer"("p_merchant_id" "uuid") TO "service_role";
@@ -1708,6 +1934,12 @@ GRANT ALL ON FUNCTION "public"."has_active_subscription"("profile_id" "uuid") TO
 
 
 
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") TO "service_role";
@@ -1744,6 +1976,12 @@ GRANT ALL ON TABLE "public"."cards" TO "service_role";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "anon";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "authenticated";
 GRANT ALL ON TABLE "public"."checkout_billing" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."checkpoint_advancements" TO "anon";
+GRANT ALL ON TABLE "public"."checkpoint_advancements" TO "authenticated";
+GRANT ALL ON TABLE "public"."checkpoint_advancements" TO "service_role";
 
 
 
