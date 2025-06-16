@@ -59,12 +59,17 @@ class _MerchantSelectionScreenState extends State<MerchantSelectionScreen> {
     
     if (!mounted) return;
 
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
     // Naviga alla main screen
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => MainScreen(
+          customerId: user.id,
           merchantId: merchantId,
-          merchantName: merchantName,
         ),
       ),
     );

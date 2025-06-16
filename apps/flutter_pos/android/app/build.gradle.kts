@@ -39,6 +39,17 @@ android {
     }
 }
 
+// Configurazione per sovrascrivere il namespace di uni_links
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core-ktx:1.9.0")
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.9.0")
+}
+
 flutter {
     source = "../.."
 }

@@ -43,11 +43,16 @@ class _SplashScreenState extends State<SplashScreen> {
     if (merchant['id'] != null && merchant['name'] != null) {
       debugPrint('Navigating to main screen with saved merchant');
       // Navigate directly to main screen with saved merchant
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => MainScreen(
+            customerId: user.id,
             merchantId: merchant['id']!,
-            merchantName: merchant['name']!,
           ),
         ),
       );
