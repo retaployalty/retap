@@ -37,15 +37,25 @@ class ReTapWeb extends StatelessWidget {
   Future<String> _getInitialRoute() async {
     print('Starting _getInitialRoute check...'); // Debug log
     
-    // Prima prova a estrarre l'ID dall'URL
+    // Estrai l'ID dall'URL
     final uri = Uri.base;
     final segments = uri.pathSegments;
     String? urlCardId;
+    String? urlMerchantId;
     
     print('URL segments: $segments'); // Debug log
     
+    // Controlla se è un URL di merchant
+    if (segments.isNotEmpty && segments.first == 'm' && segments.length > 1) {
+      urlMerchantId = segments[1];
+      print('Merchant URL detected: $urlMerchantId'); // Debug log
+      return '/m/$urlMerchantId';
+    }
+    
+    // Controlla se è un URL di carta cliente
     if (segments.isNotEmpty && segments.first == 'c' && segments.length > 1) {
       urlCardId = segments[1];
+      print('Customer card URL detected: $urlCardId'); // Debug log
     } else if (segments.isNotEmpty && segments.last.isNotEmpty) {
       urlCardId = segments.last;
     }
