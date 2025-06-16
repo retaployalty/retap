@@ -12,6 +12,11 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingForm, setBillingForm] = useState({ email: '' });
+  const [paymentMethod, setPaymentMethod] = useState({ id: '' });
+  const [stripeCustomerId, setStripeCustomerId] = useState('');
+  const [authData, setAuthData] = useState({ user: { id: '' } });
   const router = useRouter();
   
   useEffect(() => {

@@ -17,14 +17,52 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
+import { 
+  Gift, 
+  Coffee, 
+  Pizza, 
+  IceCream, 
+  ShoppingBag, 
+  Percent, 
+  Ticket, 
+  Star,
+  Flag
+} from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+
+const ICONS = [
+  { value: "gift", label: "Gift", icon: Gift },
+  { value: "coffee", label: "Coffee", icon: Coffee },
+  { value: "pizza", label: "Pizza", icon: Pizza },
+  { value: "ice-cream", label: "Ice Cream", icon: IceCream },
+  { value: "shopping", label: "Shopping", icon: ShoppingBag },
+  { value: "percent", label: "Discount", icon: Percent },
+  { value: "ticket", label: "Ticket", icon: Ticket },
+  { value: "star", label: "Star", icon: Star },
+]
 
 interface CreateRewardDialogProps {
   children: React.ReactNode
+  totalSteps?: number
+  defaultStep?: number
 }
 
-export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
+export function CreateRewardDialog({ 
+  children,
+  totalSteps = 8,
+  defaultStep = 1
+}: CreateRewardDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [selectedIcon, setSelectedIcon] = useState("gift")
+  const [createCheckpoint, setCreateCheckpoint] = useState(false)
   const router = useRouter()
   const supabase = createClientComponentClient()
   const formRef = useRef<HTMLFormElement>(null)
@@ -39,11 +77,11 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
       
       if (userError) {
         console.error("Auth error:", userError)
-        throw new Error("Errore di autenticazione")
+        throw new Error("Authentication error")
       }
 
       if (!user) {
-        throw new Error("Utente non autenticato")
+        throw new Error("User not authenticated")
       }
 
       const { data: merchant, error: merchantError } = await supabase
@@ -54,16 +92,16 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
 
       if (merchantError) {
         console.error("Merchant error:", merchantError)
-        throw new Error("Errore durante il recupero dei dati del merchant")
+        throw new Error("Error retrieving merchant data")
       }
 
       if (!merchant) {
-        throw new Error("Nessun merchant associato al tuo account")
+        throw new Error("No merchant associated with your account")
       }
 
       // 2. Get form data
       if (!formRef.current) {
-        throw new Error("Form non trovato")
+        throw new Error("Form not found")
       }
 
       const formData = new FormData(formRef.current)
@@ -71,18 +109,24 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
       const description = formData.get("description") as string
       const price = parseInt(formData.get("price") as string)
       const imageFile = formData.get("image") as File
+      const checkpointName = formData.get("checkpointName") as string
+      const checkpointDescription = formData.get("checkpointDescription") as string
 
       // Validate inputs
       if (!name || !description || !price || !imageFile) {
-        throw new Error("Tutti i campi sono obbligatori")
+        throw new Error("All fields are required")
       }
 
       if (price < 1) {
-        throw new Error("Il prezzo deve essere maggiore di 0")
+        throw new Error("Price must be greater than 0")
       }
 
       if (!imageFile.type.startsWith("image/")) {
-        throw new Error("Il file deve essere un'immagine")
+        throw new Error("File must be an image")
+      }
+
+      if (createCheckpoint && (!checkpointName || !checkpointDescription)) {
+        throw new Error("All checkpoint fields are required")
       }
 
       // 3. Upload image to Supabase Storage
@@ -93,30 +137,70 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
 
       if (uploadError) {
         console.error("Storage error:", uploadError)
-        throw new Error("Errore durante il caricamento dell'immagine")
+        throw new Error("Error uploading image")
       }
 
       // 4. Create reward in database
-      const { error: insertError } = await supabase.from("rewards").insert({
-        name,
-        description,
-        price_coins: price,
-        image_path: filename,
-        merchant_id: merchant.id,
-        is_active: true,
-      })
+      const { data: reward, error: insertError } = await supabase
+        .from("rewards")
+        .insert({
+          name,
+          description,
+          price_coins: price,
+          image_path: filename,
+          merchant_id: merchant.id,
+          is_active: true,
+        })
+        .select()
+        .single()
 
       if (insertError) {
         console.error("Insert error:", insertError)
-        throw new Error("Errore durante il salvataggio del reward")
+        throw new Error("Error saving reward")
       }
 
-      toast.success("Reward creato con successo")
+      // 5. Create checkpoint if requested
+      if (createCheckpoint) {
+        // Create checkpoint reward
+        const { data: checkpointReward, error: rewardError } = await supabase
+          .from("checkpoint_rewards")
+          .insert({
+            name: checkpointName,
+            description: checkpointDescription,
+            icon: selectedIcon,
+            merchant_id: merchant.id
+          })
+          .select()
+          .single()
+
+        if (rewardError) {
+          console.error("Reward error:", rewardError)
+          throw new Error("Error saving checkpoint reward")
+        }
+
+        // Create step with reward
+        const { error: stepError } = await supabase
+          .from("checkpoint_steps")
+          .insert({
+            step_number: defaultStep,
+            total_steps: totalSteps,
+            reward_id: checkpointReward.id,
+            merchant_id: merchant.id,
+            offer_id: reward.id
+          })
+
+        if (stepError) {
+          console.error("Step error:", stepError)
+          throw new Error("Error saving step")
+        }
+      }
+
+      toast.success("Reward created successfully")
       setOpen(false)
       router.refresh()
     } catch (error) {
       console.error("Error details:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante la creazione del reward")
+      toast.error(error instanceof Error ? error.message : "Error creating reward")
     } finally {
       setLoading(false)
     }
@@ -128,38 +212,38 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
       <DialogContent className="sm:max-w-[425px]">
         <form ref={formRef} onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>Nuovo Reward</DialogTitle>
+            <DialogTitle>New Reward</DialogTitle>
             <DialogDescription>
-              Crea un nuovo reward per i tuoi clienti. Compila tutti i campi richiesti.
+              Create a new reward for your customers. Fill in all required fields.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input id="name" name="name" placeholder="Es. Sconto 10%" required />
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" placeholder="Ex. 10% Discount" required />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Descrizione</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Es. Sconto del 10% su qualsiasi prodotto"
+                placeholder="Ex. 10% discount on any product"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="price">Prezzo (coins)</Label>
+              <Label htmlFor="price">Price (coins)</Label>
               <Input
                 id="price"
                 name="price"
                 type="number"
-                placeholder="Es. 100"
+                placeholder="Ex. 100"
                 required
                 min="1"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Immagine</Label>
+              <Label htmlFor="image">Image</Label>
               <Input
                 id="image"
                 name="image"
@@ -176,10 +260,10 @@ export function CreateRewardDialog({ children }: CreateRewardDialogProps) {
               onClick={() => setOpen(false)}
               disabled={loading}
             >
-              Annulla
+              Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creazione..." : "Crea Reward"}
+              {loading ? "Creating..." : "Create Reward"}
             </Button>
           </DialogFooter>
         </form>

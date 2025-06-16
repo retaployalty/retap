@@ -70,7 +70,7 @@ export function RewardsList() {
 
   async function deleteReward(reward: Reward) {
     try {
-      // Elimina l'immagine dallo storage
+      // Delete image from storage
       const { error: deleteImageError } = await supabase.storage
         .from("rewards")
         .remove([reward.image_path])
@@ -79,7 +79,7 @@ export function RewardsList() {
         console.error("Error deleting image:", deleteImageError)
       }
 
-      // Elimina il reward dal database
+      // Delete reward from database
       const { error: deleteRewardError } = await supabase
         .from("rewards")
         .delete()
@@ -89,11 +89,11 @@ export function RewardsList() {
         throw deleteRewardError
       }
 
-      toast.success("Reward eliminato con successo")
-      loadRewards() // Ricarica la lista
+      toast.success("Reward deleted successfully")
+      loadRewards() // Reload list
     } catch (error) {
       console.error("Error deleting reward:", error)
-      toast.error("Errore durante l'eliminazione del reward")
+      toast.error("Error deleting reward")
     }
   }
 
@@ -102,11 +102,11 @@ export function RewardsList() {
   }, [supabase])
 
   if (loading) {
-    return <div>Caricamento rewards...</div>
+    return <div>Loading rewards...</div>
   }
 
   if (rewards.length === 0) {
-    return <div>Nessun reward trovato. Crea il tuo primo reward!</div>
+    return <div>No rewards found. Create your first reward!</div>
   }
 
   return (
@@ -114,11 +114,11 @@ export function RewardsList() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Immagine</TableHead>
-            <TableHead>Nome</TableHead>
-            <TableHead>Descrizione</TableHead>
-            <TableHead>Prezzo</TableHead>
-            <TableHead>Stato</TableHead>
+            <TableHead>Image</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -140,14 +140,14 @@ export function RewardsList() {
               <TableCell>{reward.price_coins} coins</TableCell>
               <TableCell>
                 <Badge variant={reward.is_active ? "default" : "secondary"}>
-                  {reward.is_active ? "Attivo" : "Inattivo"}
+                  {reward.is_active ? "Active" : "Inactive"}
                 </Badge>
               </TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Apri menu</span>
+                      <span className="sr-only">Open menu</span>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -155,7 +155,7 @@ export function RewardsList() {
                     <EditRewardDialog reward={reward}>
                       <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        Modifica
+                        Edit
                       </DropdownMenuItem>
                     </EditRewardDialog>
                     <DropdownMenuItem
@@ -163,7 +163,7 @@ export function RewardsList() {
                       onClick={() => deleteReward(reward)}
                     >
                       <Trash className="mr-2 h-4 w-4" />
-                      Elimina
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

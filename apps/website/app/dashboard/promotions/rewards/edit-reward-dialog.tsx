@@ -46,7 +46,7 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
 
     try {
       if (!formRef.current) {
-        throw new Error("Form non trovato")
+        throw new Error("Form not found")
       }
 
       const formData = new FormData(formRef.current)
@@ -58,22 +58,22 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
 
       // Validate inputs
       if (!name || !description || !price) {
-        throw new Error("Tutti i campi sono obbligatori")
+        throw new Error("All fields are required")
       }
 
       if (price < 1) {
-        throw new Error("Il prezzo deve essere maggiore di 0")
+        throw new Error("Price must be greater than 0")
       }
 
       let imagePath = reward.image_path
 
-      // Se è stata caricata una nuova immagine
+      // If a new image was uploaded
       if (imageFile && imageFile.size > 0) {
         if (!imageFile.type.startsWith("image/")) {
-          throw new Error("Il file deve essere un'immagine")
+          throw new Error("File must be an image")
         }
 
-        // Elimina l'immagine precedente
+        // Delete previous image
         const { error: deleteError } = await supabase.storage
           .from("rewards")
           .remove([reward.image_path])
@@ -82,7 +82,7 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
           console.error("Error deleting old image:", deleteError)
         }
 
-        // Carica la nuova immagine
+        // Upload new image
         imagePath = `${Date.now()}-${imageFile.name}`
         const { error: uploadError } = await supabase.storage
           .from("rewards")
@@ -90,11 +90,11 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
 
         if (uploadError) {
           console.error("Storage error:", uploadError)
-          throw new Error("Errore durante il caricamento dell'immagine")
+          throw new Error("Error uploading image")
         }
       }
 
-      // Aggiorna il reward nel database
+      // Update reward in database
       const { error: updateError } = await supabase
         .from("rewards")
         .update({
@@ -108,15 +108,15 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
 
       if (updateError) {
         console.error("Update error:", updateError)
-        throw new Error("Errore durante l'aggiornamento del reward")
+        throw new Error("Error updating reward")
       }
 
-      toast.success("Reward aggiornato con successo")
+      toast.success("Reward updated successfully")
       setOpen(false)
       router.refresh()
     } catch (error) {
       console.error("Error details:", error)
-      toast.error(error instanceof Error ? error.message : "Errore durante l'aggiornamento del reward")
+      toast.error(error instanceof Error ? error.message : "Error updating reward")
     } finally {
       setLoading(false)
     }
@@ -128,46 +128,46 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
       <DialogContent className="sm:max-w-[425px]">
         <form ref={formRef} onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>Modifica Reward</DialogTitle>
+            <DialogTitle>Edit Reward</DialogTitle>
             <DialogDescription>
-              Modifica i dettagli del reward. Lascia vuoto il campo immagine se non vuoi cambiarla.
+              Edit reward details. Leave the image field empty if you don't want to change it.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={reward.name}
-                placeholder="Es. Sconto 10%"
+                placeholder="Ex. 10% Discount"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Descrizione</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={reward.description}
-                placeholder="Es. Sconto del 10% su qualsiasi prodotto"
+                placeholder="Ex. 10% discount on any product"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="price">Prezzo (coins)</Label>
+              <Label htmlFor="price">Price (coins)</Label>
               <Input
                 id="price"
                 name="price"
                 type="number"
                 defaultValue={reward.price_coins}
-                placeholder="Es. 100"
+                placeholder="Ex. 100"
                 required
                 min="1"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Immagine</Label>
+              <Label htmlFor="image">Image</Label>
               <div className="flex items-center gap-4">
                 <div className="relative h-12 w-12">
                   <Image
@@ -186,15 +186,15 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="is_active">Stato</Label>
+              <Label htmlFor="is_active">Status</Label>
               <select
                 id="is_active"
                 name="is_active"
                 defaultValue={reward.is_active.toString()}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="true">Attivo</option>
-                <option value="false">Inattivo</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
               </select>
             </div>
           </div>
@@ -205,10 +205,10 @@ export function EditRewardDialog({ reward, children }: EditRewardDialogProps) {
               onClick={() => setOpen(false)}
               disabled={loading}
             >
-              Annulla
+              Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Aggiornamento..." : "Aggiorna Reward"}
+              {loading ? "Updating..." : "Update Reward"}
             </Button>
           </DialogFooter>
         </form>
