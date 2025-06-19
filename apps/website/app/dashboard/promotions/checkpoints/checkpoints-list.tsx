@@ -8,7 +8,7 @@ import { useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditCheckpointDialog } from "./edit-checkpoint-dialog"
-import { Plus, MoreVertical } from "lucide-react"
+import { Plus, MoreVertical, Target, Award, Gift, Star, Trophy, Medal, Crown } from "lucide-react"
 import { CreateCheckpointDialog } from "./create-checkpoint-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -308,6 +308,12 @@ export function CheckpointsList() {
     }
   }
 
+  // Step icons based on step number
+  const getStepIcon = (stepNumber: number) => {
+    const icons = [Target, Award, Gift, Star, Trophy, Medal, Crown]
+    return icons[(stepNumber - 1) % icons.length]
+  }
+
   if (loading) {
     return <div>Caricamento...</div>
   }
@@ -451,20 +457,21 @@ export function CheckpointsList() {
                     {Array.from({ length: selectedOffer.total_steps }, (_, i) => {
                       const stepNumber = i + 1;
                       const step = steps.find(s => s.step_number === stepNumber);
+                      const StepIcon = getStepIcon(stepNumber);
                       
                       return (
-                        <Card key={`step-${stepNumber}`} className="relative overflow-hidden">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-center text-lg">Step {stepNumber}</CardTitle>
+                        <Card key={`step-${stepNumber}`} className="relative overflow-hidden hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-center flex items-center justify-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-[#f8494c]/10 flex items-center justify-center">
+                                <StepIcon className="h-4 w-4 text-[#f8494c]" />
+                              </div>
+                              <span>Step {stepNumber}</span>
+                            </CardTitle>
                           </CardHeader>
                           <CardContent>
                             {step?.reward ? (
                               <div className="space-y-3">
-                                <div className="flex items-center justify-center">
-                                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <span className="text-2xl">{step.reward.icon}</span>
-                                  </div>
-                                </div>
                                 <div className="text-center">
                                   <div className="font-medium">{step.reward.name}</div>
                                   <div className="text-sm text-muted-foreground mt-1">
@@ -472,7 +479,7 @@ export function CheckpointsList() {
                                   </div>
                                 </div>
                                 <EditCheckpointDialog step={step} onSuccess={refreshData}>
-                                  <Button variant="outline" className="w-full">
+                                  <Button variant="outline" className="w-full hover:bg-[#f8494c] hover:text-white transition-colors">
                                     Edit Reward
                                   </Button>
                                 </EditCheckpointDialog>
@@ -484,7 +491,7 @@ export function CheckpointsList() {
                                 offerId={selectedOffer.id}
                                 onSuccess={refreshData}
                               >
-                                <Button variant="outline" className="w-full gap-2">
+                                <Button variant="outline" className="w-full gap-2 hover:bg-[#f8494c] hover:text-white transition-colors">
                                   <Plus className="h-4 w-4" />
                                   Add Reward
                                 </Button>

@@ -12,13 +12,13 @@ export default function RewardsPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Rewards</h2>
           <p className="text-muted-foreground">
-            Gestisci i rewards per i tuoi clienti
+            Manage rewards for your customers
           </p>
         </div>
         <CreateRewardDialog>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            Nuovo Reward
+            New Reward
           </Button>
         </CreateRewardDialog>
       </div>
