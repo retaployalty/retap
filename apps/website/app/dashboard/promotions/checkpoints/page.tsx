@@ -8,7 +8,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditCheckpointDialog } from "./edit-checkpoint-dialog"
-import { Plus } from "lucide-react"
+import { Plus, Target, Award, Gift, Star, Trophy, Medal, Crown } from "lucide-react"
 import { CreateCheckpointDialog } from "./create-checkpoint-dialog"
 
 interface CheckpointOffer {
@@ -30,6 +30,12 @@ interface CheckpointStep {
     icon: string
   } | null
   offer_id: string
+}
+
+// Step icons based on step number
+const getStepIcon = (stepNumber: number) => {
+  const icons = [Target, Award, Gift, Star, Trophy, Medal, Crown]
+  return icons[(stepNumber - 1) % icons.length]
 }
 
 export default function CheckpointsPage() {
@@ -67,7 +73,7 @@ export default function CheckpointsPage() {
       }
     } catch (error) {
       console.error("Error loading offers:", error)
-      toast.error("Errore durante il caricamento delle offerte")
+      toast.error("Error loading offers")
     } finally {
       setLoading(false)
     }
@@ -101,7 +107,7 @@ export default function CheckpointsPage() {
       }
     } catch (error) {
       console.error("Error loading steps:", error)
-      toast.error("Errore durante il caricamento dei checkpoint")
+      toast.error("Error loading checkpoints")
     }
   }
 
@@ -110,7 +116,7 @@ export default function CheckpointsPage() {
   }, [supabase])
 
   if (loading) {
-    return <div>Caricamento...</div>
+    return <div>Loading...</div>
   }
 
   return (
@@ -119,7 +125,7 @@ export default function CheckpointsPage() {
         <div>
           <h3 className="text-lg font-medium">Checkpoints</h3>
           <p className="text-sm text-muted-foreground">
-            Gestisci i checkpoint del tuo programma fedeltà. Ogni acquisto fa avanzare il cliente di uno step.
+            Manage your loyalty program checkpoints. Each purchase advances the customer by one step.
           </p>
         </div>
       </div>
@@ -127,7 +133,7 @@ export default function CheckpointsPage() {
       {offers.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <Label>Seleziona Offerta:</Label>
+            <Label>Select Offer:</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={selectedOffer?.id}
@@ -141,7 +147,7 @@ export default function CheckpointsPage() {
             >
               {offers.map((offer) => (
                 <option key={offer.id} value={offer.id}>
-                  {offer.name} ({offer.total_steps} step)
+                  {offer.name} ({offer.total_steps} steps)
                 </option>
               ))}
             </select>
@@ -149,39 +155,49 @@ export default function CheckpointsPage() {
 
           {selectedOffer && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {steps.map((step) => (
-                <Card key={step.id} className="relative">
-                  <CardHeader>
-                    <CardTitle className="text-center">Step {step.step_number}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {step.reward ? (
-                      <div className="space-y-2">
-                        <div className="font-medium">{step.reward.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {step.reward.description}
+              {steps.map((step) => {
+                const StepIcon = getStepIcon(step.step_number)
+                return (
+                  <Card key={step.id} className="relative hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-center flex items-center justify-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-[#f8494c]/10 flex items-center justify-center">
+                          <StepIcon className="h-4 w-4 text-[#f8494c]" />
                         </div>
-                        <EditCheckpointDialog step={step}>
-                          <Button variant="outline" className="w-full">
-                            Modifica Premio
+                        <span>Step {step.step_number}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {step.reward ? (
+                        <div className="space-y-3">
+                          <div className="text-center">
+                            <div className="font-medium">{step.reward.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {step.reward.description}
+                            </div>
+                          </div>
+                          <EditCheckpointDialog step={step}>
+                            <Button variant="outline" className="w-full hover:bg-[#f8494c] hover:text-white transition-colors">
+                              Edit Reward
+                            </Button>
+                          </EditCheckpointDialog>
+                        </div>
+                      ) : (
+                        <CreateCheckpointDialog 
+                          totalSteps={selectedOffer.total_steps} 
+                          defaultStep={step.step_number}
+                          offerId={selectedOffer.id}
+                        >
+                          <Button variant="outline" className="w-full hover:bg-[#f8494c] hover:text-white transition-colors">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Reward
                           </Button>
-                        </EditCheckpointDialog>
-                      </div>
-                    ) : (
-                      <CreateCheckpointDialog 
-                        totalSteps={selectedOffer.total_steps} 
-                        defaultStep={step.step_number}
-                        offerId={selectedOffer.id}
-                      >
-                        <Button variant="outline" className="w-full">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Aggiungi Premio
-                        </Button>
-                      </CreateCheckpointDialog>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                        </CreateCheckpointDialog>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>
