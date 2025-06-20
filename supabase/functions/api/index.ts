@@ -901,6 +901,34 @@ serve(async (req) => {
       );
     }
 
+    // POST /google-wallet/generate
+    if (path === 'google-wallet/generate' && req.method === 'POST') {
+      const { cardId, customerName, cardUid } = await req.json()
+
+      if (!cardId || !customerName || !cardUid) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      try {
+        // Per ora restituiamo un URL di test
+        // TODO: Implementa la logica completa di Google Wallet con JWT valido
+        const saveUrl = `https://pay.google.com/gp/v/save/test-jwt-${cardId}`;
+        
+        return new Response(
+          JSON.stringify({ saveUrl }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

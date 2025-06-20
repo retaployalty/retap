@@ -26,8 +26,12 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/serve-static": "^5.0.3",
     "@supabase/supabase-js": "^2.49.4",
+    "@types/jsonwebtoken": "^9.0.10",
     "class-validator": "^0.14.2",
     "dotenv": "^16.5.0",
+    "googleapis": "^150.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "passkit-generator": "^3.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
