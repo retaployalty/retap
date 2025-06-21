@@ -89,18 +89,11 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
 
       try {
         await walletobjects.loyaltyclass.get({ resourceId: classId });
-        console.log('Classe pass esistente trovata, la aggiorno...');
-        await walletobjects.loyaltyclass.update({ resourceId: classId, requestBody: passClass });
-        console.log('Classe pass aggiornata con successo.');
+        console.log('Classe pass esistente trovata');
       } catch (e) {
-        if (e.code === 404) {
-          console.log('Creazione nuova classe pass...');
-          await walletobjects.loyaltyclass.insert({ requestBody: passClass });
-          console.log('Classe pass creata con successo');
-        } else {
-          console.error(`Errore durante l'aggiornamento/creazione della classe: ${e.message}`);
-          throw e;
-        }
+        console.log('Creazione nuova classe pass...');
+        await walletobjects.loyaltyclass.insert({ requestBody: passClass });
+        console.log('Classe pass creata con successo');
       }
 
       // Crea o aggiorna il pass
@@ -133,7 +126,11 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         ],
         barcode: {
           type: 'QR_CODE',
-          value: body.cardUid,
+          value: JSON.stringify({
+            type: 'retap_card',
+            id: body.cardId,
+            uid: body.cardUid
+          }),
           alternateText: body.cardUid
         },
         accountId: body.cardId,
@@ -146,9 +143,14 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         await walletobjects.loyaltyobject.update({ resourceId: objectId, requestBody: pass });
         console.log('Pass aggiornato con successo');
       } catch (e) {
-        console.log('Pass non trovato, creazione nuovo...');
-        await walletobjects.loyaltyobject.insert({ requestBody: pass });
-        console.log('Pass creato con successo');
+        if (e.code === 404) {
+          console.log('Pass non trovato, creazione nuovo...');
+          await walletobjects.loyaltyobject.insert({ requestBody: pass });
+          console.log('Pass creato con successo');
+        } else {
+          console.error('Errore durante la gestione del pass:', e.message);
+          throw e;
+        }
       }
 
       // Genera il JWT con firma RS256

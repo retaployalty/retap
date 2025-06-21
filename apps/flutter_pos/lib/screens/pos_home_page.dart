@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
 import 'card_details_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class POSHomePage extends StatefulWidget {
   final String merchantId;
@@ -347,6 +348,35 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text(
+              'Avvicina una carta NFC per i dettagli o usa il QR Code del Wallet.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scannerizza QR Code'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 60),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => QRScannerScreen(merchantId: widget.merchantId),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            Text(
+              'Programmazione Carte',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
@@ -363,12 +393,6 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
               ),
               child: const Text('Scrivi Carta Merchant'),
               onPressed: () => _writeMerchantCard(context),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Avvicina una carta NFC per vedere i dettagli',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
         ),
