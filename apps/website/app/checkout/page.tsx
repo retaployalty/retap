@@ -17,6 +17,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
+import { getStripePriceId } from "@/lib/stripe-config";
 
 const features = [
   {
@@ -138,9 +139,7 @@ function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: billingCycle === 'monthly'
-            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
-            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+          priceId: getStripePriceId(billingCycle),
           customerEmail: billingForm.email,
           successUrl: window.location.origin + '/success',
           cancelUrl: window.location.origin + '/checkout',
@@ -197,11 +196,9 @@ function CheckoutPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              priceId: billingCycle === 'monthly'
-                ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
-                : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+              priceId: getStripePriceId(billingCycle),
               customerEmail: form.email,
-              successUrl: window.location.origin + '/success',
+              successUrl: window.location.origin + '/dashboard/settings?success=true',
               cancelUrl: window.location.origin + '/checkout',
               subscription_type: form.subscription_type,
             }),

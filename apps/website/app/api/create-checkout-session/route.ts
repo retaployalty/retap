@@ -27,7 +27,16 @@ export async function POST(req: Request) {
       vatNumber,
       priceId,
       activationPriceId,
+      planType = 'base', // default a base se non specificato
+      isAnnual = false, // default a mensile se non specificato
     } = body;
+
+    // Gestisci l'URL di base con fallback sicuro
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                   (process.env.NODE_ENV === 'production' ? 'https://retap.vercel.app' : 'http://localhost:3000');
+    
+    // Assicurati che l'URL abbia il protocollo
+    const appUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
 
     // Crea la sessione di checkout
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -44,10 +53,12 @@ export async function POST(req: Request) {
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout?canceled=true`,
+      success_url: `${appUrl}/dashboard/settings?success=true`,
+      cancel_url: `${appUrl}/checkout?canceled=true`,
       metadata: {
         userId: session.user.id,
+        planType: planType,
+        isAnnual: isAnnual.toString(),
         name,
         email,
         address,
