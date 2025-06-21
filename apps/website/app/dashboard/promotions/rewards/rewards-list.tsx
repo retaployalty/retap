@@ -22,6 +22,7 @@ import { MoreHorizontal, Pencil, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EditRewardDialog } from "./edit-reward-dialog"
 import { toast } from "sonner"
+import { Gift } from "lucide-react"
 
 interface Reward {
   id: string
@@ -102,11 +103,26 @@ export function RewardsList() {
   }, [supabase])
 
   if (loading) {
-    return <div>Loading rewards...</div>
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f8494c] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading rewards...</p>
+        </div>
+      </div>
+    )
   }
 
   if (rewards.length === 0) {
-    return <div>No rewards found. Create your first reward!</div>
+    return (
+      <div className="text-center py-8 px-4">
+        <Gift className="h-12 w-12 text-[#f8494c] mx-auto mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold mb-2">No active rewards</h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+          Create your first reward to recognize loyal customers. You can offer discounts, gifts, or exclusive services.
+        </p>
+      </div>
+    )
   }
 
   return (

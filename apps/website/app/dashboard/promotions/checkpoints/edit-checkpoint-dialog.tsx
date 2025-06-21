@@ -1,24 +1,49 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { CreateCheckpointDialog } from "./create-checkpoint-dialog"
+import { Target, Award, Gift, Star, Trophy, Medal, Crown, Flag, Trash2 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const ICONS = [
+  { value: "target", label: "Target", icon: Target },
+  { value: "award", label: "Award", icon: Award },
+  { value: "gift", label: "Gift", icon: Gift },
+  { value: "star", label: "Star", icon: Star },
+  { value: "trophy", label: "Trophy", icon: Trophy },
+  { value: "medal", label: "Medal", icon: Medal },
+  { value: "crown", label: "Crown", icon: Crown },
+  { value: "flag", label: "Flag", icon: Flag },
+]
 
 interface CheckpointStep {
   id: string
-  step_number: number
-  total_steps: number
-  reward_id: string | null
   reward: {
     id: string
     name: string
     description: string
     icon: string
   } | null
-  offer_id: string
 }
 
 interface EditCheckpointDialogProps {
@@ -28,67 +53,151 @@ interface EditCheckpointDialogProps {
 }
 
 export function EditCheckpointDialog({ children, step, onSuccess }: EditCheckpointDialogProps) {
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [formData, setFormData] = useState({
+    name: step.reward?.name || "",
+    description: step.reward?.description || "",
+    icon: step.reward?.icon || "gift",
+  })
+
   const supabase = createClientComponentClient()
 
-  async function handleDelete() {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleIconChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, icon: value }))
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!step.reward) return
-
-    if (!confirm("Are you sure you want to delete this reward? This action cannot be undone.")) {
-      return
-    }
-
     setLoading(true)
 
     try {
-      // Delete step first
-      const { error: deleteStepError } = await supabase
+      const { error } = await supabase
+        .from("checkpoint_rewards")
+        .update({
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+        })
+        .eq("id", step.reward.id)
+
+      if (error) throw error
+
+      toast.success("Reward updated successfully")
+      setOpen(false)
+      onSuccess?.()
+    } catch (error) {
+      toast.error("Error updating reward")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!step.reward) return
+    setLoading(true)
+
+    try {
+      const { error: stepError } = await supabase
         .from("checkpoint_steps")
         .delete()
         .eq("id", step.id)
 
-      if (deleteStepError) {
-        console.error("Delete step error:", deleteStepError)
-        throw new Error("Error deleting step")
-      }
+      if (stepError) throw stepError
 
-      // Then delete reward
-      const { error: deleteRewardError } = await supabase
+      const { error: rewardError } = await supabase
         .from("checkpoint_rewards")
         .delete()
         .eq("id", step.reward.id)
 
-      if (deleteRewardError) {
-        console.error("Delete reward error:", deleteRewardError)
-        throw new Error("Error deleting reward")
-      }
+      if (rewardError) throw rewardError
 
-      toast.success("Reward deleted successfully")
-      router.refresh()
+      toast.success("Checkpoint deleted successfully")
+      setOpen(false)
       onSuccess?.()
     } catch (error) {
-      console.error("Error:", error)
-      toast.error(error instanceof Error ? error.message : "Error deleting reward")
+      toast.error("Error deleting checkpoint")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <CreateCheckpointDialog
-      totalSteps={step.total_steps}
-      defaultStep={step.step_number}
-      offerId={step.offer_id}
-      existingReward={step.reward ? {
-        id: step.reward.id,
-        name: step.reward.name,
-        description: step.reward.description,
-        icon: step.reward.icon
-      } : undefined}
-      onDelete={handleDelete}
-    >
-      {children}
-    </CreateCheckpointDialog>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Reward</DialogTitle>
+          <DialogDescription>
+            Make changes to the reward for this step.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleUpdate}>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <Select value={formData.icon} onValueChange={handleIconChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an icon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ICONS.map(({ value, label, icon: Icon }) => (
+                    <SelectItem key={value} value={value}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        <span>{label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="justify-between">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 } 

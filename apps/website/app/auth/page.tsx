@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Phone, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { getStripePriceId } from "@/lib/stripe-config";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -242,9 +243,7 @@ export default function AuthPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: billingCycle === 'monthly'
-            ? 'price_1RRGYVEC4VcVVLOnNYVe4B0K'
-            : 'price_1RRGZZEC4VcVVLOn6MWL9IGZ',
+          priceId: getStripePriceId(billingCycle),
           customerEmail: billingForm.email, // oppure user.email se preferisci
           successUrl: window.location.origin + '/success',
           cancelUrl: window.location.origin + '/checkout',
