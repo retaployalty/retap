@@ -1,14 +1,35 @@
 // apps/website/app/api/checkout/route.ts
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
   try {
-    const { priceId, successUrl, cancelUrl, customerEmail } = await request.json();
+    const { priceId, successUrl, cancelUrl, customerEmail, subscription_type } = await request.json();
 
-    const session = await stripe.checkout.sessions.create({
+    // Ottieni l'utente corrente
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { session: authSession } } = await supabase.auth.getSession();
+
+    if (!authSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Determina il tipo di piano e fatturazione
+    const isAnnual = subscription_type === 'annuale' || subscription_type === 'yearly';
+    const planType = 'base'; // default a base per ora
+
+    // Usa gli URL passati dal frontend, con fallback sicuro
+    const finalSuccessUrl = successUrl || 
+      (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/dashboard/settings?success=true';
+    
+    const finalCancelUrl = cancelUrl || 
+      (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/checkout';
+
+    const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
@@ -18,12 +39,17 @@ export async function POST(request: Request) {
         },
       ],
       customer_email: customerEmail,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-//      automatic_payment_methods: { enabled: true },
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
+      metadata: {
+        userId: authSession.user.id,
+        planType: planType,
+        isAnnual: isAnnual.toString(),
+        subscription_type: subscription_type || 'mensile',
+      },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: checkoutSession.url });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -17,44 +17,18 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
-import { Target, Award, Gift, Star, Trophy, Medal, Crown, Flag } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
-const ICONS = [
-  { value: "target", label: "Target", icon: Target },
-  { value: "award", label: "Award", icon: Award },
-  { value: "gift", label: "Gift", icon: Gift },
-  { value: "star", label: "Star", icon: Star },
-  { value: "trophy", label: "Trophy", icon: Trophy },
-  { value: "medal", label: "Medal", icon: Medal },
-  { value: "crown", label: "Crown", icon: Crown },
-  { value: "flag", label: "Flag", icon: Flag },
-]
-
-export interface CreateCheckpointDialogProps {
+export interface CreateOfferDialogProps {
   children: React.ReactNode
-  totalSteps: number
-  defaultStep: number
-  offerId: string
   onSuccess?: () => void
 }
 
-export function CreateCheckpointDialog({ 
+export function CreateOfferDialog({ 
   children,
-  totalSteps,
-  defaultStep,
-  offerId,
   onSuccess
-}: CreateCheckpointDialogProps) {
+}: CreateOfferDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [selectedIcon, setSelectedIcon] = useState("gift")
   const router = useRouter()
   const supabase = createClientComponentClient()
   const formRef = useRef<HTMLFormElement>(null)
@@ -99,58 +73,34 @@ export function CreateCheckpointDialog({
       const formData = new FormData(formRef.current)
       const name = formData.get("name") as string
       const description = formData.get("description") as string
+      const totalSteps = parseInt(formData.get("total_steps") as string) || 8
 
       // Validate inputs
       if (!name || !description) {
         throw new Error("All fields are required")
       }
 
-      // Create new reward
-      const { data: reward, error: rewardError } = await supabase
-        .from("checkpoint_rewards")
+      // Create new checkpoint offer
+      const { data: offer, error: offerError } = await supabase
+        .from("checkpoint_offers")
         .insert({
           name,
           description,
-          icon: selectedIcon,
+          total_steps: totalSteps,
           merchant_id: merchant.id
         })
         .select()
         .single()
 
-      if (rewardError) {
-        console.error("Reward error:", rewardError)
-        throw new Error("Error saving reward")
+      if (offerError) {
+        console.error("Offer error:", offerError)
+        throw new Error("Error creating offer")
       }
 
-      if (!reward) {
-        throw new Error("No reward created")
-      }
-
-      // Create step with reward
-      const { error: stepError } = await supabase
-        .from("checkpoint_steps")
-        .insert({
-          step_number: defaultStep,
-          total_steps: totalSteps,
-          reward_id: reward.id,
-          merchant_id: merchant.id,
-          offer_id: offerId
-        })
-
-      if (stepError) {
-        // Se c'è un errore nel creare lo step, elimina il reward appena creato
-        await supabase
-          .from("checkpoint_rewards")
-          .delete()
-          .eq("id", reward.id)
-        
-        console.error("Step error:", stepError)
-        throw stepError
-      }
-
-      toast.success("Checkpoint created successfully")
+      toast.success("Checkpoint offer created successfully")
       setOpen(false)
       onSuccess?.()
+      router.refresh()
     } catch (error) {
       console.error("Error details:", error)
       toast.error(error instanceof Error ? error.message : "Error during operation")
@@ -165,20 +115,18 @@ export function CreateCheckpointDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form ref={formRef} onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>
-              Add Reward for Step {defaultStep}
-            </DialogTitle>
+            <DialogTitle>Create New Checkpoint Offer</DialogTitle>
             <DialogDescription>
-              Add a reward for step {defaultStep} of {totalSteps}.
+              Create a new milestone journey for your customers. You can add rewards to each step later.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Reward Name</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 name="name"
-                placeholder="Ex. Free Ice Cream"
+                placeholder="Summer Loyalty Program"
                 required
               />
             </div>
@@ -187,27 +135,21 @@ export function CreateCheckpointDialog({
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Ex. A free ice cream of any flavor"
+                placeholder="Collect stamps and get rewards at each milestone"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label>Icon</Label>
-              <Select value={selectedIcon} onValueChange={setSelectedIcon}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an icon" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICONS.map(({ value, label, icon: Icon }) => (
-                    <SelectItem key={value} value={value}>
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <span>{label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="total_steps">Total Steps</Label>
+              <Input
+                id="total_steps"
+                name="total_steps"
+                type="number"
+                min="2"
+                max="12"
+                defaultValue="8"
+                required
+              />
             </div>
           </div>
           <DialogFooter>
@@ -215,7 +157,7 @@ export function CreateCheckpointDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+              {loading ? "Creating..." : "Create Offer"}
             </Button>
           </DialogFooter>
         </form>

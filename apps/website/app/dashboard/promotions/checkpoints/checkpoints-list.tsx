@@ -8,7 +8,7 @@ import { useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditCheckpointDialog } from "./edit-checkpoint-dialog"
-import { Plus, MoreVertical, Target, Award, Gift, Star, Trophy, Medal, Crown } from "lucide-react"
+import { Plus, MoreVertical, Target, Award, Gift, Star, Trophy, Medal, Crown, Flag } from "lucide-react"
 import { CreateCheckpointDialog } from "./create-checkpoint-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -26,6 +26,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { EditOfferDialog } from "./edit-offer-dialog"
 
 interface CheckpointOffer {
   id: string
@@ -68,6 +76,28 @@ export function CheckpointsList() {
   useEffect(() => {
     console.log("Component mounted")
     loadOffers()
+  }, [])
+
+  // Add realtime subscription for offers
+  useEffect(() => {
+    const channel = supabase
+      .channel('checkpoint_offers_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checkpoint_offers'
+        },
+        () => {
+          loadOffers()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   async function loadOffers() {
@@ -308,219 +338,190 @@ export function CheckpointsList() {
     }
   }
 
-  // Step icons based on step number
-  const getStepIcon = (stepNumber: number) => {
-    const icons = [Target, Award, Gift, Star, Trophy, Medal, Crown]
-    return icons[(stepNumber - 1) % icons.length]
+  const getStepIcon = (step: CheckpointStep | null | undefined) => {
+    if (!step?.reward) {
+      return Gift // Icona di default per gli step vuoti
+    }
+    // Mappa delle icone disponibili
+    const iconMap: { [key: string]: any } = {
+      target: Target,
+      award: Award,
+      gift: Gift,
+      star: Star,
+      trophy: Trophy,
+      medal: Medal,
+      crown: Crown,
+      flag: Flag
+    }
+    // Ritorna l'icona selezionata o l'icona di default se l'icona selezionata non esiste
+    return iconMap[step.reward.icon.toLowerCase()] || Gift
   }
 
   if (loading) {
-    return <div>Caricamento...</div>
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f8494c] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading offers...</p>
+        </div>
+      </div>
+    )
   }
-
-  console.log("Rendering with state:", { offers, selectedOffer, steps })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Checkpoint Offers</h3>
-          <p className="text-sm text-muted-foreground">
-            Create and manage your checkpoint offers. Each offer has a specific number of steps.
-          </p>
-        </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Offer
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={createOffer}>
-              <DialogHeader>
-                <DialogTitle>Create New Offer</DialogTitle>
-                <DialogDescription>
-                  Create a new checkpoint offer with multiple steps.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Ex. Summer Promotion"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Ex. Complete all steps to get a free ice cream"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="total_steps">Total Steps</Label>
-                  <Input
-                    id="total_steps"
-                    name="total_steps"
-                    type="number"
-                    value={formData.total_steps}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="10"
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCreateDialogOpen(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Creating..." : "Create Offer"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
       {offers.length > 0 ? (
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Label className="whitespace-nowrap">Select Offer:</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            <Select
               value={selectedOffer?.id}
-              onChange={(e) => {
-                const offer = offers.find(o => o.id === e.target.value)
+              onValueChange={(value) => {
+                const offer = offers.find(o => o.id === value);
                 if (offer) {
-                  setSelectedOffer(offer)
-                  loadSteps(offer.id)
+                  setSelectedOffer(offer);
+                  loadSteps(offer.id);
                 }
               }}
             >
-              <option value="">Select an offer</option>
-              {offers.map((offer) => (
-                <option key={offer.id} value={offer.id}>
-                  {offer.name} ({offer.total_steps} step)
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="Select an offer to manage" />
+              </SelectTrigger>
+              <SelectContent>
+                {offers.map((offer) => (
+                  <SelectItem key={offer.id} value={offer.id}>
+                    <span className="font-medium">{offer.name}</span>
+                    <span className="ml-2 text-muted-foreground">({offer.total_steps} steps)</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {selectedOffer && (
+                  <EditOfferDialog offer={selectedOffer} onSuccess={loadOffers}>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      Edit Offer
+                    </DropdownMenuItem>
+                  </EditOfferDialog>
+                )}
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onSelect={deleteOffer}
+                >
+                  Delete Offer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {selectedOffer && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{selectedOffer.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">{selectedOffer.description}</p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleEditClick}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
-                          onClick={deleteOffer}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Array.from({ length: selectedOffer.total_steps }, (_, i) => {
-                      const stepNumber = i + 1;
-                      const step = steps.find(s => s.step_number === stepNumber);
-                      const StepIcon = getStepIcon(stepNumber);
-                      
-                      return (
-                        <Card key={`step-${stepNumber}`} className="relative overflow-hidden hover:shadow-md transition-shadow">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-center flex items-center justify-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-[#f8494c]/10 flex items-center justify-center">
-                                <StepIcon className="h-4 w-4 text-[#f8494c]" />
+            <Card>
+              <CardHeader>
+                <CardTitle>{selectedOffer.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Steps Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+                  {Array.from({ length: selectedOffer.total_steps }, (_, i) => {
+                    const stepNumber = i + 1;
+                    const step = steps.find(s => s.step_number === stepNumber);
+                    const StepIcon = getStepIcon(step);
+                    const hasReward = step?.reward;
+                    const isLastStep = stepNumber === selectedOffer.total_steps;
+                    
+                    return (
+                      <div 
+                        key={`step-${stepNumber}`} 
+                        className={`relative p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                          hasReward 
+                            ? 'border-[#f8494c] bg-white' 
+                            : 'border-dashed border-gray-300 bg-gray-50 hover:border-[#f8494c]/50'
+                        }`}
+                      >
+                        {/* Progress Line */}
+                        {!isLastStep && (
+                          <div className="absolute -right-5 top-1/2 transform -translate-y-1/2 w-6 h-0.5 bg-gray-200" />
+                        )}
+
+                        {/* Step Number Badge */}
+                        <div className={`absolute -top-3 -left-1 h-6 px-2 rounded-full flex items-center justify-center text-xs font-medium ${
+                          hasReward 
+                            ? 'bg-[#f8494c] text-white' 
+                            : 'bg-gray-100 text-gray-600 border border-gray-300'
+                        }`}>
+                          Step {stepNumber}
+                        </div>
+
+                        {/* Icon and Content */}
+                        <div className="mt-4 space-y-3">
+                          <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center ${
+                            hasReward 
+                              ? 'bg-[#f8494c]/10 text-[#f8494c]' 
+                              : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            <StepIcon className="h-5 w-5" />
+                          </div>
+                          
+                          {hasReward ? (
+                            <div className="text-center space-y-2">
+                              <div className="font-medium text-sm line-clamp-2" title={step.reward?.name}>
+                                {step.reward?.name}
                               </div>
-                              <span>Step {stepNumber}</span>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {step?.reward ? (
-                              <div className="space-y-3">
-                                <div className="text-center">
-                                  <div className="font-medium">{step.reward.name}</div>
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    {step.reward.description}
-                                  </div>
-                                </div>
-                                <EditCheckpointDialog step={step} onSuccess={refreshData}>
-                                  <Button variant="outline" className="w-full hover:bg-[#f8494c] hover:text-white transition-colors">
-                                    Edit Reward
-                                  </Button>
-                                </EditCheckpointDialog>
+                              <div className="text-xs text-gray-500 line-clamp-1" title={step.reward?.description}>
+                                {step.reward?.description}
                               </div>
-                            ) : (
+                              <EditCheckpointDialog step={step} onSuccess={refreshData}>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="w-full text-xs font-medium hover:text-[#f8494c] hover:bg-[#f8494c]/5"
+                                >
+                                  Edit
+                                </Button>
+                              </EditCheckpointDialog>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-2">
+                              <p className="text-sm text-gray-500">No reward</p>
                               <CreateCheckpointDialog 
                                 totalSteps={selectedOffer.total_steps} 
                                 defaultStep={stepNumber}
                                 offerId={selectedOffer.id}
                                 onSuccess={refreshData}
                               >
-                                <Button variant="outline" className="w-full gap-2 hover:bg-[#f8494c] hover:text-white transition-colors">
-                                  <Plus className="h-4 w-4" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="w-full text-xs font-medium hover:text-[#f8494c] hover:bg-[#f8494c]/5"
+                                >
                                   Add Reward
                                 </Button>
                               </CreateCheckpointDialog>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="rounded-full bg-primary/10 p-3 mb-4">
-              <Plus className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-lg font-medium mb-2">No checkpoint offer created</p>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Create your first offer to start managing your checkpoint program.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No checkpoint offers found.</p>
+          <p className="text-sm text-muted-foreground mt-1">Create a new offer to get started.</p>
+        </div>
       )}
 
+      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <form onSubmit={updateOffer}>
