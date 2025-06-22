@@ -750,6 +750,10 @@ CREATE TABLE IF NOT EXISTS "public"."cards" (
 ALTER TABLE "public"."cards" OWNER TO "postgres";
 
 
+COMMENT ON TABLE "public"."cards" IS 'Cards table - each customer can have one card, but merchants can create multiple cards';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."checkout_billing" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "email" "text",
@@ -1044,16 +1048,6 @@ ALTER TABLE ONLY "public"."card_merchants"
 
 ALTER TABLE ONLY "public"."card_merchants"
     ADD CONSTRAINT "card_merchants_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."cards"
-    ADD CONSTRAINT "cards_customer_id_key" UNIQUE ("customer_id");
-
-
-
-ALTER TABLE ONLY "public"."cards"
-    ADD CONSTRAINT "cards_customer_id_unique" UNIQUE ("customer_id");
 
 
 
