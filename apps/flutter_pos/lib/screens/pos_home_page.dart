@@ -25,11 +25,13 @@ class POSHomePage extends StatefulWidget {
 class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   bool _isPolling = false;
   bool _isScreenOpen = false;
+  bool _nfcAvailable = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkNfcAvailability();
     _startPolling();
   }
 
@@ -43,18 +45,46 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _checkNfcAvailability();
       _startPolling();
     } else if (state == AppLifecycleState.paused) {
       _isPolling = false;
     }
   }
 
+  Future<void> _checkNfcAvailability() async {
+    try {
+      final availability = await FlutterNfcKit.nfcAvailability;
+      setState(() {
+        _nfcAvailable = availability == NFCAvailability.available;
+      });
+      
+      if (!_nfcAvailable) {
+        debugPrint('NFC non disponibile. Stato: $availability');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('NFC non disponibile: $availability'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Errore nel controllo disponibilità NFC: $e');
+      setState(() {
+        _nfcAvailable = false;
+      });
+    }
+  }
+
   Future<void> _startPolling() async {
-    if (_isPolling) return;
+    if (_isPolling || !_nfcAvailable) return;
     _isPolling = true;
 
     try {
-      while (_isPolling) {
+      while (_isPolling && _nfcAvailable) {
         try {
           debugPrint('In attesa di una carta NFC...');
           final tag = await FlutterNfcKit.poll();
@@ -94,6 +124,16 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _writeCard(BuildContext context) async {
+    if (!_nfcAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('NFC non disponibile su questo dispositivo'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       debugPrint('Iniziando la scrittura della carta...');
       debugPrint('In attesa di una carta NFC...');
@@ -106,12 +146,31 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
 
       // Verifica se il tag supporta NDEF
       if (tag.ndefAvailable == false) {
-        throw Exception('Questa carta non supporta NDEF');
+        throw Exception('Questa carta non supporta NDEF. Usa una carta NTAG.');
       }
 
       // Verifica se il tag è scrivibile
       if (tag.ndefWritable == false) {
-        throw Exception('Questa carta è in sola lettura');
+        throw Exception('Questa carta è in sola lettura o già programmata.');
+      }
+
+      // Verifica se la carta è già programmata leggendo i dati NDEF
+      try {
+        debugPrint('Verifico se la carta è già programmata...');
+        final existingRecords = await FlutterNfcKit.readNDEFRecords();
+        if (existingRecords.isNotEmpty) {
+          debugPrint('Carta già programmata con ${existingRecords.length} record NDEF');
+          for (final record in existingRecords) {
+            debugPrint('Record: ${record.toString()}');
+          }
+          throw Exception('Questa carta è già programmata. Usa una carta NTAG vuota.');
+        }
+        debugPrint('Carta vuota, procedo con la programmazione...');
+      } catch (readError) {
+        if (readError.toString().contains('già programmata')) {
+          rethrow;
+        }
+        debugPrint('Errore nella lettura NDEF (normale per carte vuote): $readError');
       }
 
       // 2. Controlla se la carta esiste già
@@ -135,27 +194,10 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         customerId = existingCard['customer_id'];
         isExistingCard = true;
       } else {
-        // La carta non esiste, crea un nuovo customer
-        debugPrint('Carta non trovata, creo un nuovo customer...');
-        final customerRes = await http.post(
-          Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
-          headers: {
-            'Content-Type': 'application/json',
-            'x-merchant-id': widget.merchantId,
-          },
-          body: jsonEncode({
-            'merchant_id': widget.merchantId,
-          }),
-        );
-
-        if (customerRes.statusCode != 200) {
-          throw Exception('Errore nella creazione del customer: ${customerRes.body}');
-        }
-
-        final customer = jsonDecode(customerRes.body);
-        debugPrint('Customer creato: ${customer['id']}');
-        customerId = customer['id'];
+        // La carta non esiste, prepara i dati ma NON creare ancora
+        debugPrint('Carta non trovata, preparo i dati per la creazione...');
         cardId = const Uuid().v4();
+        // CustomerId verrà creato solo dopo la scrittura NFC riuscita
       }
 
       // 3. Crea il link
@@ -164,13 +206,72 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
 
       // 4. Scrivi il link sul chip in formato NDEF
       try {
+        debugPrint('Tentativo di scrittura NFC...');
+        
+        // Crea il record NDEF
         final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
-        await FlutterNfcKit.writeNDEFRecords([uriRecord]);
-        debugPrint('Link scritto sul chip con successo');
+        debugPrint('Record NDEF creato, lunghezza: ${uriRecord.toString().length} caratteri');
+        
+        // Tentativo di scrittura con retry
+        bool writeSuccess = false;
+        int retryCount = 0;
+        const maxRetries = 3;
+        
+        while (!writeSuccess && retryCount < maxRetries) {
+          try {
+            retryCount++;
+            debugPrint('Tentativo di scrittura $retryCount/$maxRetries...');
+            
+            // Scrivi il record
+            await FlutterNfcKit.writeNDEFRecords([uriRecord]);
+            writeSuccess = true;
+            debugPrint('✅ Link scritto sul chip con successo!');
+          } catch (writeError) {
+            debugPrint('❌ Tentativo $retryCount fallito: $writeError');
+            
+            if (retryCount < maxRetries) {
+              debugPrint('Attendo 1 secondo prima del prossimo tentativo...');
+              await Future.delayed(const Duration(seconds: 1));
+              
+              // Verifica che il tag sia ancora presente
+              try {
+                await FlutterNfcKit.poll();
+                debugPrint('Tag ancora presente, riprovo...');
+              } catch (pollError) {
+                debugPrint('Tag perso durante il retry: $pollError');
+                throw Exception('La carta è stata allontanata durante la scrittura');
+              }
+            } else {
+              throw writeError;
+            }
+          }
+        }
 
-        // Se la carta non esisteva, la creiamo solo dopo la scrittura riuscita
+        // 5. SOLO DOPO la scrittura riuscita, crea customer e carta se necessario
         if (!isExistingCard) {
-          debugPrint('Creo la carta nel database dopo la scrittura NFC riuscita');
+          debugPrint('Creo il customer e la carta nel database...');
+          
+          // Crea il customer
+          final customerRes = await http.post(
+            Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/customers'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-merchant-id': widget.merchantId,
+            },
+            body: jsonEncode({
+              'merchant_id': widget.merchantId,
+            }),
+          );
+
+          if (customerRes.statusCode != 200 && customerRes.statusCode != 201) {
+            throw Exception('Errore nella creazione del customer: ${customerRes.body}');
+          }
+
+          final customer = jsonDecode(customerRes.body);
+          customerId = customer['id'];
+          debugPrint('Customer creato: $customerId');
+
+          // Crea la carta
           final res = await http.post(
             Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards'),
             headers: {
@@ -184,13 +285,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
             }),
           );
 
-          if (res.statusCode != 200) {
+          if (res.statusCode != 200 && res.statusCode != 201) {
             throw Exception('Errore nella creazione della carta: ${res.body}');
           }
-          debugPrint('Carta creata nel database');
+          debugPrint('✅ Carta creata nel database');
         }
 
-        // 5. Blocca il chip in sola lettura (se supportato)
+        // 6. Blocca il chip in sola lettura (se supportato)
         if (tag.type == NFCTagType.iso15693) {
           try {
             await FlutterNfcKit.finish(iosAlertMessage: 'Chip bloccato in sola lettura');
@@ -200,54 +301,98 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
           }
         }
 
-        // 6. Mostra messaggio appropriato
+        // 7. Mostra messaggio di successo
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(isExistingCard ? 'Carta già associata' : 'Carta programmata con successo'),
+              content: Text(isExistingCard ? 'Carta già associata' : '✅ Carta programmata con successo!'),
               backgroundColor: isExistingCard ? Colors.orange : Colors.green,
+              duration: const Duration(seconds: 3),
             ),
           );
         }
 
-        await FlutterNfcKit.finish(iosAlertMessage: isExistingCard ? 'Carta già associata' : 'Fatto!');
-        debugPrint('Operazione completata con successo!');
+        await FlutterNfcKit.finish(iosAlertMessage: isExistingCard ? 'Carta già associata' : '✅ Fatto!');
+        debugPrint('🎉 Operazione completata con successo!');
       } catch (e) {
-        debugPrint('ERRORE durante la scrittura NFC:');
+        debugPrint('❌ ERRORE durante la scrittura NFC:');
         debugPrint('Tipo di errore: ${e.runtimeType}');
         debugPrint('Messaggio: $e');
+        
+        String errorMessage = 'Errore nella scrittura NFC';
+        
+        if (e.toString().contains('Communication error')) {
+          errorMessage = 'Errore di comunicazione con la carta.\n\nSuggerimenti:\n• Mantieni la carta ferma e ben posizionata\n• Assicurati che sia una carta NTAG vuota\n• Riprova più volte se necessario';
+        } else if (e.toString().contains('Tag was lost') || e.toString().contains('carta è stata allontanata')) {
+          errorMessage = 'La carta è stata allontanata durante la scrittura.\n\nMantieni la carta ferma sul dispositivo fino al completamento.';
+        } else if (e.toString().contains('Not enough space')) {
+          errorMessage = 'Carta piena o non supportata.\n\nUsa una carta NTAG vuota (NTAG213/215/216).';
+        } else if (e.toString().contains('NDEF')) {
+          errorMessage = 'Carta non supportata.\n\nUsa una carta NTAG standard (NTAG213/215/216).';
+        }
         
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Errore nella scrittura NFC: $e'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 5),
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: 'Riprova',
+                textColor: Colors.white,
+                onPressed: () => _writeCard(context),
+              ),
             ),
           );
         }
         
-        await FlutterNfcKit.finish(iosAlertMessage: 'Errore nella scrittura NFC');
+        await FlutterNfcKit.finish(iosAlertMessage: '❌ Errore nella scrittura NFC');
       }
     } catch (e) {
-      debugPrint('ERRORE durante l\'operazione:');
+      debugPrint('❌ ERRORE durante l\'operazione:');
       debugPrint('Tipo di errore: ${e.runtimeType}');
       debugPrint('Messaggio: $e');
+      
+      String errorMessage = 'Errore sconosciuto';
+      
+      if (e.toString().contains('NFC not available')) {
+        errorMessage = 'NFC non disponibile su questo dispositivo';
+      } else if (e.toString().contains('User cancelled')) {
+        errorMessage = 'Operazione annullata dall\'utente';
+      } else if (e.toString().contains('Timeout')) {
+        errorMessage = 'Timeout: nessuna carta rilevata';
+      } else if (e.toString().contains('Communication error')) {
+        errorMessage = 'Errore di comunicazione con la carta';
+      } else if (e.toString().contains('NDEF')) {
+        errorMessage = 'Carta non supportata. Usa una carta NTAG standard.';
+      } else {
+        errorMessage = 'Errore: $e';
+      }
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore: $e'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );
       }
       
-      await FlutterNfcKit.finish(iosAlertMessage: 'Errore: $e');
+      await FlutterNfcKit.finish(iosAlertMessage: errorMessage);
     }
   }
 
   Future<void> _writeMerchantCard(BuildContext context) async {
+    if (!_nfcAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('NFC non disponibile su questo dispositivo'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       debugPrint('Iniziando la scrittura della carta merchant...');
       debugPrint('In attesa di una carta NFC...');
@@ -322,16 +467,28 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       debugPrint('Tipo di errore: ${e.runtimeType}');
       debugPrint('Messaggio: $e');
       
+      String errorMessage = 'Errore sconosciuto';
+      
+      if (e.toString().contains('NFC not available')) {
+        errorMessage = 'NFC non disponibile su questo dispositivo';
+      } else if (e.toString().contains('User cancelled')) {
+        errorMessage = 'Operazione annullata dall\'utente';
+      } else if (e.toString().contains('Timeout')) {
+        errorMessage = 'Timeout: nessuna carta rilevata';
+      } else {
+        errorMessage = 'Errore: $e';
+      }
+      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore: $e'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );
       }
       
-      await FlutterNfcKit.finish(iosAlertMessage: 'Errore: $e');
+      await FlutterNfcKit.finish(iosAlertMessage: errorMessage);
     }
   }
 
@@ -348,6 +505,30 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Indicatore stato NFC
+            if (!_nfcAvailable)
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.wifi_off, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'NFC non disponibile su questo dispositivo',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
             Text(
               'Avvicina una carta NFC per i dettagli o usa il QR Code del Wallet.',
               textAlign: TextAlign.center,
@@ -382,7 +563,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 minimumSize: const Size(double.infinity, 50),
               ),
               child: const Text('Scrivi Carta Standard'),
-              onPressed: () => _writeCard(context),
+              onPressed: _nfcAvailable ? () => _writeCard(context) : null,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -392,7 +573,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 foregroundColor: Colors.white,
               ),
               child: const Text('Scrivi Carta Merchant'),
-              onPressed: () => _writeMerchantCard(context),
+              onPressed: _nfcAvailable ? () => _writeMerchantCard(context) : null,
             ),
           ],
         ),

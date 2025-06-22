@@ -33,22 +33,46 @@ serve(async (req) => {
         )
       }
 
-      // Use the get_or_create_customer function instead of direct table insertion
-      const { data, error } = await supabaseClient
-        .rpc('get_or_create_customer', {
-          p_merchant_id: merchantId
+      // Verifica che il merchant esista
+      const { data: merchant, error: merchantError } = await supabaseClient
+        .from('merchants')
+        .select('id')
+        .eq('id', merchantId)
+        .single()
+
+      if (merchantError || !merchant) {
+        return new Response(
+          JSON.stringify({ error: 'Merchant not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crea sempre un nuovo customer
+      const { data: customer, error } = await supabaseClient
+        .from('customers')
+        .insert({
+          id: crypto.randomUUID(),
+          // Altri campi del customer possono essere aggiunti qui se necessario
         })
+        .select('id')
+        .single()
 
       if (error) {
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: `Error creating customer: ${error.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
       return new Response(
-        JSON.stringify({ id: data }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          id: customer.id,
+          message: 'New customer created successfully'
+        }),
+        { 
+          status: 201,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
 
@@ -139,24 +163,82 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
       const { cardId, uid, customerId } = await req.json()
 
+      // Validazione dei parametri
+      if (!cardId || !uid || !customerId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters: cardId, uid, customerId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // Verifica se esiste già una carta con questo UID
-      const { data: existingCard } = await supabaseClient
+      const { data: existingCard, error: existingError } = await supabaseClient
         .from('cards')
-        .select('id')
+        .select('id, customer_id, issuing_merchant_id')
         .eq('uid', uid)
         .single()
 
-      if (existingCard) {
-        // Se esiste, restituisci la carta esistente
+      if (existingError && existingError.code !== 'PGRST116') {
         return new Response(
-          JSON.stringify(existingCard),
+          JSON.stringify({ error: `Error checking existing card: ${existingError.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (existingCard) {
+        // Se esiste, verifica che sia associata al customer corretto
+        if (existingCard.customer_id !== customerId) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Card UID already exists with different customer',
+              existingCardId: existingCard.id 
+            }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        // Se esiste e appartiene al customer corretto, restituisci la carta esistente
+        return new Response(
+          JSON.stringify({
+            ...existingCard,
+            message: 'Card already exists for this customer'
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      // Se non esiste, crea una nuova carta
+      // Verifica che il customer esista
+      const { data: customer, error: customerError } = await supabaseClient
+        .from('customers')
+        .select('id')
+        .eq('id', customerId)
+        .single()
+
+      if (customerError || !customer) {
+        return new Response(
+          JSON.stringify({ error: 'Customer not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Verifica che il merchant esista
+      const { data: merchant, error: merchantError } = await supabaseClient
+        .from('merchants')
+        .select('id')
+        .eq('id', merchantId)
+        .single()
+
+      if (merchantError || !merchant) {
+        return new Response(
+          JSON.stringify({ error: 'Merchant not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crea la nuova carta
       const { data: card, error: cardError } = await supabaseClient
         .from('cards')
         .insert({
@@ -170,7 +252,7 @@ serve(async (req) => {
 
       if (cardError) {
         return new Response(
-          JSON.stringify({ error: cardError.message }),
+          JSON.stringify({ error: `Error creating card: ${cardError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -184,15 +266,27 @@ serve(async (req) => {
         })
 
       if (cmError) {
+        // Se fallisce la creazione della relazione, elimina la carta creata
+        await supabaseClient
+          .from('cards')
+          .delete()
+          .eq('id', card.id)
+        
         return new Response(
-          JSON.stringify({ error: cmError.message }),
+          JSON.stringify({ error: `Error creating card-merchant relationship: ${cmError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
       return new Response(
-        JSON.stringify(card),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          ...card,
+          message: 'Card created successfully'
+        }),
+        { 
+          status: 201,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
 
@@ -927,6 +1021,81 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+    }
+
+    // GET /cards/status?uid=XXX
+    if (path === 'cards/status' && req.method === 'GET') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const uid = params.uid;
+      if (!uid) {
+        return new Response(
+          JSON.stringify({ error: 'Missing UID parameter' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Verifica se la carta esiste
+      const { data: card, error: cardError } = await supabaseClient
+        .from('cards')
+        .select('id, uid, customer_id, issuing_merchant_id, created_at')
+        .eq('uid', uid)
+        .single();
+
+      if (cardError) {
+        if (cardError.code === 'PGRST116') {
+          // Carta non trovata
+          return new Response(
+            JSON.stringify({ 
+              exists: false,
+              message: 'Card not found'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        return new Response(
+          JSON.stringify({ error: cardError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Verifica se la carta è già associata al merchant
+      const { data: cardMerchant, error: cmError } = await supabaseClient
+        .from('card_merchants')
+        .select('id, created_at')
+        .eq('card_id', card.id)
+        .eq('merchant_id', merchantId)
+        .single();
+
+      const isAssociated = !cmError && cardMerchant;
+      const isIssuer = card.issuing_merchant_id === merchantId;
+
+      return new Response(
+        JSON.stringify({
+          exists: true,
+          card: {
+            id: card.id,
+            uid: card.uid,
+            customer_id: card.customer_id,
+            issuing_merchant_id: card.issuing_merchant_id,
+            created_at: card.created_at
+          },
+          merchant_status: {
+            is_associated: isAssociated,
+            is_issuer: isIssuer,
+            associated_at: cardMerchant?.created_at || null
+          },
+          message: isAssociated 
+            ? 'Card already associated with this merchant'
+            : 'Card exists but not associated with this merchant'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     return new Response(
