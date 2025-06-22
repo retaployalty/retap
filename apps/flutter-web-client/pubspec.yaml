@@ -78,6 +78,8 @@ flutter:
   assets:
     - .env
     - assets/icons/
+    - assets/icons/mingcute_gift-fill.svg
+    - assets/icons/tabler_coin-filled.svg
     - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see

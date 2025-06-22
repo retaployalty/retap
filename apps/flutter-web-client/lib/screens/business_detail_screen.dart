@@ -475,22 +475,19 @@ class _BusinessHeaderState extends State<BusinessHeader> {
               ),
               // Business name in basso a destra sopra la cover
               Positioned(
-                right: 24,
-                bottom: 24,
-                left: null,
-                child: SizedBox(
-                  width: 220,
-                  child: Text(
-                    widget.businessName,
-                    maxLines: 2,
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(blurRadius: 8, color: Colors.black26)],
-                    ),
+                right: 16,
+                bottom: 16,
+                left: 160, // Lascia spazio per il logo a sinistra
+                child: Text(
+                  widget.businessName,
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black26)],
                   ),
                 ),
               ),

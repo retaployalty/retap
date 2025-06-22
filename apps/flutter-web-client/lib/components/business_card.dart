@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../shared_utils/business_hours.dart';
@@ -84,7 +85,12 @@ class BusinessCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: AppColors.primary.withOpacity(0.08),
-                    child: Icon(Icons.store, color: AppColors.primary, size: 48),
+                    child: SvgPicture.asset(
+                      'assets/icons/Home.svg',
+                      width: 48,
+                      height: 48,
+                      colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                    ),
                   ),
                 ),
               ),
@@ -160,7 +166,12 @@ class BusinessCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(categoryIcon, color: AppColors.primary, size: 14),
+                          SvgPicture.asset(
+                            'assets/icons/Compass.svg',
+                            width: 14,
+                            height: 14,
+                            colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             category,
@@ -212,10 +223,11 @@ class BusinessCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
-                                    Icons.card_giftcard,
-                                    color: Colors.white,
-                                    size: 14,
+                                  SvgPicture.asset(
+                                    'assets/icons/mingcute_gift-fill.svg',
+                                    width: 14,
+                                    height: 14,
+                                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                                   ),
                                   const SizedBox(width: 4),
                                   Flexible(
@@ -290,7 +302,12 @@ class BusinessCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.stars, color: AppColors.primary, size: 14),
+                              SvgPicture.asset(
+                                'assets/icons/tabler_coin-filled.svg',
+                                width: 14,
+                                height: 14,
+                                colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '$points',

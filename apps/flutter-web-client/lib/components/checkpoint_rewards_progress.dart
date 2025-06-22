@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class CheckpointRewardsProgress extends StatefulWidget {
   final int currentStep;
@@ -40,7 +41,12 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+    
+    // Centra automaticamente la visuale sullo step corrente
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _centerOnCurrentStep();
+      _onScroll();
+    });
 
     // Setup dell'animazione di pulsazione
     _pulseController = AnimationController(
@@ -125,6 +131,34 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     setState(() {
       _progress = progress;
     });
+  }
+
+  void _centerOnCurrentStep() {
+    if (!_scrollController.hasClients) return;
+    
+    // Calcola la posizione dello step corrente
+    const double pxPerStep = 90;
+    const double rewardDotSize = 29;
+    const double normalDotSize = 19;
+    const double barHPadding = 4;
+    const double firstDotOffset = 60;
+    const double lastDotOffset = 30;
+    final double barWidth = (widget.totalSteps - 1) * pxPerStep + rewardDotSize;
+    
+    // Posizione del dot corrente
+    final double currentStepPos = barHPadding + firstDotOffset + 
+        (barWidth - firstDotOffset - lastDotOffset) * (widget.currentStep - 1) / (widget.totalSteps - 1);
+    
+    // Calcola la posizione di scroll per centrare lo step corrente
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double scrollPosition = currentStepPos - (screenWidth / 2) + 22; // 22 è il barLeft
+    
+    // Applica lo scroll con animazione
+    _scrollController.animateTo(
+      scrollPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -272,7 +306,12 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.card_giftcard, color: Color(0xFFFF6565), size: 25),
+                    SvgPicture.asset(
+                      'assets/icons/mingcute_gift-fill.svg',
+                      width: 25,
+                      height: 25,
+                      colorFilter: const ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
+                    ),
                   ],
                 ),
               ),
@@ -445,12 +484,11 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                         ),
                                                       ],
                                                     ),
-                                                    child: Icon(
-                                                      widget.redeemedSteps.contains(step)
-                                                          ? Icons.check_circle
-                                                          : Icons.icecream,
-                                                      size: 16,
-                                                      color: const Color(0xFFFF6565),
+                                                    child: SvgPicture.asset(
+                                                      'assets/icons/mingcute_gift-fill.svg',
+                                                      width: 16,
+                                                      height: 16,
+                                                      colorFilter: const ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
                                                     ),
                                                   ),
                                                 ),

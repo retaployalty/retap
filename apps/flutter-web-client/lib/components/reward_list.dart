@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
@@ -77,7 +78,12 @@ class RewardList extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.attach_money, color: Colors.white, size: 26),
+                  SvgPicture.asset(
+                    'assets/icons/tabler_coin-filled.svg',
+                    width: 26,
+                    height: 26,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                  ),
                 ],
               ),
             ),
@@ -374,7 +380,12 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.attach_money, size: 20, color: Color(0xFF1A1A1A)),
+                SvgPicture.asset(
+                  'assets/icons/tabler_coin-filled.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(Color(0xFF1A1A1A), BlendMode.srcIn),
+                ),
               ],
             ),
           ),
