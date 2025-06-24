@@ -516,8 +516,11 @@ export function CheckpointsList() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No checkpoint offers found.</p>
-          <p className="text-sm text-muted-foreground mt-1">Create a new offer to get started.</p>
+          <Flag className="h-12 w-12 text-[#4c8ff8] mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No checkpoint offers</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+            Create your first checkpoint offer to build customer loyalty journeys. Set up milestone-based rewards to keep customers engaged.
+          </p>
         </div>
       )}
 

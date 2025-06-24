@@ -8,8 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, Image as ImageIcon, Phone, Store, Calendar, X, Eye, Upload, Settings, ImagePlus, Pencil, ArrowLeft, ArrowRight } from "lucide-react";
+import { 
+  MapPin, 
+  Clock, 
+  Image as ImageIcon, 
+  Phone, 
+  Store, 
+  Calendar, 
+  X, 
+  Eye, 
+  Upload, 
+  Settings, 
+  ImagePlus, 
+  Pencil, 
+  ArrowLeft, 
+  ArrowRight,
+  Save,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -21,6 +40,7 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 export default function BusinessProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("general");
@@ -83,6 +103,7 @@ export default function BusinessProfilePage() {
 
   const handleInputChange = (field: keyof BusinessProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
   };
 
   const handleHoursChange = (day: string, field: 'open' | 'close' | 'closed', value: string | boolean) => {
@@ -96,13 +117,12 @@ export default function BusinessProfilePage() {
         }
       }
     }));
+    setHasChanges(true);
   };
 
   const handleAddClosure = () => {
     if (!newClosure.name) {
-      toast.error("Error", {
-        description: "Please enter at least the closure name",
-      });
+      toast.error("Please enter at least the closure name");
       return;
     }
 
@@ -124,9 +144,8 @@ export default function BusinessProfilePage() {
       isRecurring: false,
     });
 
-    toast.success("Closure added", {
-      description: "New annual closure added successfully",
-    });
+    setHasChanges(true);
+    toast.success("Closure added successfully");
   };
 
   const handleRemoveClosure = (id: string) => {
@@ -134,6 +153,7 @@ export default function BusinessProfilePage() {
       ...prev,
       annualClosures: prev.annualClosures.filter(closure => closure.id !== id)
     }));
+    setHasChanges(true);
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,19 +167,13 @@ export default function BusinessProfilePage() {
 
       const fileName = `merchants/${user.id}/logo.${file.name.split('.').pop()}`;
       
-      console.log("Attempting to upload logo:", fileName);
-
-      // Prima rimuoviamo il vecchio logo se esiste
+      // Remove old logo if exists
       if (profile.logoUrl) {
         const oldFileName = profile.logoUrl.split('/').pop();
         if (oldFileName) {
-          const { error: removeError } = await supabase.storage
+          await supabase.storage
             .from('business-media')
             .remove([`merchants/${user.id}/${oldFileName}`]);
-          
-          if (removeError) {
-            console.warn("Error removing old logo:", removeError);
-          }
         }
       }
 
@@ -170,102 +184,64 @@ export default function BusinessProfilePage() {
           cacheControl: '3600'
         });
 
-      if (uploadError) {
-        console.error("Upload error details:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       if (!data?.path) {
-        throw new Error("Nessun percorso restituito dopo l'upload");
+        throw new Error("No path returned after upload");
       }
 
       const { data: { publicUrl } } = supabase.storage
         .from('business-media')
         .getPublicUrl(data.path);
 
-      console.log("Logo uploaded successfully:", publicUrl);
-
       setProfile(prev => ({ ...prev, logoUrl: publicUrl }));
-      toast.success("Logo aggiornato", {
-        description: "Il logo del negozio è stato aggiornato con successo.",
-      });
+      setHasChanges(true);
+      toast.success("Logo updated successfully");
     } catch (error) {
       console.error("Error uploading logo:", error);
-      const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto durante il caricamento";
-      toast.error("Errore", {
-        description: `Si è verificato un errore durante il caricamento del logo: ${errorMessage}`,
-      });
+      toast.error("Error uploading logo");
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     try {
       setIsUploading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const uploadPromises = Array.from(files).map(async (file) => {
-        try {
-          const fileExt = file.name.split('.').pop();
-          const timestamp = Date.now();
-          const randomString = Math.random().toString(36).substring(7);
-          const fileName = `merchants/${user.id}/covers/${timestamp}-${randomString}.${fileExt}`;
-          
-          console.log("Attempting to upload file:", fileName);
+      const uploadPromises = files.map(async (file, index) => {
+        const fileName = `merchants/${user.id}/cover_${Date.now()}_${index}.${file.name.split('.').pop()}`;
+        
+        const { data, error } = await supabase.storage
+          .from('business-media')
+          .upload(fileName, file, { 
+            cacheControl: '3600'
+          });
 
-          const { data, error: uploadError } = await supabase.storage
-            .from('business-media')
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: true
-            });
+        if (error) throw error;
 
-          if (uploadError) {
-            console.error("Upload error details:", uploadError);
-            throw uploadError;
-          }
+        const { data: { publicUrl } } = supabase.storage
+          .from('business-media')
+          .getPublicUrl(data.path);
 
-          if (!data?.path) {
-            throw new Error("Nessun percorso restituito dopo l'upload");
-          }
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('business-media')
-            .getPublicUrl(data.path);
-
-          console.log("File uploaded successfully:", publicUrl);
-          return publicUrl;
-        } catch (fileError) {
-          console.error("Error uploading single file:", fileError);
-          throw fileError;
-        }
+        return publicUrl;
       });
 
       const newUrls = await Promise.all(uploadPromises);
-      
-      if (newUrls.length === 0) {
-        throw new Error("Nessuna immagine è stata caricata con successo");
-      }
-
-      setProfile(prev => ({
-        ...prev,
-        coverImages: [...(prev.coverImages || []), ...newUrls].slice(0, 6)
+      setProfile(prev => ({ 
+        ...prev, 
+        coverImages: [...(prev.coverImages || []), ...newUrls] 
       }));
-
-      toast.success("Immagini caricate", {
-        description: "Le immagini di copertina sono state caricate con successo.",
-      });
+      setHasChanges(true);
+      toast.success(`${files.length} cover image(s) uploaded successfully`);
     } catch (error) {
       console.error("Error uploading cover images:", error);
-      const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto durante il caricamento";
-      toast.error("Errore", {
-        description: `Si è verificato un errore durante il caricamento delle immagini: ${errorMessage}`,
-      });
+      toast.error("Error uploading cover images");
     } finally {
       setIsUploading(false);
     }
@@ -274,122 +250,134 @@ export default function BusinessProfilePage() {
   const handleRemoveCoverImage = async (index: number) => {
     try {
       const imageUrl = profile.coverImages[index];
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
       const fileName = imageUrl.split('/').pop();
       
       if (fileName) {
-        const { error } = await supabase.storage
-          .from('business-media')
-          .remove([`merchants/${user.id}/covers/${fileName}`]);
-
-        if (error) throw error;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.storage
+            .from('business-media')
+            .remove([`merchants/${user.id}/${fileName}`]);
+        }
       }
 
       setProfile(prev => ({
         ...prev,
         coverImages: prev.coverImages.filter((_, i) => i !== index)
       }));
-
-      toast.success("Immagine rimossa", {
-        description: "L'immagine di copertina è stata rimossa con successo.",
-      });
+      setHasChanges(true);
+      toast.success("Cover image removed");
     } catch (error) {
       console.error("Error removing cover image:", error);
-      toast.error("Errore", {
-        description: "Si è verificato un errore durante la rimozione dell'immagine.",
-      });
+      toast.error("Error removing cover image");
     }
   };
 
   const moveCoverImage = (from: number, to: number) => {
-    setProfile(prev => {
-      const images = [...(prev.coverImages || [])];
-      if (to < 0 || to >= images.length) return prev;
-      const [moved] = images.splice(from, 1);
-      images.splice(to, 0, moved);
-      return { ...prev, coverImages: images };
-    });
+    const newImages = [...profile.coverImages];
+    const [movedImage] = newImages.splice(from, 1);
+    newImages.splice(to, 0, movedImage);
+    setProfile(prev => ({ ...prev, coverImages: newImages }));
+    setHasChanges(true);
   };
 
   const handleSave = async () => {
     try {
       setIsLoading(true);
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data: merchant, error: merchantError } = await supabase
         .from('merchants')
-        .select('id')
+        .select('id, country, industry, address')
         .eq('profile_id', user.id)
         .single();
 
-      if (merchantError || !merchant) throw new Error("Merchant not found");
+      if (merchantError) {
+        console.error("Error fetching merchant:", merchantError);
+        throw new Error(`Merchant fetch error: ${merchantError.message}`);
+      }
 
-      const merchantId = merchant.id;
+      if (!merchant) throw new Error("Merchant not found");
+
+      // Validate and clean data before sending
+      const updateData = {
+        name: profile.name || null,
+        phone: profile.phone || null,
+        google_maps_url: profile.googleMapsUrl || null,
+        logo_url: profile.logoUrl || null,
+        cover_image_url: profile.coverImages && profile.coverImages.length > 0 ? profile.coverImages : null,
+        hours: profile.hours || null,
+        annual_closures: profile.annualClosures && profile.annualClosures.length > 0 ? profile.annualClosures : null,
+      };
+
+      // Remove null values to avoid database constraints
+      const cleanedData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, value]) => value !== null)
+      );
+
+      console.log("Updating merchant with cleaned data:", cleanedData);
+      console.log("Merchant ID:", merchant.id);
 
       const { error } = await supabase
         .from('merchants')
-        .update({
-          name: profile.name,
-          phone: profile.phone,
-          google_maps_url: profile.googleMapsUrl,
-          logo_url: profile.logoUrl,
-          cover_image_url: profile.coverImages,
-          hours: profile.hours,
-          annual_closures: profile.annualClosures,
-          gallery_images: profile.galleryImages,
-        })
-        .eq('id', merchantId);
+        .update(cleanedData)
+        .eq('id', merchant.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase update error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        throw new Error(`Update error: ${error.message || 'Unknown database error'}`);
+      }
 
-      toast.success("Profile saved", {
-        description: "Store profile updated successfully.",
-      });
-
-      router.refresh();
+      setHasChanges(false);
+      toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast.error("Error", {
-        description: "There was a problem saving the profile. Please try again.",
-      });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Error saving profile: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8 min-h-screen p-6">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-4"
-      >
+    <div className="space-y-6 min-h-screen p-6">
+      {/* Header with Save Button */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold">Business Profile</h1>
-          <p className="text-lg text-[#f8494c] font-semibold mt-1">Store Settings</p>
-          <p className="text-muted-foreground text-sm mt-1">Manage your store information and settings</p>
+          <h1 className="text-3xl font-bold">Business Profile</h1>
+          <p className="text-muted-foreground mt-1">Manage your store information and settings</p>
         </div>
+        
         <div className="flex items-center gap-3">
+          {hasChanges && (
+            <Badge variant="outline" className="text-orange-600 border-orange-200">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Unsaved changes
+            </Badge>
+          )}
           <Button 
             onClick={handleSave} 
-            disabled={isLoading}
+            disabled={isLoading || !hasChanges}
             className="bg-[#f8494c] hover:bg-[#f8494c]/90"
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Changes
           </Button>
         </div>
-      </motion.div>
+      </div>
 
+      {/* Main Content */}
       <div className="w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
+              <Store className="h-4 w-4" />
               General
             </TabsTrigger>
             <TabsTrigger value="hours" className="flex items-center gap-2">
@@ -404,31 +392,81 @@ export default function BusinessProfilePage() {
 
           <TabsContent value="general" className="space-y-6">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
             >
+              {/* Basic Information */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Store className="h-5 w-5 text-[#f8494c]" />
                     Basic Information
                   </CardTitle>
-                  <CardDescription>Main details about your store</CardDescription>
+                  <CardDescription>Main details about your business</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-8">
-                  <div className="flex flex-col items-center gap-4 w-full">
-                    <Label className="text-base font-semibold">Logo del Negozio</Label>
+                <CardContent className="space-y-6">
+                  {/* Store Name and Contact */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="font-medium">Store Name *</Label>
+                      <Input
+                        id="name"
+                        value={profile.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        placeholder="Enter your store name"
+                        className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="font-medium">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        value={profile.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        placeholder="+1 (555) 123-4567"
+                        className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="googleMapsUrl" className="font-medium">Google Maps Link</Label>
+                    <Input
+                      id="googleMapsUrl"
+                      value={profile.googleMapsUrl}
+                      onChange={(e) => handleInputChange('googleMapsUrl', e.target.value)}
+                      placeholder="https://maps.google.com/..."
+                      className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Help customers find your location easily
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Logo Upload */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-[#f8494c]" />
+                    Store Logo
+                  </CardTitle>
+                  <CardDescription>Upload your business logo (recommended: 512x512px)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-4">
                     <div className="relative">
-                      <div className="w-32 h-32 rounded-full border border-gray-200 shadow-md flex items-center justify-center bg-white overflow-hidden">
+                      <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 shadow-sm flex items-center justify-center bg-gray-50 overflow-hidden hover:border-[#f8494c] transition-colors">
                         {profile.logoUrl ? (
                           <img
                             src={profile.logoUrl}
-                            alt="Logo"
-                            className="object-cover w-full h-full"
+                            alt="Store Logo"
+                            className="object-cover w-full h-full rounded-full"
                           />
                         ) : (
-                          <ImagePlus className="h-10 w-10 text-muted-foreground" />
+                          <ImagePlus className="h-8 w-8 text-gray-400" />
                         )}
                       </div>
                       <input
@@ -439,125 +477,113 @@ export default function BusinessProfilePage() {
                         className="hidden"
                       />
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute bottom-0 right-0 bg-white border border-gray-200 shadow hover:bg-gray-100"
+                        variant="outline"
+                        size="sm"
+                        className="absolute -bottom-2 -right-2 bg-white border-2 border-white shadow-md hover:bg-gray-50"
                         onClick={() => logoInputRef.current?.click()}
                         disabled={isUploading}
                       >
-                        <Pencil className="h-5 w-5 text-[#f8494c]" />
+                        <Pencil className="h-3 w-3" />
                       </Button>
                     </div>
+                    {isUploading && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#f8494c]" />
+                        Uploading...
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-col items-center w-full gap-2">
-                    <Label className="text-base font-semibold mb-2">Immagini di Copertina</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-md">
+                </CardContent>
+              </Card>
+
+              {/* Cover Images */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-[#f8494c]" />
+                    Cover Images
+                  </CardTitle>
+                  <CardDescription>Add up to 6 images to showcase your business (recommended: 1200x400px)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                       {profile.coverImages && profile.coverImages.length > 0 ? (
-                        profile.coverImages.map((image, index) => (
-                          <div key={index} className="relative group w-[120px] h-[80px] md:w-[140px] md:h-[90px] rounded-lg overflow-hidden border shadow-sm bg-white flex items-center justify-center">
+                        profile.coverImages.slice(0, 6).map((image, index) => (
+                          <div key={index} className="relative group aspect-video rounded-lg overflow-hidden border shadow-sm bg-white">
                             <img
                               src={image}
                               alt={`Cover ${index + 1}`}
                               className="object-cover w-full h-full"
                             />
-                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="bg-white/80 hover:bg-white"
-                                onClick={() => handleRemoveCoverImage(index)}
-                                disabled={isUploading}
-                              >
-                                <X className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                            <div className="absolute bottom-1 left-1 flex gap-1">
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                               {index > 0 && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="bg-white/80 hover:bg-white p-1"
+                                  className="bg-white/90 hover:bg-white h-7 w-7"
                                   onClick={() => moveCoverImage(index, index - 1)}
                                   disabled={isUploading}
-                                  aria-label="Sposta a sinistra"
                                 >
-                                  <ArrowLeft className="h-4 w-4 text-[#f8494c]" />
+                                  <ArrowLeft className="h-3 w-3" />
                                 </Button>
                               )}
-                              {index < profile.coverImages.length - 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="bg-white/90 hover:bg-white h-7 w-7"
+                                onClick={() => handleRemoveCoverImage(index)}
+                                disabled={isUploading}
+                              >
+                                <X className="h-3 w-3 text-red-500" />
+                              </Button>
+                              {index < profile.coverImages.length - 1 && index < 5 && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="bg-white/80 hover:bg-white p-1"
+                                  className="bg-white/90 hover:bg-white h-7 w-7"
                                   onClick={() => moveCoverImage(index, index + 1)}
                                   disabled={isUploading}
-                                  aria-label="Sposta a destra"
                                 >
-                                  <ArrowRight className="h-4 w-4 text-[#f8494c]" />
+                                  <ArrowRight className="h-3 w-3" />
                                 </Button>
                               )}
                             </div>
+                            <div className="absolute top-1 left-1 bg-black/50 text-white text-xs px-1 rounded">
+                              {index + 1}
+                            </div>
                           </div>
                         ))
-                      ) : (
-                        <div className="col-span-2 md:col-span-3 flex flex-col items-center justify-center h-[80px] md:h-[90px] rounded-lg border-2 border-dashed text-muted-foreground bg-white">
-                          <ImagePlus className="h-8 w-8 mb-1" />
-                          <span className="text-xs">Aggiungi immagine di copertina</span>
+                      ) : null}
+                      
+                      {(!profile.coverImages || profile.coverImages.length < 6) && (
+                        <div className="aspect-video rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-gray-50 hover:border-[#f8494c] transition-colors cursor-pointer">
+                          <input
+                            type="file"
+                            ref={coverInputRef}
+                            onChange={handleCoverUpload}
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                          />
+                          <Button
+                            variant="ghost"
+                            onClick={() => coverInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="flex flex-col items-center gap-2 h-full w-full"
+                          >
+                            <ImagePlus className="h-6 w-6 text-gray-400" />
+                            <span className="text-xs text-gray-500">Add Image</span>
+                          </Button>
                         </div>
                       )}
-                      <input
-                        type="file"
-                        ref={coverInputRef}
-                        onChange={handleCoverUpload}
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="border-dashed border-2 border-[#f8494c] bg-white hover:bg-[#f8494c]/10 flex items-center justify-center w-[120px] h-[80px] md:w-[140px] md:h-[90px]"
-                        onClick={() => coverInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        <ImagePlus className="h-6 w-6 text-[#f8494c]" />
-                      </Button>
                     </div>
+                    
                     {profile.coverImages && profile.coverImages.length > 6 && (
-                      <span className="text-xs text-muted-foreground mt-2">+{profile.coverImages.length - 6} altre</span>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Showing first 6 of {profile.coverImages.length} images
+                      </p>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full pt-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="font-medium">Store Name</Label>
-                      <Input
-                        id="name"
-                        value={profile.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        placeholder="Enter your store name"
-                        className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="font-medium">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={profile.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        placeholder="Enter phone number"
-                        className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="googleMapsUrl" className="font-medium">Google Maps Link</Label>
-                      <Input
-                        id="googleMapsUrl"
-                        value={profile.googleMapsUrl}
-                        onChange={(e) => handleInputChange('googleMapsUrl', e.target.value)}
-                        placeholder="Enter Google Maps link"
-                        className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
-                      />
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -566,9 +592,9 @@ export default function BusinessProfilePage() {
 
           <TabsContent value="hours" className="space-y-6">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
             >
               <Card>
                 <CardHeader>
@@ -576,46 +602,49 @@ export default function BusinessProfilePage() {
                     <Clock className="h-5 w-5 text-[#f8494c]" />
                     Opening Hours
                   </CardTitle>
-                  <CardDescription>Manage your store's opening hours</CardDescription>
+                  <CardDescription>Set your business operating hours for each day of the week</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {WEEKDAYS.map((day) => {
+                  <div className="space-y-3">
+                    {WEEKDAYS.map((day, index) => {
                       const hours = profile.hours[day];
                       return (
                         <motion.div
                           key={day}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 transition-colors"
                         >
-                          <div className="w-32">
-                            <Label>{day}</Label>
+                          <div className="w-24 font-medium text-sm">
+                            {day}
                           </div>
-                          <div className="flex items-center gap-2">
+                          
+                          <div className="flex items-center gap-3">
                             <Switch
                               checked={!hours.closed}
                               onCheckedChange={(checked) => handleHoursChange(day, 'closed', !checked)}
                               className="data-[state=checked]:bg-[#f8494c]"
                             />
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-muted-foreground min-w-[60px]">
                               {hours.closed ? 'Closed' : 'Open'}
                             </span>
                           </div>
+                          
                           {!hours.closed && (
                             <div className="flex items-center gap-2">
                               <Input
                                 type="time"
                                 value={hours.open}
                                 onChange={(e) => handleHoursChange(day, 'open', e.target.value)}
-                                className="w-32 transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                                className="w-28 transition-all focus:ring-2 focus:ring-[#f8494c]/20"
                               />
-                              <span>to</span>
+                              <span className="text-sm text-muted-foreground">to</span>
                               <Input
                                 type="time"
                                 value={hours.close}
                                 onChange={(e) => handleHoursChange(day, 'close', e.target.value)}
-                                className="w-32 transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                                className="w-28 transition-all focus:ring-2 focus:ring-[#f8494c]/20"
                               />
                             </div>
                           )}
@@ -630,9 +659,9 @@ export default function BusinessProfilePage() {
 
           <TabsContent value="closures" className="space-y-6">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
             >
               <Card>
                 <CardHeader>
@@ -640,13 +669,15 @@ export default function BusinessProfilePage() {
                     <Calendar className="h-5 w-5 text-[#f8494c]" />
                     Annual Closures
                   </CardTitle>
-                  <CardDescription>Manage your store's closure periods</CardDescription>
+                  <CardDescription>Manage holidays and closure periods for your business</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="space-y-6">
+                  {/* Add New Closure */}
+                  <div className="p-4 border rounded-lg bg-gray-50">
+                    <h4 className="font-medium mb-4">Add New Closure</h4>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Date</Label>
+                        <Label>Date *</Label>
                         <Input
                           type="date"
                           value={newClosure.date}
@@ -655,7 +686,7 @@ export default function BusinessProfilePage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Name</Label>
+                        <Label>Name *</Label>
                         <Input
                           value={newClosure.name}
                           onChange={(e) => setNewClosure(prev => ({ ...prev, name: e.target.value }))}
@@ -664,63 +695,80 @@ export default function BusinessProfilePage() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-4">
                       <Label>Description</Label>
                       <Textarea
                         value={newClosure.description}
                         onChange={(e) => setNewClosure(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Enter closure description"
+                        placeholder="Optional description of the closure"
                         className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                        rows={2}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-4">
                       <Switch
                         checked={newClosure.isRecurring}
                         onCheckedChange={(checked) => setNewClosure(prev => ({ ...prev, isRecurring: checked }))}
                         className="data-[state=checked]:bg-[#f8494c]"
                       />
-                      <Label>Recurring annually</Label>
+                      <Label className="text-sm">Recurring annually</Label>
                     </div>
-                    <Button onClick={handleAddClosure} className="w-full bg-[#f8494c] hover:bg-[#f8494c]/90">
+                    <Button 
+                      onClick={handleAddClosure} 
+                      className="mt-4 bg-[#f8494c] hover:bg-[#f8494c]/90"
+                      disabled={!newClosure.name || !newClosure.date}
+                    >
                       Add Closure
                     </Button>
                   </div>
 
-                  <Separator className="my-6" />
+                  <Separator />
 
-                  <div className="space-y-4">
-                    <AnimatePresence>
-                      {profile.annualClosures.map((closure) => (
-                        <motion.div
-                          key={closure.id}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="flex items-center justify-between p-4 bg-muted rounded-lg"
-                        >
-                          <div>
-                            <h4 className="font-medium">{closure.name}</h4>
-                            <p className="text-sm text-muted-foreground">{closure.date}</p>
-                            {closure.description && (
-                              <p className="text-sm mt-1">{closure.description}</p>
-                            )}
-                            {closure.isRecurring && (
-                              <span className="text-xs bg-[#f8494c]/10 text-[#f8494c] px-2 py-1 rounded-full mt-2 inline-block">
-                                Recurring
-                              </span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveClosure(closure.id)}
-                            className="hover:bg-[#f8494c]/10"
+                  {/* Existing Closures */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Existing Closures</h4>
+                    {profile.annualClosures.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No closures added yet</p>
+                        <p className="text-sm">Add your first closure above</p>
+                      </div>
+                    ) : (
+                      <AnimatePresence>
+                        {profile.annualClosures.map((closure) => (
+                          <motion.div
+                            key={closure.id}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow"
                           >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h5 className="font-medium">{closure.name}</h5>
+                                {closure.isRecurring && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Recurring
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{closure.date}</p>
+                              {closure.description && (
+                                <p className="text-sm mt-1 text-gray-600">{closure.description}</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveClosure(closure.id)}
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    )}
                   </div>
                 </CardContent>
               </Card>

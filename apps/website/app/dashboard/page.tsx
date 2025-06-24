@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useEffect, useState } from "react";
@@ -19,7 +20,11 @@ import {
   PieChart,
   Plus,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Activity,
+  Crown,
+  UserCheck,
+  UserX
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -28,7 +33,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useDashboardStats } from "@/lib/hooks/useDashboardStats";
 
 // Custom tooltip styles
 const tooltipStyles = {
@@ -40,22 +46,9 @@ export default function DashboardPage() {
   const [merchant, setMerchant] = useState<any>(null);
   const [timeRange, setTimeRange] = useState("today");
   const supabase = createClientComponentClient();
-
-  // Sample data for peak hours - this would come from your API
-  const peakHoursData = [
-    { hour: '9:00', transactions: 12 },
-    { hour: '10:00', transactions: 18 },
-    { hour: '11:00', transactions: 25 },
-    { hour: '12:00', transactions: 30 },
-    { hour: '13:00', transactions: 28 },
-    { hour: '14:00', transactions: 22 },
-    { hour: '15:00', transactions: 20 },
-    { hour: '16:00', transactions: 24 },
-    { hour: '17:00', transactions: 27 },
-    { hour: '18:00', transactions: 32 },
-    { hour: '19:00', transactions: 29 },
-    { hour: '20:00', transactions: 15 },
-  ];
+  
+  // Utilizzo il hook personalizzato per le statistiche
+  const { stats, loading, error } = useDashboardStats(merchant?.id, timeRange);
 
   useEffect(() => {
     const fetchMerchant = async () => {
@@ -73,6 +66,29 @@ export default function DashboardPage() {
 
     fetchMerchant();
   }, [supabase]);
+
+  if (loading) {
+    return (
+      <div className="space-y-8 min-h-screen p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Caricamento dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 min-h-screen p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-lg text-red-600 mb-2">Errore nel caricamento</div>
+            <div className="text-sm text-gray-600">{error}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 min-h-screen p-6">
@@ -118,13 +134,13 @@ export default function DashboardPage() {
                   <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
-                  <p>Shows the number of unique customers who made at least one transaction in the selected time period</p>
+                  <p>Unique customers with at least one transaction in the selected period</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-extrabold">0</div>
+            <div className="text-3xl font-extrabold">{stats.activeCustomers}</div>
             <p className="text-xs text-muted-foreground">+0% from last month</p>
           </CardContent>
         </Card>
@@ -139,13 +155,13 @@ export default function DashboardPage() {
                   <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
-                  <p>Total number of active NFC physical cards currently registered in your store</p>
+                  <p>Total number of active NFC physical cards registered</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-extrabold">0</div>
+            <div className="text-3xl font-extrabold">{stats.issuedCards}</div>
             <p className="text-xs text-muted-foreground">NFC cards issued</p>
           </CardContent>
         </Card>
@@ -160,159 +176,292 @@ export default function DashboardPage() {
                   <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
-                  <p>Percentage of customers who have returned to your store at least once in the last 30 days</p>
+                  <p>Percentage of customers who returned in the last 30 days</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-extrabold">0%</div>
+            <div className="text-3xl font-extrabold">{stats.customerRetention}%</div>
             <p className="text-xs text-muted-foreground">Returning customers</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Points and Analysis Section */}
+      {/* Points and Transaction Volume Section */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle>Points Trend</CardTitle>
-            <BarChart2 className="h-5 w-5 text-[#f8494c]" />
+            <CardTitle className="flex items-center gap-2">
+              Points Trend
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
+                  <p>Points accumulated today, this week and this month</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center p-4 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-sm text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">{stats.pointsToday}</p>
               </div>
               <div className="text-center p-4 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-sm text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">{stats.pointsThisWeek}</p>
               </div>
               <div className="text-center p-4 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <p className="text-sm text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">{stats.pointsThisMonth}</p>
               </div>
             </div>
             <div className="h-[200px] flex items-center justify-center text-muted-foreground border rounded-lg bg-card">
-              Points chart (coming soon)
+              {stats.pointsTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={stats.pointsTrend}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' })}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }}
+                      domain={[0, Math.max(...stats.pointsTrend.map(d => d.points)) + 10]}
+                    />
+                    <RechartsTooltip
+                      formatter={(value) => [`${value} points`, '']}
+                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString('en-US')}`}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem',
+                        fontSize: '0.875rem',
+                        color: '#64748b'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="points" 
+                      fill="#f8494c"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <BarChart2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No points data available</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
         <Card className="col-span-3 hover:shadow-md transition-shadow">
-          <CardHeader className="space-y-0 pb-2">
-            <CardTitle>Peak Hours</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-[#f8494c]" />
+              Transaction Volume
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
+                  <p>Daily number of transactions in the selected period</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={peakHoursData}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <XAxis type="number" domain={[0, 40]} />
-                  <YAxis 
-                    dataKey="hour" 
-                    type="category" 
-                    width={50}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <RechartsTooltip
-                    formatter={(value) => [`${value} transactions`, '']}
-                    labelFormatter={(label) => `Hour: ${label}`}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '0.5rem',
-                      padding: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#64748b'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="transactions" 
-                    fill="#f8494c"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              {stats.transactionVolume.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={stats.transactionVolume}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' })}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      domain={[0, Math.max(...stats.transactionVolume.map(d => d.transactions)) + 2]}
+                    />
+                    <RechartsTooltip
+                      formatter={(value) => [`${value} transactions`, '']}
+                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString('en-US')}`}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem',
+                        fontSize: '0.875rem',
+                        color: '#64748b'
+                      }}
+                    />
+                    <Line 
+                      type="monotone"
+                      dataKey="transactions" 
+                      stroke="#f8494c"
+                      strokeWidth={2}
+                      dot={{ fill: '#f8494c', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#f8494c', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No transaction data available
+                </div>
+              )}
             </div>
             <div className="mt-4 text-sm text-muted-foreground text-center">
-              Average transactions per hour based on store opening hours
+              Daily transaction volume in the selected period
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Rewards and Segmentation Section */}
+      {/* Reward Performance and Customer Segmentation Section */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="space-y-0 pb-2">
-            <CardTitle>Most Requested Rewards</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-[#f8494c]" />
+              Reward Performance
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
+                  <p>Reward statistics: totals, redemption rate and most popular rewards</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Reward Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-card rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Rewards</p>
+                  <p className="text-xl font-bold">{stats.rewardPerformance.totalRewards}</p>
+                </div>
+                <div className="text-center p-3 bg-card rounded-lg">
+                  <p className="text-sm text-muted-foreground">Redemption Rate</p>
+                  <p className="text-xl font-bold">{stats.rewardPerformance.redemptionRate}%</p>
+                </div>
+              </div>
+              
+              {/* Top Rewards */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Top Performing Rewards</h4>
+                <div className="space-y-3">
+                  {stats.rewardPerformance.topRewards.length > 0 ? (
+                    stats.rewardPerformance.topRewards.map((reward, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-[#f8494c]" />
+                          <span className="text-sm font-medium">{reward.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">{reward.redemptions} redemptions</div>
+                          <div className="text-xs text-muted-foreground">{reward.pointsCost} points</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-4">
+                      <Award className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No rewards redeemed yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="h-5 w-5 text-[#f8494c]" />
+              Customer Segmentation
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-[#f8494c] transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className={tooltipStyles.tooltip} sideOffset={5}>
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm">Segments:</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-3 w-3 text-green-600" />
+                        <span><strong>New:</strong> First transaction within 30 days</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Repeat className="h-3 w-3 text-blue-600" />
+                        <span><strong>Returning:</strong> Active customers for 30+ days</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Crown className="h-3 w-3 text-yellow-600" />
+                        <span><strong>VIP:</strong> 1000+ points OR 10+ transactions</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <UserX className="h-3 w-3 text-red-600" />
+                        <span><strong>Inactive:</strong> No visits for 90+ days</span>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-[#f8494c]" />
-                  <span className="text-sm">Reward 1</span>
-                </div>
-                <span className="text-sm font-medium">0 redemptions</span>
+              {/* Total Customers */}
+              <div className="text-center p-3 bg-card rounded-lg">
+                <p className="text-sm text-muted-foreground">Total Customers</p>
+                <p className="text-2xl font-bold">{stats.customerSegmentation.totalCustomers}</p>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-[#f8494c]" />
-                  <span className="text-sm">Reward 2</span>
-                </div>
-                <span className="text-sm font-medium">0 redemptions</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-[#f8494c]" />
-                  <span className="text-sm">Reward 3</span>
-                </div>
-                <span className="text-sm font-medium">0 redemptions</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="space-y-0 pb-2">
-            <CardTitle>Customer Segmentation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[200px] flex items-center justify-center">
-              <div className="text-center">
-                <PieChart className="h-12 w-12 text-[#f8494c] mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">New vs Returning</p>
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">New</span>
-                    <span className="text-sm font-medium">0%</span>
+              
+              {/* Segments */}
+              <div className="space-y-3">
+                {stats.customerSegmentation.segments.map((segment, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {segment.segment === 'New' && <UserCheck className="h-4 w-4 text-green-600" />}
+                      {segment.segment === 'Returning' && <Repeat className="h-4 w-4 text-blue-600" />}
+                      {segment.segment === 'VIP' && <Crown className="h-4 w-4 text-yellow-600" />}
+                      {segment.segment === 'Inactive' && <UserX className="h-4 w-4 text-red-600" />}
+                      <span className="text-sm font-medium">{segment.segment}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium">{segment.count}</div>
+                      <div className="text-xs text-muted-foreground">{segment.percentage}%</div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Returning</span>
-                    <span className="text-sm font-medium">0%</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Points History */}
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="space-y-0 pb-2">
-          <CardTitle>Points History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] flex items-center justify-center text-muted-foreground border rounded-lg bg-card">
-            Points distribution/redemption history chart (coming soon)
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 } 

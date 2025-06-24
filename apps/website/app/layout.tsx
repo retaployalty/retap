@@ -23,6 +23,7 @@ export default function RootLayout({
     <html lang="it">
       <body
         className={`${fredoka.variable} font-sans antialiased`}
+        suppressHydrationWarning={true}
       >
         {children}
         <Toaster />
