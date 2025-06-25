@@ -4,12 +4,16 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../components/category_filters.dart';
 import '../components/business_card.dart';
 import '../shared_utils/business_hours.dart';
+import '../shared_utils/distance_calculator.dart';
+import '../providers/location_provider.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -30,17 +34,18 @@ const Map<String, IconData> BUSINESS_CATEGORIES = {
   'Other': Icons.store,
 };
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isLoading = true;
   String? _error;
   List<dynamic> _merchantBalances = [];
+  List<dynamic> _merchantsWithCoordinates = [];
   String? cardId;
   String? _selectedCategory;
   String? _customerName;
@@ -145,27 +150,59 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
-      final response = await http.get(
+      // Carica i bilanci
+      final balanceResponse = await http.get(
         Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
       );
       
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('Balance Response status: ${balanceResponse.statusCode}');
+      print('Balance Response body: ${balanceResponse.body}');
       
-      if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero dei punti: ${response.statusCode} - ${response.body}');
+      if (balanceResponse.statusCode != 200) {
+        throw Exception('Errore nel recupero dei punti: ${balanceResponse.statusCode} - ${balanceResponse.body}');
       }
       
-      final data = jsonDecode(response.body);
-      print('API Response: $data'); // Debug log
+      final balanceData = jsonDecode(balanceResponse.body);
+      print('Balance API Response: $balanceData'); // Debug log
+      
+      final balances = (balanceData['balances'] ?? []).where((b) => ((b['balance'] ?? 0) is int && (b['balance'] ?? 0) > 0)).toList();
+      
+      // Carica i merchant con coordinate
+      final merchantsResponse = await http.get(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchants'),
+      );
+      
+      if (merchantsResponse.statusCode != 200) {
+        throw Exception('Errore nel recupero dei merchant: ${merchantsResponse.statusCode}');
+      }
+      
+      final merchantsData = jsonDecode(merchantsResponse.body);
+      final merchants = merchantsData['merchants'] ?? [];
+      
+      // Combina i dati: aggiungi coordinate ai bilanci
+      final balancesWithCoordinates = balances.map((balance) {
+        final merchantId = balance['merchant_id'];
+        final merchant = merchants.firstWhere(
+          (m) => m['id'] == merchantId,
+          orElse: () => {},
+        );
+        
+        return {
+          ...balance,
+          'latitude': merchant['latitude'],
+          'longitude': merchant['longitude'],
+          'cover_image_url': merchant['cover_image_url'],
+        };
+      }).toList();
       
       setState(() {
-        _merchantBalances = (data['balances'] ?? []).where((b) => ((b['balance'] ?? 0) is int && (b['balance'] ?? 0) > 0)).toList();
-        print('Filtered Balances: $_merchantBalances'); // Debug log
+        _merchantBalances = balancesWithCoordinates;
+        _merchantsWithCoordinates = merchants;
+        print('Combined Balances: $_merchantBalances'); // Debug log
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading balances: $e'); // Debug log
+      print('Error loading data: $e'); // Debug log
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -190,9 +227,47 @@ class _HomeScreenState extends State<HomeScreen> {
     return filtered;
   }
 
+  List<dynamic> get _sortedMerchantBalances {
+    final locationState = ref.read(locationProvider);
+    if (locationState.latitude == null || locationState.longitude == null) {
+      return _filteredMerchantBalances;
+    }
+    
+    // Converti la lista in Map per usare il metodo sortByDistance
+    final businessesAsMaps = _filteredMerchantBalances.map((business) {
+      return {
+        'merchant_id': business['merchant_id'],
+        'merchant_name': business['merchant_name'],
+        'industry': business['industry'],
+        'logo_url': business['logo_url'],
+        'hours': business['hours'],
+        'balance': business['balance'],
+        'checkpoints_current': business['checkpoints_current'],
+        'checkpoints_total': business['checkpoints_total'],
+        'reward_steps': business['reward_steps'],
+        'cover_image_url': business['cover_image_url'],
+        'latitude': business['latitude'],
+        'longitude': business['longitude'],
+      };
+    }).toList();
+    
+    final sorted = DistanceCalculator.sortByDistance(
+      businessesAsMaps, 
+      locationState.latitude!, 
+      locationState.longitude!
+    );
+    
+    return sorted;
+  }
+
+  String _getDistanceText(dynamic business) {
+    return business['distanceFormatted'] ?? '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -257,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-                      : _filteredMerchantBalances.isEmpty
+                      : _sortedMerchantBalances.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -287,9 +362,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _filteredMerchantBalances.length,
+                                itemCount: _sortedMerchantBalances.length,
                                 itemBuilder: (context, index) {
-                                  final business = _filteredMerchantBalances[index];
+                                  final business = _sortedMerchantBalances[index];
                                   final category = business['industry'] ?? 'Other';
                                   final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
                                   final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
@@ -300,6 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final checkpointsTotal = business['checkpoints_total'] ?? 0;
                                   final points = business['balance'] ?? 0;
                                   final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+                                  final distance = _getDistanceText(business);
                                   return BusinessCard(
                                     category: category,
                                     categoryIcon: categoryIcon,
@@ -310,6 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     checkpointsTotal: checkpointsTotal,
                                     points: points,
                                     rewardSteps: rewardSteps,
+                                    distance: distance,
                                     hours: hours,
                                     onTap: () {
                                       print('HomeScreen - Business data: $business'); // Debug log

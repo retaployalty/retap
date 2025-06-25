@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
 import '../components/business_list_card.dart';
 import '../components/category_filters.dart';
 import '../screens/business_detail_screen.dart';
 import '../shared_utils/business_hours.dart';
+import '../shared_utils/distance_calculator.dart';
+import '../providers/location_provider.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -27,14 +31,14 @@ const Map<String, IconData> BUSINESS_CATEGORIES = {
   'Other': Icons.store,
 };
 
-class BusinessListScreen extends StatefulWidget {
+class BusinessListScreen extends ConsumerStatefulWidget {
   const BusinessListScreen({super.key});
 
   @override
-  State<BusinessListScreen> createState() => _BusinessListScreenState();
+  ConsumerState<BusinessListScreen> createState() => _BusinessListScreenState();
 }
 
-class _BusinessListScreenState extends State<BusinessListScreen> {
+class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
   bool _isLoading = true;
   String? _error;
   List<dynamic> _businesses = [];
@@ -42,7 +46,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String? cardId;
   static const String _cardIdKey = 'retap_card_id';
-
+  
   // Immagini placeholder (puoi sostituirle con asset reali in futuro)
   final List<String> _imageUrls = [
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=512&h=256',
@@ -79,8 +83,21 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
       }
       final data = jsonDecode(response.body);
       print('Debug - API Response: ${data['_debug']}'); // Debug log
+      
+      List<dynamic> businesses = data['merchants'] ?? [];
+      
+      // Se abbiamo la posizione dell'utente, ordina per distanza
+      final locationState = ref.read(locationProvider);
+      if (locationState.latitude != null && locationState.longitude != null) {
+        businesses = DistanceCalculator.sortByDistance(
+          businesses.cast<Map<String, dynamic>>(),
+          locationState.latitude!,
+          locationState.longitude!,
+        );
+      }
+      
       setState(() {
-        _businesses = data['merchants'] ?? [];
+        _businesses = businesses;
         _isLoading = false;
       });
     } catch (e) {
@@ -185,6 +202,16 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
         business['name'].toString().toLowerCase().contains(searchLower) ||
         business['address'].toString().toLowerCase().contains(searchLower)
       ).toList();
+    }
+    
+    // Mantieni l'ordinamento per distanza se disponibile
+    final locationState = ref.read(locationProvider);
+    if (locationState.latitude != null && locationState.longitude != null) {
+      filtered = DistanceCalculator.sortByDistance(
+        filtered.cast<Map<String, dynamic>>(),
+        locationState.latitude!,
+        locationState.longitude!,
+      );
     }
     
     return filtered;
@@ -313,6 +340,7 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                                 openingHours: business['hours'],
                                 rewards: business['rewards'],
                                 checkpointOffers: business['checkpoint_offers'],
+                                distance: business['distanceFormatted'],
                                 onTap: () async {
                                   if (cardId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(

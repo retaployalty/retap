@@ -904,7 +904,9 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "annual_closures" "jsonb",
     "gallery_images" "jsonb",
     "image_path" "text",
-    "opening_hours" "jsonb"
+    "opening_hours" "jsonb",
+    "latitude" numeric(10,8),
+    "longitude" numeric(11,8)
 );
 
 
@@ -915,7 +917,7 @@ COMMENT ON COLUMN "public"."merchants"."logo_url" IS 'URL del logo del negozio';
 
 
 
-COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'Array di URL delle immagini di copertina del negozio';
+COMMENT ON COLUMN "public"."merchants"."cover_image_url" IS 'URL dell''immagine di copertina del negozio';
 
 
 
@@ -940,6 +942,14 @@ COMMENT ON COLUMN "public"."merchants"."gallery_images" IS 'Array di URL immagin
 
 
 COMMENT ON COLUMN "public"."merchants"."opening_hours" IS 'JSONB object with opening hours for each day of the week. Format: {"monday": {"open": "09:00", "close": "20:00"}, ...}';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."latitude" IS 'Latitude coordinate of the merchant location';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."longitude" IS 'Longitude coordinate of the merchant location';
 
 
 
@@ -1143,6 +1153,10 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_merchants_coordinates" ON "public"."merchants" USING "btree" ("latitude", "longitude");
 
 
 
