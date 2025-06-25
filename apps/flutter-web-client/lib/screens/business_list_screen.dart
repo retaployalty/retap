@@ -10,7 +10,6 @@ import '../components/category_filters.dart';
 import '../screens/business_detail_screen.dart';
 import '../shared_utils/business_hours.dart';
 import '../shared_utils/distance_calculator.dart';
-import '../providers/providers.dart';
 import '../providers/location_provider.dart';
 
 // Business categories with their corresponding icons
@@ -88,12 +87,12 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
       List<dynamic> businesses = data['merchants'] ?? [];
       
       // Se abbiamo la posizione dell'utente, ordina per distanza
-      final userPosition = ref.read(userPositionProvider);
-      if (userPosition != null) {
+      final locationState = ref.read(locationProvider);
+      if (locationState.latitude != null && locationState.longitude != null) {
         businesses = DistanceCalculator.sortByDistance(
           businesses.cast<Map<String, dynamic>>(),
-          userPosition.latitude,
-          userPosition.longitude,
+          locationState.latitude!,
+          locationState.longitude!,
         );
       }
       
@@ -206,12 +205,12 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
     }
     
     // Mantieni l'ordinamento per distanza se disponibile
-    final userPosition = ref.read(userPositionProvider);
-    if (userPosition != null) {
+    final locationState = ref.read(locationProvider);
+    if (locationState.latitude != null && locationState.longitude != null) {
       filtered = DistanceCalculator.sortByDistance(
         filtered.cast<Map<String, dynamic>>(),
-        userPosition.latitude,
-        userPosition.longitude,
+        locationState.latitude!,
+        locationState.longitude!,
       );
     }
     
@@ -228,8 +227,6 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Indicatore di posizione
-                _buildLocationIndicator(),
                 // Barra di ricerca
                 Row(
                   children: [
@@ -406,64 +403,5 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildLocationIndicator() {
-    final locationStatus = ref.watch(locationStatusProvider);
-    final locationError = ref.watch(locationErrorProvider);
-    final userPosition = ref.watch(userPositionProvider);
-
-    if (locationStatus == LocationStatus.loading || locationError != null || userPosition != null) {
-      return Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: locationError != null ? Colors.red[50] : Colors.green[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: locationError != null ? Colors.red[200]! : Colors.green[200]!,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  locationStatus == LocationStatus.loading 
-                    ? Icons.location_searching 
-                    : locationError != null 
-                      ? Icons.location_off 
-                      : Icons.location_on,
-                  color: locationError != null ? Colors.red : Colors.green,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    locationStatus == LocationStatus.loading 
-                      ? 'Ottenendo la posizione...'
-                      : locationError != null 
-                        ? 'Impossibile ottenere la posizione'
-                        : 'Business ordinati per distanza',
-                    style: TextStyle(
-                      color: locationError != null ? Colors.red[700] : Colors.green[700],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                if (locationError != null)
-                  TextButton(
-                    onPressed: () => ref.read(locationProvider).getCurrentLocation(),
-                    child: const Text('Riprova', style: TextStyle(fontSize: 12)),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      );
-    } else {
-      return const SizedBox.shrink();
-    }
   }
 } 

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
 enum LocationStatus {
   initial,
@@ -11,187 +13,219 @@ enum LocationStatus {
   serviceDisabled,
 }
 
-class LocationProvider extends ChangeNotifier {
-  Position? _userPosition;
-  LocationStatus _status = LocationStatus.initial;
-  String? _errorMessage;
-  bool _isInitialized = false;
+class LocationState {
+  final LocationStatus status;
+  final double? latitude;
+  final double? longitude;
+  final String? errorMessage;
+  final List<String> logs;
 
-  // Getters
-  Position? get userPosition => _userPosition;
-  LocationStatus get status => _status;
-  String? get errorMessage => _errorMessage;
-  bool get isInitialized => _isInitialized;
-  bool get hasLocation => _userPosition != null;
-  
-  // Coordinate getters per facilità d'uso
-  double? get latitude => _userPosition?.latitude;
-  double? get longitude => _userPosition?.longitude;
+  LocationState({
+    this.status = LocationStatus.initial,
+    this.latitude,
+    this.longitude,
+    this.errorMessage,
+    this.logs = const [],
+  });
 
-  /// Inizializza il provider e carica la posizione salvata
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-    
-    _isInitialized = true;
-    
-    // Prova a caricare la posizione salvata
-    await _loadSavedLocation();
-    
-    // Richiedi la posizione corrente
-    await getCurrentLocation();
+  LocationState copyWith({
+    LocationStatus? status,
+    double? latitude,
+    double? longitude,
+    String? errorMessage,
+    List<String>? logs,
+  }) {
+    return LocationState(
+      status: status ?? this.status,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      errorMessage: errorMessage ?? this.errorMessage,
+      logs: logs ?? this.logs,
+    );
+  }
+}
+
+class LocationNotifier extends StateNotifier<LocationState> {
+  LocationNotifier() : super(LocationState()) {
+    _loadSavedLocation();
   }
 
-  /// Carica la posizione salvata dalle SharedPreferences
+  void _addLog(String message) {
+    final timestamp = DateTime.now().toString().substring(11, 19);
+    final logEntry = '[$timestamp] $message';
+    state = state.copyWith(logs: [...state.logs, logEntry]);
+    print(logEntry);
+  }
+
   Future<void> _loadSavedLocation() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedLat = prefs.getDouble('saved_latitude');
-      final savedLon = prefs.getDouble('saved_longitude');
-      final savedTimestamp = prefs.getInt('location_timestamp');
+      final savedLng = prefs.getDouble('saved_longitude');
       
-      if (savedLat != null && savedLon != null && savedTimestamp != null) {
-        final savedTime = DateTime.fromMillisecondsSinceEpoch(savedTimestamp);
-        final now = DateTime.now();
-        final difference = now.difference(savedTime);
-        
-        // Usa la posizione salvata solo se è più recente di 30 minuti
-        if (difference.inMinutes < 30) {
-          _userPosition = Position(
-            latitude: savedLat,
-            longitude: savedLon,
-            timestamp: savedTime,
-            accuracy: 0,
-            altitude: 0,
-            heading: 0,
-            speed: 0,
-            speedAccuracy: 0,
-            altitudeAccuracy: 0,
-            headingAccuracy: 0,
-          );
-          _status = LocationStatus.success;
-          notifyListeners();
-        }
+      if (savedLat != null && savedLng != null) {
+        _addLog('Caricata posizione salvata: $savedLat, $savedLng');
+        state = state.copyWith(
+          status: LocationStatus.success,
+          latitude: savedLat,
+          longitude: savedLng,
+        );
       }
     } catch (e) {
-      print('Errore nel caricamento della posizione salvata: $e');
+      _addLog('Errore nel caricare posizione salvata: $e');
     }
   }
 
-  /// Salva la posizione corrente nelle SharedPreferences
-  Future<void> _saveLocation(Position position) async {
+  Future<void> _saveLocation(double latitude, double longitude) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('saved_latitude', position.latitude);
-      await prefs.setDouble('saved_longitude', position.longitude);
-      await prefs.setInt('location_timestamp', position.timestamp?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch);
+      await prefs.setDouble('saved_latitude', latitude);
+      await prefs.setDouble('saved_longitude', longitude);
+      _addLog('Posizione salvata: $latitude, $longitude');
     } catch (e) {
-      print('Errore nel salvataggio della posizione: $e');
+      _addLog('Errore nel salvare posizione: $e');
     }
   }
 
-  /// Ottiene la posizione corrente dell'utente
   Future<void> getCurrentLocation() async {
-    if (_status == LocationStatus.loading) return;
-    
-    _setStatus(LocationStatus.loading);
-    
+    _addLog('Richiesta posizione corrente...');
+    state = state.copyWith(status: LocationStatus.loading);
+
     try {
-      // Controlla se i servizi di localizzazione sono abilitati
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _setStatus(LocationStatus.serviceDisabled, 'I servizi di localizzazione sono disabilitati');
+      final position = await _getLocationWithGeolocator();
+      if (position != null) {
+        await _saveLocation(position.latitude, position.longitude);
+        state = state.copyWith(
+          status: LocationStatus.success,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+        _addLog('Posizione ottenuta: ${position.latitude}, ${position.longitude}');
         return;
       }
+    } catch (e) {
+      _addLog('Errore con geolocator: $e');
+    }
 
-      // Controlla i permessi
+    // Se arriviamo qui, c'è stato un errore
+    state = state.copyWith(
+      status: LocationStatus.error,
+      errorMessage: 'Impossibile ottenere la posizione',
+    );
+    _addLog('Impossibile ottenere la posizione');
+  }
+
+  Future<Position?> _getLocationWithGeolocator() async {
+    try {
+      _addLog('Tentativo con geolocator...');
+      
+      // Verifica se il servizio di localizzazione è abilitato
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      _addLog('Servizio di localizzazione abilitato: $serviceEnabled');
+      
+      if (!serviceEnabled) {
+        state = state.copyWith(status: LocationStatus.serviceDisabled);
+        return null;
+      }
+
+      // Verifica i permessi
       LocationPermission permission = await Geolocator.checkPermission();
+      _addLog('Permesso attuale: $permission');
+      
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        _addLog('Nuovo permesso dopo richiesta: $permission');
+        
         if (permission == LocationPermission.denied) {
-          _setStatus(LocationStatus.permissionDenied, 'Permessi di localizzazione negati');
-          return;
+          state = state.copyWith(status: LocationStatus.permissionDenied);
+          return null;
         }
       }
       
       if (permission == LocationPermission.deniedForever) {
-        _setStatus(LocationStatus.permissionDenied, 'I permessi di localizzazione sono negati permanentemente');
-        return;
+        state = state.copyWith(status: LocationStatus.permissionDenied);
+        return null;
       }
 
-      // Ottieni la posizione
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      // Prova con diverse precisioni
+      final locationSettings = [
+        LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+        LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          distanceFilter: 50,
+        ),
+        LocationSettings(
+          accuracy: LocationAccuracy.low,
+          distanceFilter: 100,
+        ),
+      ];
+
+      for (int i = 0; i < locationSettings.length; i++) {
+        try {
+          _addLog('Tentativo ${i + 1} con precisione: ${locationSettings[i].accuracy}');
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: locationSettings[i].accuracy,
+            timeLimit: Duration(seconds: 10),
+          );
+          _addLog('Posizione ottenuta con precisione ${locationSettings[i].accuracy}');
+          return position;
+        } catch (e) {
+          _addLog('Errore tentativo ${i + 1}: $e');
+          if (i == locationSettings.length - 1) rethrow;
+        }
+      }
       
-      _userPosition = position;
-      await _saveLocation(position);
-      _setStatus(LocationStatus.success);
-      
+      return null;
     } catch (e) {
-      _setStatus(LocationStatus.error, e.toString());
-      print('Errore geolocalizzazione: $e');
+      _addLog('Errore generale geolocator: $e');
+      rethrow;
     }
   }
 
-  /// Aggiorna la posizione (per aggiornamenti periodici)
-  Future<void> refreshLocation() async {
-    await getCurrentLocation();
-  }
-
-  /// Imposta lo status e notifica i listener
-  void _setStatus(LocationStatus status, [String? errorMessage]) {
-    _status = status;
-    _errorMessage = errorMessage;
-    notifyListeners();
-  }
-
-  /// Resetta lo stato di errore
-  void clearError() {
-    if (_status == LocationStatus.error || _status == LocationStatus.permissionDenied) {
-      _setStatus(LocationStatus.initial);
+  Future<void> forceRequestPermission() async {
+    _addLog('Forzatura richiesta permessi...');
+    state = state.copyWith(status: LocationStatus.loading);
+    
+    try {
+      LocationPermission permission = await Geolocator.requestPermission();
+      _addLog('Permesso ottenuto: $permission');
+      
+      if (permission == LocationPermission.denied || 
+          permission == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          status: LocationStatus.permissionDenied,
+          errorMessage: 'Permessi di geolocalizzazione negati',
+        );
+        return;
+      }
+      
+      // Se i permessi sono stati concessi, prova a ottenere la posizione
+      await getCurrentLocation();
+    } catch (e) {
+      _addLog('Errore nella forzatura permessi: $e');
+      state = state.copyWith(
+        status: LocationStatus.error,
+        errorMessage: 'Errore nella richiesta permessi: $e',
+      );
     }
   }
 
-  /// Controlla se la posizione è valida e recente
-  bool get isLocationValid {
-    if (_userPosition == null) return false;
-    
-    final now = DateTime.now();
-    final locationTime = _userPosition!.timestamp ?? now;
-    final difference = now.difference(locationTime);
-    
-    // Considera valida se è più recente di 5 minuti
-    return difference.inMinutes < 5;
+  void clearLogs() {
+    state = state.copyWith(logs: []);
   }
 
-  /// Ottiene un messaggio descrittivo per lo status corrente
-  String get statusMessage {
-    switch (_status) {
-      case LocationStatus.initial:
-        return 'Inizializzazione...';
-      case LocationStatus.loading:
-        return 'Ottenendo la posizione...';
-      case LocationStatus.success:
-        return 'Posizione aggiornata';
-      case LocationStatus.error:
-        return _errorMessage ?? 'Errore sconosciuto';
-      case LocationStatus.permissionDenied:
-        return 'Permessi di localizzazione negati';
-      case LocationStatus.serviceDisabled:
-        return 'Servizi di localizzazione disabilitati';
-    }
+  void ignoreLocation() {
+    _addLog('Geolocalizzazione ignorata dall\'utente');
+    state = state.copyWith(
+      status: LocationStatus.error,
+      errorMessage: 'Geolocalizzazione ignorata',
+    );
   }
+}
 
-  /// Controlla se è necessario aggiornare la posizione
-  bool get needsRefresh {
-    if (_userPosition == null) return true;
-    
-    final now = DateTime.now();
-    final locationTime = _userPosition!.timestamp ?? now;
-    final difference = now.difference(locationTime);
-    
-    // Aggiorna se la posizione è più vecchia di 2 minuti
-    return difference.inMinutes >= 2;
-  }
-} 
+final locationProvider = StateNotifierProvider<LocationNotifier, LocationState>((ref) {
+  return LocationNotifier();
+}); 

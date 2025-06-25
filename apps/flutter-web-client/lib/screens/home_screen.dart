@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'business_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
@@ -12,7 +13,7 @@ import '../components/category_filters.dart';
 import '../components/business_card.dart';
 import '../shared_utils/business_hours.dart';
 import '../shared_utils/distance_calculator.dart';
-import '../providers/providers.dart';
+import '../providers/location_provider.dart';
 
 // Business categories with their corresponding icons
 const Map<String, IconData> BUSINESS_CATEGORIES = {
@@ -227,8 +228,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   List<dynamic> get _sortedMerchantBalances {
-    final location = ref.read(locationProvider);
-    if (location == null || location.latitude == null || location.longitude == null) {
+    final locationState = ref.read(locationProvider);
+    if (locationState.latitude == null || locationState.longitude == null) {
       return _filteredMerchantBalances;
     }
     
@@ -252,8 +253,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     
     final sorted = DistanceCalculator.sortByDistance(
       businessesAsMaps, 
-      location.latitude!, 
-      location.longitude!
+      locationState.latitude!, 
+      locationState.longitude!
     );
     
     return sorted;
@@ -266,7 +267,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final location = ref.watch(locationProvider);
     
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/providers.dart';
+import '../providers/location_provider.dart';
 
 class LocationInitializer extends ConsumerStatefulWidget {
   final Widget child;
@@ -20,7 +20,7 @@ class _LocationInitializerState extends ConsumerState<LocationInitializer> {
     super.initState();
     // Inizializza il LocationProvider quando il widget viene creato
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(locationProvider).initialize();
+      ref.read(locationProvider.notifier).getCurrentLocation();
     });
   }
 
