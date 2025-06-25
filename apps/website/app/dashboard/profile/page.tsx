@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { BusinessProfile, BusinessHours, AnnualClosure } from "./types";
 import { motion, AnimatePresence } from "framer-motion";
+import { AddressInput } from "@/components/ui/address-input";
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -68,6 +69,8 @@ export default function BusinessProfilePage() {
     annualClosures: [],
     galleryImages: [],
   });
+  const [address, setAddress] = useState("");
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const supabase = createClientComponentClient();
   const router = useRouter();
@@ -95,6 +98,17 @@ export default function BusinessProfilePage() {
           annualClosures: merchant.annual_closures || [],
           galleryImages: merchant.gallery_images || [],
         }));
+
+        // Imposta l'indirizzo e le coordinate se disponibili
+        if (merchant.address) {
+          setAddress(merchant.address);
+        }
+        if (merchant.latitude && merchant.longitude) {
+          setCoordinates({
+            latitude: merchant.latitude,
+            longitude: merchant.longitude
+          });
+        }
       }
     };
 
@@ -301,7 +315,7 @@ export default function BusinessProfilePage() {
       if (!merchant) throw new Error("Merchant not found");
 
       // Validate and clean data before sending
-      const updateData = {
+      const updateData: any = {
         name: profile.name || null,
         phone: profile.phone || null,
         google_maps_url: profile.googleMapsUrl || null,
@@ -309,7 +323,14 @@ export default function BusinessProfilePage() {
         cover_image_url: profile.coverImages && profile.coverImages.length > 0 ? profile.coverImages : null,
         hours: profile.hours || null,
         annual_closures: profile.annualClosures && profile.annualClosures.length > 0 ? profile.annualClosures : null,
+        address: address || null,
       };
+
+      // Aggiungi le coordinate se disponibili
+      if (coordinates) {
+        updateData.latitude = coordinates.latitude;
+        updateData.longitude = coordinates.longitude;
+      }
 
       // Remove null values to avoid database constraints
       const cleanedData = Object.fromEntries(
@@ -339,6 +360,17 @@ export default function BusinessProfilePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAddressChange = (newAddress: string) => {
+    setAddress(newAddress);
+    setHasChanges(true);
+  };
+
+  const handleCoordinatesChange = (latitude: number, longitude: number) => {
+    setCoordinates({ latitude, longitude });
+    setHasChanges(true);
+    toast.success("Coordinate aggiornate!");
   };
 
   return (
@@ -429,6 +461,16 @@ export default function BusinessProfilePage() {
                       />
                     </div>
                   </div>
+
+                  {/* Address with Geocoding */}
+                  <AddressInput
+                    value={address}
+                    onChange={handleAddressChange}
+                    onCoordinatesChange={handleCoordinatesChange}
+                    label="Indirizzo Negozio"
+                    placeholder="es. Via Roma 123, Milano, Italia"
+                    className="transition-all focus:ring-2 focus:ring-[#f8494c]/20"
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="googleMapsUrl" className="font-medium">Google Maps Link</Label>
