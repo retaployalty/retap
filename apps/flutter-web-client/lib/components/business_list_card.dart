@@ -10,6 +10,7 @@ class BusinessListCard extends StatelessWidget {
   final Map<String, dynamic>? openingHours;
   final List<dynamic>? rewards;
   final List<dynamic>? checkpointOffers;
+  final String? distance;
   final VoidCallback? onTap;
 
   const BusinessListCard({
@@ -21,6 +22,7 @@ class BusinessListCard extends StatelessWidget {
     this.openingHours,
     this.rewards,
     this.checkpointOffers,
+    this.distance,
     this.onTap,
   }) : super(key: key);
 
@@ -91,41 +93,72 @@ class BusinessListCard extends StatelessWidget {
                 Positioned(
                   top: 16,
                   right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B)).withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Distance Badge
+                      if (distance != null)
                         Container(
-                          width: 6,
-                          height: 6,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.location_on, color: Colors.white, size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                distance!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isOpen ? 'Open' : 'Closed',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      // Open/Closed Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B)).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isOpen ? 'Open' : 'Closed',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Business Name Overlay

@@ -14,6 +14,7 @@ class BusinessCard extends StatelessWidget {
   final int checkpointsTotal;
   final int points;
   final List<int> rewardSteps;
+  final String? distance;
   final VoidCallback? onTap;
   final dynamic hours;
 
@@ -28,6 +29,7 @@ class BusinessCard extends StatelessWidget {
     required this.checkpointsTotal,
     required this.points,
     required this.rewardSteps,
+    this.distance,
     this.onTap,
     this.hours,
   }) : super(key: key);
@@ -75,24 +77,52 @@ class BusinessCard extends StatelessWidget {
                 ),
                 color: Colors.white,
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                ),
-                child: Image.network(
-                  logoUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: AppColors.primary.withOpacity(0.08),
-                    child: SvgPicture.asset(
-                      'assets/icons/Home.svg',
-                      width: 48,
-                      height: 48,
-                      colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                    child: Image.network(
+                      logoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.primary.withOpacity(0.08),
+                        child: SvgPicture.asset(
+                          'assets/icons/Home.svg',
+                          width: 48,
+                          height: 48,
+                          colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  // Icona categoria in alto a destra
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        categoryIcon,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             // Contenuto principale
@@ -110,80 +140,84 @@ class BusinessCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header con nome e stato apertura
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: AppTextStyles.titleMedium.copyWith(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          name,
+                          style: AppTextStyles.titleMedium.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        const SizedBox(height: 4),
+                        // Distanza e stato apertura
+                        Row(
+                          children: [
+                            // Distanza
+                            if (distance != null) ...[
                               Container(
-                                width: 6,
-                                height: 6,
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isOpen ? Colors.green : Colors.red,
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.location_on, color: Colors.grey[600], size: 10),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      distance!,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                isOpen ? 'Open' : 'Closed',
-                                style: TextStyle(
-                                  color: isOpen ? Colors.green : Colors.red,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              const SizedBox(width: 8),
                             ],
-                          ),
+                            // Stato apertura
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isOpen ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isOpen ? 'Open' : 'Closed',
+                                    style: TextStyle(
+                                      color: isOpen ? Colors.green : Colors.red,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    // Categoria
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/icons/Compass.svg',
-                            width: 14,
-                            height: 14,
-                            colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            category,
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     const Spacer(),
                     // Barra di progresso
                     Stack(

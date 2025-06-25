@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
+import 'providers/location_provider.dart';
+import 'widgets/location_initializer.dart';
 import 'screens/home_screen.dart';
 import 'screens/business_list_screen.dart';
 import 'screens/settings_screen.dart';
@@ -131,113 +134,117 @@ class ReTapWeb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'ReTap Card',
-      theme: appTheme,
-      debugShowCheckedModeBanner: false,
-      routerConfig: GoRouter(
-        initialLocation: '/splash',
-        redirect: (context, state) async {
-          print('Router redirect called for: ${state.matchedLocation}'); // Debug log
-          if (state.matchedLocation == '/splash') {
-            final initialRoute = await _getInitialRoute();
-            print('Initial route determined: $initialRoute'); // Debug log
-            if (initialRoute != '/splash') {
-              return initialRoute;
-            }
-          }
-          return null;
-        },
-        routes: [
-          // Splash screen
-          GoRoute(
-            path: '/splash',
-            builder: (context, state) => const SplashScreen(),
-          ),
-          // Onboarding flow
-          GoRoute(
-            path: '/onboarding',
-            builder: (context, state) {
-              print('Building OnboardingScreen'); // Debug log
-              return const OnboardingScreen();
-            },
-          ),
-          GoRoute(
-            path: '/onboarding/register',
-            builder: (context, state) {
-              print('Building RegistrationScreen'); // Debug log
-              return const RegistrationScreen();
-            },
-          ),
-          // Rotte separate senza bottom navigation bar
-          GoRoute(
-            path: '/m/:merchantId',
-            builder: (context, state) {
-              debugPrint('Building MerchantShowcaseScreen');
-              debugPrint('MerchantId: ${state.pathParameters['merchantId']}');
-              final merchantId = state.pathParameters['merchantId']!;
-              return MerchantShowcaseScreen(
-                merchantId: merchantId,
-              );
-            },
-          ),
-          GoRoute(
-            path: '/m/:merchantId/c/:cardId',
-            builder: (context, state) {
-              debugPrint('Building MerchantDetailsScreen');
-              debugPrint('MerchantId: ${state.pathParameters['merchantId']}');
-              debugPrint('CardId: ${state.pathParameters['cardId']}');
-              final merchantId = state.pathParameters['merchantId']!;
-              final cardId = state.pathParameters['cardId']!;
-              return MerchantDetailsScreen(
-                merchantId: merchantId,
-                cardId: cardId,
-              );
-            },
-          ),
-          // Rotte principali con bottom navigation bar
-          ShellRoute(
-            builder: (context, state, child) {
-              debugPrint('ShellRoute builder - Current location: ${state.matchedLocation}');
-              return Scaffold(
-                body: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  },
-                  child: KeyedSubtree(
-                    key: ValueKey(state.matchedLocation),
-                    child: child,
-                  ),
-                ),
-                bottomNavigationBar: CustomBottomNavBar(
-                  currentIndex: _calculateSelectedIndex(state),
-                  onTap: (index) => _onItemTapped(context, index),
-                ),
-              );
+    return ProviderScope(
+      child: LocationInitializer(
+        child: MaterialApp.router(
+          title: 'ReTap Card',
+          theme: appTheme,
+          debugShowCheckedModeBanner: false,
+          routerConfig: GoRouter(
+            initialLocation: '/splash',
+            redirect: (context, state) async {
+              print('Router redirect called for: ${state.matchedLocation}'); // Debug log
+              if (state.matchedLocation == '/splash') {
+                final initialRoute = await _getInitialRoute();
+                print('Initial route determined: $initialRoute'); // Debug log
+                if (initialRoute != '/splash') {
+                  return initialRoute;
+                }
+              }
+              return null;
             },
             routes: [
+              // Splash screen
               GoRoute(
-                path: '/',
+                path: '/splash',
+                builder: (context, state) => const SplashScreen(),
+              ),
+              // Onboarding flow
+              GoRoute(
+                path: '/onboarding',
                 builder: (context, state) {
-                  debugPrint('Building HomeScreen');
-                  return const HomeScreen();
+                  print('Building OnboardingScreen'); // Debug log
+                  return const OnboardingScreen();
                 },
               ),
               GoRoute(
-                path: '/businesses',
-                builder: (context, state) => const BusinessListScreen(),
+                path: '/onboarding/register',
+                builder: (context, state) {
+                  print('Building RegistrationScreen'); // Debug log
+                  return const RegistrationScreen();
+                },
+              ),
+              // Rotte separate senza bottom navigation bar
+              GoRoute(
+                path: '/m/:merchantId',
+                builder: (context, state) {
+                  debugPrint('Building MerchantShowcaseScreen');
+                  debugPrint('MerchantId: ${state.pathParameters['merchantId']}');
+                  final merchantId = state.pathParameters['merchantId']!;
+                  return MerchantShowcaseScreen(
+                    merchantId: merchantId,
+                  );
+                },
               ),
               GoRoute(
-                path: '/settings',
-                builder: (context, state) => const SettingsScreen(),
+                path: '/m/:merchantId/c/:cardId',
+                builder: (context, state) {
+                  debugPrint('Building MerchantDetailsScreen');
+                  debugPrint('MerchantId: ${state.pathParameters['merchantId']}');
+                  debugPrint('CardId: ${state.pathParameters['cardId']}');
+                  final merchantId = state.pathParameters['merchantId']!;
+                  final cardId = state.pathParameters['cardId']!;
+                  return MerchantDetailsScreen(
+                    merchantId: merchantId,
+                    cardId: cardId,
+                  );
+                },
+              ),
+              // Rotte principali con bottom navigation bar
+              ShellRoute(
+                builder: (context, state, child) {
+                  debugPrint('ShellRoute builder - Current location: ${state.matchedLocation}');
+                  return Scaffold(
+                    body: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey(state.matchedLocation),
+                        child: child,
+                      ),
+                    ),
+                    bottomNavigationBar: CustomBottomNavBar(
+                      currentIndex: _calculateSelectedIndex(state),
+                      onTap: (index) => _onItemTapped(context, index),
+                    ),
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: '/',
+                    builder: (context, state) {
+                      debugPrint('Building HomeScreen');
+                      return const HomeScreen();
+                    },
+                  ),
+                  GoRoute(
+                    path: '/businesses',
+                    builder: (context, state) => const BusinessListScreen(),
+                  ),
+                  GoRoute(
+                    path: '/settings',
+                    builder: (context, state) => const SettingsScreen(),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
