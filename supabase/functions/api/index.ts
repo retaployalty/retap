@@ -995,6 +995,37 @@ serve(async (req) => {
       );
     }
 
+    // POST /apple-wallet/generate
+    if (path === 'apple-wallet/generate' && req.method === 'POST') {
+      const { cardId, customerName, cardUid } = await req.json()
+
+      if (!cardId || !customerName || !cardUid) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      try {
+        // Per ora restituiamo un URL di test che punta al controller NestJS
+        // TODO: Implementa la logica completa di Apple Wallet con passkit-generator
+        const downloadUrl = `http://localhost:4000/apple-wallet/generate`;
+        
+        return new Response(
+          JSON.stringify({ 
+            downloadUrl,
+            message: 'Apple Wallet pass generation endpoint'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     // POST /google-wallet/generate
     if (path === 'google-wallet/generate' && req.method === 'POST') {
       const { cardId, customerName, cardUid } = await req.json()
