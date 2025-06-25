@@ -11,12 +11,11 @@ class AppleWalletService {
     try {
       print('Richiesta creazione pass Apple Wallet per carta: $cardId');
       
-      // Chiama l'API Supabase Edge Function per creare il pass Apple Wallet
+      // Chiama l'API NestJS per creare il pass Apple Wallet
       final response = await http.post(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/apple-wallet'),
+        Uri.parse('http://localhost:4000/apple-wallet/generate'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
         },
         body: jsonEncode({
           'cardId': cardId,
