@@ -265,7 +265,7 @@ $$;
 ALTER FUNCTION "public"."create_customer_checkpoint"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[])
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "latitude" numeric, "longitude" numeric, "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[])
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
 BEGIN
@@ -278,13 +278,15 @@ BEGIN
       c.issuing_merchant_id = cm.merchant_id as is_issuer,
       m.industry,
       m.logo_url,
-      m.hours
+      m.hours,
+      m.latitude,
+      m.longitude
     FROM public.cards c
     JOIN public.card_merchants cm ON cm.card_id = c.id
     JOIN public.merchants m ON m.id = cm.merchant_id
     LEFT JOIN public.transactions t ON t.card_merchant_id = cm.id
     WHERE c.id = $1
-    GROUP BY cm.merchant_id, m.name, c.issuing_merchant_id, m.industry, m.logo_url, m.hours
+    GROUP BY cm.merchant_id, m.name, c.issuing_merchant_id, m.industry, m.logo_url, m.hours, m.latitude, m.longitude
   ),
   checkpoints AS (
     SELECT
@@ -322,6 +324,8 @@ BEGIN
     mb.industry,
     mb.logo_url,
     mb.hours,
+    mb.latitude,
+    mb.longitude,
     COALESCE(bc.current_step, 0) as checkpoints_current,
     COALESCE(bc.total_steps, 0) as checkpoints_total,
     COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps

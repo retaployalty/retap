@@ -11,6 +11,8 @@ import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../shared_utils/google_wallet_service.dart';
 import '../shared_utils/apple_wallet_service.dart';
+import '../shared_utils/platform_detector.dart';
+import '../components/wallet_status_card.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -808,9 +810,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
 
   Future<void> _addToWallet() async {
     try {
+      print('🚀 Inizio _addToWallet');
+      
       if (_cardId == null) {
         throw Exception('Card ID not found');
       }
+
+      print('📋 Card ID: $_cardId');
 
       // Get card details from Supabase
       final cardResponse = await _supabase
@@ -828,36 +834,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       final customerName = '${customerResponse['first_name']} ${customerResponse['last_name']}';
       final cardUid = cardResponse['uid'];
 
-      // Determina la piattaforma
-      final userAgent = html.window.navigator.userAgent.toLowerCase();
-      final isIOS = userAgent.contains('iphone') || userAgent.contains('ipad') || userAgent.contains('ipod');
+      print('👤 Customer Name: $customerName');
+      print('🆔 Card UID: $cardUid');
 
-      String saveUrl;
-      if (isIOS) {
+      // Usa il nuovo PlatformDetector
+      final isApplePlatform = PlatformDetector.isApplePlatform;
+      final platformName = PlatformDetector.platformName;
+      
+      print('🖥️  Piattaforma rilevata: $platformName');
+      print('🍎 È piattaforma Apple: $isApplePlatform');
+      print('👛 Tipo wallet: ${PlatformDetector.walletType}');
+
+      if (isApplePlatform) {
+        print('🍎 Avvio generazione Apple Wallet...');
         // Crea il pass per Apple Wallet
-        saveUrl = await AppleWalletService.createPass(
+        await AppleWalletService.createPass(
           cardId: _cardId!,
           customerName: customerName,
           cardUid: cardUid,
         );
+        print('✅ Apple Wallet completato');
       } else {
+        print('🤖 Avvio generazione Google Wallet...');
         // Crea il pass per Google Wallet
-        saveUrl = await GoogleWalletService.createLoyaltyCard(
+        final saveUrl = await GoogleWalletService.createLoyaltyCard(
           cardId: _cardId!,
           customerName: customerName,
           cardUid: cardUid,
         );
+        
+        print('🔗 Google Wallet URL: $saveUrl');
+        // Apri l'URL in una nuova tab
+        html.window.open(saveUrl, '_blank');
+        print('✅ Google Wallet completato');
       }
-
-      // Apri l'URL in una nuova tab
-      html.window.open(saveUrl, '_blank');
 
       // Mostra messaggio di successo
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Carta aggiunta al wallet con successo'),
+          SnackBar(
+            content: Text(isApplePlatform 
+              ? 'Pass Apple Wallet scaricato con successo. Apri il file per aggiungerlo al Wallet.'
+              : 'Carta aggiunta al Google Wallet con successo'
+            ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -865,9 +886,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       // Procedi al prossimo step
       _nextStep();
     } catch (e) {
+      print('❌ Errore nell\'aggiunta al wallet: $e');
       setState(() {
         _error = e.toString();
       });
+      
+      // Mostra messaggio di errore
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Errore nell\'aggiunta al wallet: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 } 
