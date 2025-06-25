@@ -12,7 +12,6 @@ import '../components/category_filters.dart';
 import '../components/business_card.dart';
 import '../shared_utils/business_hours.dart';
 import '../shared_utils/distance_calculator.dart';
-import '../providers/location_provider.dart';
 import '../providers/providers.dart';
 
 // Business categories with their corresponding icons
@@ -44,8 +43,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isLoading = true;
   String? _error;
-  List<dynamic> _allMerchants = [];
   List<dynamic> _merchantBalances = [];
+  List<dynamic> _merchantsWithCoordinates = [];
   String? cardId;
   String? _selectedCategory;
   String? _customerName;
@@ -94,10 +93,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       cardId = prefs.getString(_cardIdKey);
     }
     
-    // Se abbiamo un cardId valido, carichiamo i dati
+    // Se abbiamo un cardId valido, carichiamo i bilanci
     if (cardId != null && cardId!.isNotEmpty) {
       await _loadCustomerData();
-      await _loadAllData();
+      _loadBalances(cardId!);
     } else {
       setState(() {
         _isLoading = false;
@@ -144,26 +143,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _loadAllData() async {
+  Future<void> _loadBalances(String cardId) async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
-
     try {
-      // Carica tutti i merchant
-      await _loadAllMerchants();
+      // Carica i bilanci
+      final balanceResponse = await http.get(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
+      );
       
-      // Carica i bilanci se abbiamo un cardId
-      if (cardId != null) {
-        await _loadBalances(cardId!);
+      print('Balance Response status: ${balanceResponse.statusCode}');
+      print('Balance Response body: ${balanceResponse.body}');
+      
+      if (balanceResponse.statusCode != 200) {
+        throw Exception('Errore nel recupero dei punti: ${balanceResponse.statusCode} - ${balanceResponse.body}');
       }
       
+      final balanceData = jsonDecode(balanceResponse.body);
+      print('Balance API Response: $balanceData'); // Debug log
+      
+      final balances = (balanceData['balances'] ?? []).where((b) => ((b['balance'] ?? 0) is int && (b['balance'] ?? 0) > 0)).toList();
+      
+      // Carica i merchant con coordinate
+      final merchantsResponse = await http.get(
+        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchants'),
+      );
+      
+      if (merchantsResponse.statusCode != 200) {
+        throw Exception('Errore nel recupero dei merchant: ${merchantsResponse.statusCode}');
+      }
+      
+      final merchantsData = jsonDecode(merchantsResponse.body);
+      final merchants = merchantsData['merchants'] ?? [];
+      
+      // Combina i dati: aggiungi coordinate ai bilanci
+      final balancesWithCoordinates = balances.map((balance) {
+        final merchantId = balance['merchant_id'];
+        final merchant = merchants.firstWhere(
+          (m) => m['id'] == merchantId,
+          orElse: () => {},
+        );
+        
+        return {
+          ...balance,
+          'latitude': merchant['latitude'],
+          'longitude': merchant['longitude'],
+          'cover_image_url': merchant['cover_image_url'],
+        };
+      }).toList();
+      
       setState(() {
+        _merchantBalances = balancesWithCoordinates;
+        _merchantsWithCoordinates = merchants;
+        print('Combined Balances: $_merchantBalances'); // Debug log
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading all data: $e');
+      print('Error loading data: $e'); // Debug log
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -171,138 +209,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _loadAllMerchants() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/merchants'),
-      );
-      
-      if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero dei merchant: ${response.statusCode}');
-      }
-      
-      final data = jsonDecode(response.body);
-      setState(() {
-        _allMerchants = data['merchants'] ?? [];
-      });
-    } catch (e) {
-      print('Error loading merchants: $e');
-      throw e;
-    }
+  List<dynamic> get _filteredMerchantBalances {
+    if (_selectedCategory == null) return _merchantBalances;
+    
+    // Debug log
+    print('Selected Category: $_selectedCategory');
+    print('Filtering merchants...');
+    
+    final filtered = _merchantBalances.where((business) {
+      final businessCategory = business['industry'];
+      print('Business: ${business['merchant_name']}, Category: $businessCategory'); // Debug log
+      return businessCategory == _selectedCategory;
+    }).toList();
+    
+    print('Filtered Results: $filtered'); // Debug log
+    return filtered;
   }
 
-  Future<void> _loadBalances(String cardId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/balance?cardId=$cardId'),
-      );
-      
-      if (response.statusCode != 200) {
-        throw Exception('Errore nel recupero dei punti: ${response.statusCode}');
-      }
-      
-      final data = jsonDecode(response.body);
-      setState(() {
-        _merchantBalances = data['balances'] ?? [];
-      });
-    } catch (e) {
-      print('Error loading balances: $e');
-      // Non blocchiamo il caricamento se i bilanci falliscono
-      setState(() {
-        _merchantBalances = [];
-      });
+  List<dynamic> get _sortedMerchantBalances {
+    final location = ref.read(locationProvider);
+    if (location == null || location.latitude == null || location.longitude == null) {
+      return _filteredMerchantBalances;
     }
-  }
-
-  List<dynamic> get _filteredAndSortedMerchants {
-    // Combina i dati dei merchant con i bilanci
-    final merchantsWithData = _allMerchants.map((merchant) {
-      final balanceData = _merchantBalances.firstWhere(
-        (balance) => balance['merchant_id'] == merchant['id'],
-        orElse: () => {
-          'balance': 0,
-          'checkpoints_current': 0,
-          'checkpoints_total': 0,
-          'reward_steps': [],
-        },
-      );
-
+    
+    // Converti la lista in Map per usare il metodo sortByDistance
+    final businessesAsMaps = _filteredMerchantBalances.map((business) {
       return {
-        ...merchant,
-        'balance': balanceData['balance'] ?? 0,
-        'checkpoints_current': balanceData['checkpoints_current'] ?? 0,
-        'checkpoints_total': balanceData['checkpoints_total'] ?? 0,
-        'reward_steps': balanceData['reward_steps'] ?? [],
+        'merchant_id': business['merchant_id'],
+        'merchant_name': business['merchant_name'],
+        'industry': business['industry'],
+        'logo_url': business['logo_url'],
+        'hours': business['hours'],
+        'balance': business['balance'],
+        'checkpoints_current': business['checkpoints_current'],
+        'checkpoints_total': business['checkpoints_total'],
+        'reward_steps': business['reward_steps'],
+        'cover_image_url': business['cover_image_url'],
+        'latitude': business['latitude'],
+        'longitude': business['longitude'],
       };
     }).toList();
+    
+    final sorted = DistanceCalculator.sortByDistance(
+      businessesAsMaps, 
+      location.latitude!, 
+      location.longitude!
+    );
+    
+    return sorted;
+  }
 
-    // Filtra solo i business dove l'utente ha dei punti (balance > 0)
-    final merchantsWithPoints = merchantsWithData.where((business) {
-      final balance = business['balance'] ?? 0;
-      return balance > 0;
-    }).toList();
-
-    // Filtra per categoria se selezionata
-    List<dynamic> filtered = merchantsWithPoints;
-    if (_selectedCategory != null) {
-      filtered = merchantsWithPoints.where((business) {
-        final businessCategory = business['industry'];
-        return businessCategory == _selectedCategory;
-      }).toList();
-    }
-
-    // Ottieni la posizione corrente
-    final locationState = ref.read(locationProvider);
-    final userLocation = locationState.userPosition;
-
-    // Se abbiamo la posizione dell'utente, calcola le distanze e ordina
-    if (userLocation != null) {
-      final merchantsWithDistance = filtered.map((merchant) {
-        final latitude = merchant['latitude'];
-        final longitude = merchant['longitude'];
-        
-        double? distance;
-        String? distanceFormatted;
-        
-        if (latitude != null && longitude != null) {
-          distance = DistanceCalculator.calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            latitude.toDouble(),
-            longitude.toDouble(),
-          );
-          distanceFormatted = DistanceCalculator.formatDistance(distance);
-        }
-        
-        return {
-          ...merchant,
-          'distance': distance,
-          'distanceFormatted': distanceFormatted,
-        };
-      }).toList();
-
-      // Ordina per distanza (prima quelli più vicini)
-      merchantsWithDistance.sort((a, b) {
-        final distanceA = a['distance'] ?? double.infinity;
-        final distanceB = b['distance'] ?? double.infinity;
-        return distanceA.compareTo(distanceB);
-      });
-
-      return merchantsWithDistance;
-    }
-
-    // Se non abbiamo la posizione, restituisci senza ordinare per distanza
-    return filtered.map((merchant) => {
-      ...merchant,
-      'distance': null,
-      'distanceFormatted': null,
-    }).toList();
+  String _getDistanceText(dynamic business) {
+    return business['distanceFormatted'] ?? '';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final locationState = ref.watch(locationProvider);
+    final location = ref.watch(locationProvider);
     
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -353,83 +317,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                       ],
                     ),
-                  // Indicatore di posizione
-                  if (locationState.status == LocationStatus.loading)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Localizzando...',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (locationState.status == LocationStatus.error || locationState.status == LocationStatus.permissionDenied)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_off, color: Colors.red[700], size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            locationState.errorMessage ?? 'Errore posizione',
-                            style: TextStyle(
-                              color: Colors.red[700],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (locationState.userPosition != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on, color: Colors.green[700], size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Posizione attiva',
-                            style: TextStyle(
-                              color: Colors.green[700],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -445,7 +332,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-                      : _filteredAndSortedMerchants.isEmpty
+                      : _sortedMerchantBalances.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -475,20 +362,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _filteredAndSortedMerchants.length,
+                                itemCount: _sortedMerchantBalances.length,
                                 itemBuilder: (context, index) {
-                                  final business = _filteredAndSortedMerchants[index];
+                                  final business = _sortedMerchantBalances[index];
                                   final category = business['industry'] ?? 'Other';
                                   final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
                                   final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
-                                  final name = business['name'] ?? '';
+                                  final name = business['merchant_name'] ?? '';
                                   final hours = business['hours'];
                                   final isOpen = isBusinessOpen(hours);
                                   final checkpointsCurrent = business['checkpoints_current'] ?? 0;
                                   final checkpointsTotal = business['checkpoints_total'] ?? 0;
                                   final points = business['balance'] ?? 0;
                                   final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
-                                  final distance = business['distanceFormatted'];
+                                  final distance = _getDistanceText(business);
                                   return BusinessCard(
                                     category: category,
                                     categoryIcon: categoryIcon,
@@ -513,7 +400,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
                                             isOpen: isOpen,
                                             hours: hours,
-                                            merchantId: business['id'],
+                                            merchantId: business['merchant_id'],
                                             cardId: cardId!,
                                           ),
                                         ),

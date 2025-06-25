@@ -77,52 +77,24 @@ class BusinessCard extends StatelessWidget {
                 ),
                 color: Colors.white,
               ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                    ),
-                    child: Image.network(
-                      logoUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.primary.withOpacity(0.08),
-                        child: SvgPicture.asset(
-                          'assets/icons/Home.svg',
-                          width: 48,
-                          height: 48,
-                          colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
-                        ),
-                      ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+                child: Image.network(
+                  logoUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: AppColors.primary.withOpacity(0.08),
+                    child: SvgPicture.asset(
+                      'assets/icons/Home.svg',
+                      width: 48,
+                      height: 48,
+                      colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
                     ),
                   ),
-                  // Icona categoria in alto a destra
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        categoryIcon,
-                        size: 16,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             // Contenuto principale
@@ -140,26 +112,27 @@ class BusinessCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header con nome e stato apertura
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          name,
-                          style: AppTextStyles.titleMedium.copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        // Distanza e stato apertura
-                        Row(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             // Distanza
-                            if (distance != null) ...[
+                            if (distance != null)
                               Container(
+                                margin: const EdgeInsets.only(bottom: 4),
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[100],
@@ -181,8 +154,6 @@ class BusinessCard extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                            ],
                             // Stato apertura
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -218,6 +189,34 @@ class BusinessCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
+                    // Categoria
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SvgPicture.asset(
+                            'assets/icons/Compass.svg',
+                            width: 14,
+                            height: 14,
+                            colorFilter: ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            category,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const Spacer(),
                     // Barra di progresso
                     Stack(
