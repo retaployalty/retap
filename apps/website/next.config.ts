@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
     remotePatterns: [
       {
@@ -10,7 +9,6 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
-    domains: ["images.unsplash.com", "lh3.googleusercontent.com"],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -18,7 +16,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: ["@prisma/client", "bcrypt"],
+  serverExternalPackages: ['@supabase/auth-helpers-nextjs'],
   async headers() {
     return [
       {
@@ -38,15 +36,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        source: "/app/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
-        ],
-      },
     ];
   },
   async redirects() {
@@ -58,6 +47,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
