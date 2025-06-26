@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +62,7 @@ interface Merchant {
   created_at: string;
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
@@ -393,92 +393,107 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 min-h-screen p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Caricamento...</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 min-h-screen p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">Errore: {error}</p>
-            <Button onClick={() => window.location.reload()}>
-              Riprova
-            </Button>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 min-h-screen p-6">
-      {/* Success Message */}
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">Manage your account and preferences</p>
+        </div>
+      </div>
+
       {showSuccessMessage && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <h3 className="font-medium text-green-800">Payment completed successfully!</h3>
-              <p className="text-sm text-green-700">Your subscription has been updated.</p>
-            </div>
+            <p className="text-green-800">Payment completed successfully!</p>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and subscription
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {!subscription && (
-            <Button 
-              onClick={handleCreateTestSubscription}
-              disabled={isCreatingTest}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              {isCreatingTest ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CreditCard className="h-4 w-4" />
-              )}
-              Create Test
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Tabs defaultValue="subscription" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="subscription" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" /> Subscription
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Lock className="h-4 w-4" /> Security
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" /> Notifications
-          </TabsTrigger>
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
-        {/* Subscription Tab */}
-        <TabsContent value="subscription">
-          <div className="grid gap-6">
-            {/* Subscription Plan */}
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+              <CardDescription>
+                Update your personal details and contact information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={userProfile?.first_name || ''}
+                    onChange={(e) => setUserProfile(prev => prev ? {...prev, first_name: e.target.value} : null)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={userProfile?.last_name || ''}
+                    onChange={(e) => setUserProfile(prev => prev ? {...prev, last_name: e.target.value} : null)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={userProfile?.email || ''}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={userProfile?.phone_number || ''}
+                  onChange={(e) => setUserProfile(prev => prev ? {...prev, phone_number: e.target.value} : null)}
+                />
+              </div>
+              <Button onClick={handleSave} className="w-full">
+                Save Changes
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscription" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -711,74 +726,69 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-[#f8494c]" /> Password
-                </CardTitle>
-                <CardDescription>
-                  Update your password and security settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {passwordError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600">{passwordError}</p>
-                  </div>
+        <TabsContent value="security" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-[#f8494c]" /> Password
+              </CardTitle>
+              <CardDescription>
+                Update your password and security settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {passwordError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{passwordError}</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input 
+                  id="current-password" 
+                  type="password" 
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  disabled={isUpdatingPassword}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input 
+                  id="new-password" 
+                  type="password" 
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  disabled={isUpdatingPassword}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input 
+                  id="confirm-password" 
+                  type="password" 
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  disabled={isUpdatingPassword}
+                />
+              </div>
+              <Button onClick={handleSave} disabled={isUpdatingPassword}>
+                {isUpdatingPassword ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Password'
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input 
-                    id="current-password" 
-                    type="password" 
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                    disabled={isUpdatingPassword}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input 
-                    id="new-password" 
-                    type="password" 
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                    disabled={isUpdatingPassword}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input 
-                    id="confirm-password" 
-                    type="password" 
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    disabled={isUpdatingPassword}
-                  />
-                </div>
-                <Button onClick={handleSave} disabled={isUpdatingPassword}>
-                  {isUpdatingPassword ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update Password'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -885,5 +895,17 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 } 

@@ -1,15 +1,19 @@
 {
   "name": "retap",
   "version": "1.0.0",
-  "description": "",
+  "description": "ReTap Monorepo - Website + Flutter Web Client",
   "main": "index.js",
   "scripts": {
     "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
+    "build": "npm run build:website && npm run build:flutter",
+    "build:website": "cd apps/website && npm run build",
+    "build:flutter": "./build-flutter-web.sh",
+    "build:all": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "vercel-build": "npm run build"
   },
-  "keywords": [],
+  "keywords": ["retap", "monorepo", "nextjs", "flutter"],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",

@@ -587,7 +587,7 @@ function CheckoutPage() {
               <h4 className="font-semibold text-lg mb-2">Next steps</h4>
               <ol className="list-decimal list-inside space-y-1 text-base text-muted-foreground">
                 <li>Make the bank transfer using the details provided</li>
-                <li>Send the payment receipt to <span className='font-medium text-primary'>payments@retap.com</span> or via WhatsApp</li>
+                <li>Send the payment receipt to <span className='font-medium text-primary'>payments@retapcard.com</span> or via WhatsApp</li>
               </ol>
             </div>
             <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-5 flex flex-col items-center shadow-sm">

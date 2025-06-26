@@ -9,6 +9,18 @@ export async function middleware(req: NextRequest) {
   // Refresh session if expired - required for Server Components
   const { data: { session } } = await supabase.auth.getSession()
 
+  // Handle domain redirects for production
+  if (process.env.NODE_ENV === 'production') {
+    const hostname = req.headers.get('host')
+    
+    // Redirect www to non-www
+    if (hostname?.startsWith('www.')) {
+      const newUrl = req.nextUrl.clone()
+      newUrl.hostname = hostname.replace('www.', '')
+      return NextResponse.redirect(newUrl, 301)
+    }
+  }
+
   // Check if the request is for the admin panel
   if (req.nextUrl.pathname.startsWith('/admin-panel')) {
     // Skip middleware for login page
@@ -29,7 +41,7 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/dashboard')) {
     // If not authenticated, redirect to login
     if (!session) {
-      return NextResponse.redirect(new URL('/login', req.url))
+      return NextResponse.redirect(new URL('/auth', req.url))
     }
   }
 

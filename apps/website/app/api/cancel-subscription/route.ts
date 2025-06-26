@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { stripe } from '@/lib/stripe';
 
 export async function POST(request: Request) {
   try {

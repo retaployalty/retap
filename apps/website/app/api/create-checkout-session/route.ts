@@ -4,8 +4,11 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2025-05-28.basil",
 });
+
+// Evita il pre-rendering di questa route
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -33,7 +36,7 @@ export async function POST(req: Request) {
 
     // Gestisci l'URL di base con fallback sicuro
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                   (process.env.NODE_ENV === 'production' ? 'https://retap.vercel.app' : 'http://localhost:3000');
+                   (process.env.NODE_ENV === 'production' ? 'https://retapcard.com' : 'http://localhost:3000');
     
     // Assicurati che l'URL abbia il protocollo
     const appUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;

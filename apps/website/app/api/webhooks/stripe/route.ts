@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = headers().get('Stripe-Signature') as string;
+  const signature = (await headers()).get('Stripe-Signature') as string;
 
   console.log('Webhook received:', { 
     bodyLength: body.length, 
@@ -199,7 +199,7 @@ export async function POST(req: Request) {
         
         if (subscriptionId) {
           // Aggiorna la data di fine dell'abbonamento quando il pagamento va a buon fine
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
           const userId = subscription.metadata?.userId;
 
           if (userId) {
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
         const subscriptionId = invoice.subscription;
         
         if (subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any;
           const userId = subscription.metadata?.userId;
 
           if (userId) {

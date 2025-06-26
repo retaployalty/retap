@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Button } from "@/components/ui/button";
 import { Mail, CheckCircle2, AlertCircle, ArrowRight, ExternalLink } from "lucide-react";
@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getInboxUrl, isEmailTestingAvailable } from "@/lib/email-config";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -199,21 +199,43 @@ export default function VerifyEmailPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
               >
-                Open Email Testing Interface
+                View Email Inbox
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           )}
-          
-          <Link 
-            href="/auth" 
-            className="text-[#1A1A1A] hover:text-[#FF3131] transition-colors flex items-center justify-center gap-2"
+        </div>
+
+        <div className="text-center">
+          <Link
+            href="/auth"
+            className="text-sm text-[#FF3131] hover:text-[#FF3131]/80 transition-colors"
           >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            Back to login
+            ← Back to sign in
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg border border-border">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+              <Mail className="h-6 w-6 text-blue-600" />
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">
+              Loading...
+            </h2>
+          </div>
+        </div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 } 
