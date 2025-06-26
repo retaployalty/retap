@@ -53,16 +53,17 @@ const FORM_STORAGE_KEY = 'retap_checkout_form';
 // Inserisco la costante per il piano unico in inglese
 const SUBSCRIPTION = {
   name: "SINGLE SUBSCRIPTION",
+  subtitle: "For all businesses, big and small",
   monthlyPrice: 49,
+  annualPrice: 529,
   activationFee: 99,
-  annualDiscount: 0.10, // 10%
   features: [
-    "Up to 1000 cards/month",
+    "POS device included",
+    "Up to 100 physical cards/month",
     "Full dashboard",
-    "Advanced statistics",
-    "Priority support",
-    "API access"
-  ]
+    "Advanced statistics"
+  ],
+  guarantee: "30-day money-back guarantee. No questions asked."
 };
 
 export default function CheckoutWrapper() {
@@ -74,9 +75,9 @@ export default function CheckoutWrapper() {
 }
 
 function CheckoutPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
@@ -139,7 +140,7 @@ function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: getStripePriceId(billingCycle),
+          priceId: getStripePriceId(isAnnual ? "yearly" : "monthly"),
           customerEmail: billingForm.email,
           successUrl: window.location.origin + '/success',
           cancelUrl: window.location.origin + '/checkout',
@@ -196,7 +197,7 @@ function CheckoutPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              priceId: getStripePriceId(billingCycle),
+              priceId: getStripePriceId(isAnnual ? "yearly" : "monthly"),
               customerEmail: form.email,
               successUrl: window.location.origin + '/dashboard/settings?success=true',
               cancelUrl: window.location.origin + '/checkout',
@@ -236,8 +237,8 @@ function CheckoutPage() {
     iban: 'IT60X0542811101000000123456',
     swift: 'UNCRITM1XXX',
     beneficiary: 'ReTap S.r.l.',
-    amount: billingCycle === 'monthly' ? '148.00' : '530.00',
-    reason: `Abbonamento ReTap Business ${billingCycle === 'monthly' ? 'Mensile' : 'Annuale'}`,
+    amount: isAnnual ? '470.00' : '148.00',
+    reason: `Abbonamento ReTap Business ${isAnnual ? 'Annuale' : 'Mensile'}`,
   };
 
   // Salvataggio e ripristino dati form in localStorage
@@ -264,363 +265,213 @@ function CheckoutPage() {
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      subscription_type: billingCycle === "monthly" ? "mensile" : "annuale",
+      subscription_type: isAnnual ? "annuale" : "mensile",
     }));
-  }, [billingCycle]);
+  }, [isAnnual]);
 
   return (
-    <div className="container max-w-7xl mx-auto py-12 px-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-        {/* Colonna sinistra - Caratteristiche */}
-        <div className="space-y-10">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">ReTap Business</h1>
-            <p className="text-lg text-muted-foreground">
-              The complete solution for managing your customer loyalty
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="container max-w-7xl mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-4">
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </Link>
+          <div className="text-center">
+            <h1 className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
+              ReTap Business
+            </h1>
+            <p className="text-xl text-muted-foreground mt-2 max-w-2xl mx-auto">
+              The complete solution to manage your customer loyalty with NFC cards
             </p>
           </div>
-
-          <div className="space-y-6">
-            {features.map((feature) => (
-              <div key={feature.title} className="flex items-start gap-4 p-5 rounded-2xl border bg-card shadow-sm">
-                <div className="p-3 bg-primary/10 rounded-xl">
-                  <feature.icon className="w-7 h-7 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-1">{feature.title}</h3>
-                  <p className="text-muted-foreground text-base">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Card className="border-2 rounded-2xl shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl">Included in the plan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Custom dashboard</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Dedicated technical support</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">Analytics and reporting</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-base">POS integration</span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-
-        {/* Colonna destra - Step multipli */}
-        <Card className="border-2 rounded-2xl shadow-lg">
-          <CardHeader className="space-y-1.5 pb-2">
-            <CardTitle className="text-2xl text-center">Complete your subscription</CardTitle>
-            <p className="text-sm text-muted-foreground text-center">
-              {step === 1 && "Choose your plan and continue"}
-              {step === 2 && "Enter your billing and shipping details"}
-            </p>
-          </CardHeader>
-          <CardContent>
-            {step === 1 && (
-              <div className="space-y-8">
-                <div className="text-center mb-4">
-                  <h2 className="text-2xl font-bold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-                    Pricing
-                  </h2>
-                  <p className="text-base text-muted-foreground mb-4">
-                    One simple, transparent subscription
-                  </p>
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <Label htmlFor="billing-toggle" className="text-sm font-medium">Monthly</Label>
-                    <Switch
-                      id="billing-toggle"
-                      checked={billingCycle === 'yearly'}
-                      onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
-                    />
-                    <Label htmlFor="billing-toggle" className="text-sm font-medium">
-                      Annual
-                      </Label>
-                    </div>
-                </div>
-                <div className="flex justify-center">
-                  <Card className="max-w-md w-full border-primary shadow-md rounded-2xl">
-                    <CardHeader>
-                      <CardTitle className="text-2xl text-center">{SUBSCRIPTION.name}</CardTitle>
-                      <CardDescription className="text-center">For all businesses, big and small</CardDescription>
-                      <div className="mt-4 flex flex-col items-center">
-                        <span className="text-5xl font-bold mb-1">
-                          {billingCycle === 'yearly' ? `${Math.round(SUBSCRIPTION.monthlyPrice * 12 * (1 - SUBSCRIPTION.annualDiscount))}€` : `${SUBSCRIPTION.monthlyPrice}€`}
-                        </span>
-                        <span className="text-muted-foreground text-lg">
-                          /{billingCycle === 'yearly' ? "year" : "month"}
-                        </span>
-                    </div>
-                      {billingCycle === 'monthly' && (
-                        <p className="text-sm text-muted-foreground mt-2 text-center">
-                          + {SUBSCRIPTION.activationFee}€ one-time activation fee
-                        </p>
-                      )}
-                      {billingCycle === 'yearly' && (
-                        <p className="text-sm text-primary mt-2 text-center">
-                          10% discount and no activation fee
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2 mb-4">
-                        {SUBSCRIPTION.features.map((feature) => (
-                          <li key={feature} className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary" />
-                            <span className="text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="flex justify-center">
-                        <div className="bg-green-50 text-green-700 text-sm font-bold rounded-lg px-4 py-2 mb-4 shadow-sm border border-green-200">
-                          30-day money-back guarantee. No questions asked.
-                        </div>
-                  </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button className="w-full h-12 text-base mt-2" variant="default" onClick={() => setStep(2)}>
-                        Continue
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                  </div>
-                <div className="text-center mt-8 text-muted-foreground">
-                  <p>ReTap is always free for end customers.</p>
-                </div>
+        <div className="flex flex-col items-center">
+          {step === 1 && (
+            <>
+              {/* Toggle Monthly/Annual */}
+              <div className="flex items-center justify-center gap-4 mb-2 w-full max-w-md">
+                <span className="text-lg sm:text-xl">Monthly</span>
+                <Switch id="billing-toggle" checked={isAnnual} onCheckedChange={setIsAnnual} className="scale-110 sm:scale-125" />
+                <span className="text-lg sm:text-xl">Annual</span>
               </div>
-            )}
-            {step === 2 && (
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Personal Info Section */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <select
-                        id="title"
-                        name="title"
-                        value={form.title}
-                        onChange={handleChange}
-                        className="w-full border rounded px-3 py-2"
-                        required
-                      >
-                        <option value="">Not specified</option>
-                        <option value="Mr">Mr</option>
-                        <option value="Ms">Ms</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="first_name">First name</Label>
-                      <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="last_name">Last name</Label>
-                      <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} required />
-                    </div>
+              {/* Banner annuale stile pricing, spazio sempre riservato */}
+              <div className="flex justify-center w-full max-w-md mb-6" style={{minHeight: '32px'}}>
+                {isAnnual ? (
+                  <div className="bg-[#1A1A1A]/5 text-[#1A1A1A] px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1.5 border border-[#1A1A1A]/10 whitespace-nowrap">
+                    No activation fee + 10% off first year (Save 84€)
                   </div>
-                </div>
-                {/* Address Section */}
-                <div className="space-y-4">
-                  <Label className="font-semibold">Address</Label>
-                  <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Street and number" required />
-                  <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Apartment, suite, building code (optional)" />
-                  <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Other address info" />
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="zip_code">ZIP code</Label>
-                      <Input id="zip_code" name="zip_code" value={form.zip_code} onChange={handleChange} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input id="city" name="city" value={form.city} onChange={handleChange} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Input id="country" name="country" value={form.country} onChange={handleChange} required />
-                    </div>
-                  </div>
-                </div>
-                {/* Company Section */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="is_company"
-                      name="is_company"
-                      checked={form.is_company}
-                      onChange={handleChange}
-                      className="accent-primary"
-                    />
-                    <Label htmlFor="is_company">This is a company address</Label>
-                  </div>
-                  {form.is_company && (
-                    <div>
-                      <Label htmlFor="company_name">Company name</Label>
-                      <Input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} required={form.is_company} />
-                    </div>
-                  )}
-                </div>
-                {/* Contact Section */}
-                <div className="space-y-2">
-                  <Label className="font-semibold">Contact information</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone number</Label>
-                      <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Phone number" required />
-                    </div>
-                  </div>
-                </div>
-                {/* Payment Method Section */}
-                {billingCycle === 'yearly' && (
-                  <div className="space-y-4">
-                    <Label className="font-semibold">Payment method</Label>
-                    <RadioGroup
-                      value={paymentMethod}
-                      onValueChange={(value) => setPaymentMethod(value as 'card' | 'bank')}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div>
-                        <RadioGroupItem
-                          value="card"
-                          id="card"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="card"
-                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
-                        >
-                          <CreditCard className="w-6 h-6 mb-2" />
-                          <div className="text-sm font-medium">Credit card</div>
-                        </Label>
-                      </div>
-                      <div>
-                        <RadioGroupItem
-                          value="bank"
-                          id="bank"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="bank"
-                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors"
-                        >
-                          <svg className="w-6 h-6 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3" />
-                          </svg>
-                          <div className="text-sm font-medium">Bank transfer</div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                    {paymentMethod === 'bank' && (
-                      <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                        <h4 className="font-semibold">Bank transfer details</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Beneficiary:</span>
-                            <span className="font-medium">{bankDetails.beneficiary}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">IBAN:</span>
-                            <span className="font-medium">{bankDetails.iban}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">SWIFT/BIC:</span>
-                            <span className="font-medium">{bankDetails.swift}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Amount:</span>
-                            <span className="font-medium">€{bankDetails.amount}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Reason:</span>
-                            <span className="font-medium">{bankDetails.reason}</span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-4">
-                          Once the transfer is complete, you will receive a confirmation email with your access credentials.
-                        </p>
-                      </div>
+                ) : (
+                  <div className="px-2 sm:px-3 py-1 sm:py-1.5" style={{visibility: 'hidden'}}>&nbsp;</div>
+                )}
+              </div>
+              {/* Subscription Box - stile identico a pricing */}
+              <Card className="max-w-sm sm:max-w-md w-full border-[#1A1A1A] shadow-xl rounded-2xl">
+                <CardHeader className="px-4 sm:px-6">
+                  <CardTitle className="text-2xl text-center text-[#1A1A1A]">{SUBSCRIPTION.name}</CardTitle>
+                  <CardDescription className="text-center text-muted-foreground text-sm sm:text-base">{SUBSCRIPTION.subtitle}</CardDescription>
+                  <div className="mt-4 flex flex-col items-center">
+                    <span className="text-4xl sm:text-5xl font-bold mb-1 text-[#1A1A1A]">
+                      {isAnnual ? `${SUBSCRIPTION.annualPrice}€` : `${SUBSCRIPTION.monthlyPrice}€`}
+                    </span>
+                    <span className="text-muted-foreground text-base sm:text-lg">
+                      /{isAnnual ? "year" : "month"}
+                    </span>
+                    {!isAnnual && (
+                      <span className="text-xs sm:text-sm text-muted-foreground mt-2 text-center">
+                        + {SUBSCRIPTION.activationFee}€ one-time activation fee
+                      </span>
                     )}
                   </div>
-                )}
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base"
-                  disabled={loading}
-                >
-                  {loading ? "Processing..." : paymentMethod === 'bank' ? "Confirm and proceed" : "Continue"}
-                </Button>
-              </form>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      {success && <p>Dati salvati con successo!</p>}
-
-      {/* Dialog di ringraziamento per bonifico */}
-      <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
-        <DialogContent className="sm:max-w-md p-6">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-bold text-center mb-1">Thank you for your order!</DialogTitle>
-            <DialogDescription className="text-center text-base mb-4">
-              We have received your subscription request with bank transfer payment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-5">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Next steps</h4>
-              <ol className="list-decimal list-inside space-y-1 text-base text-muted-foreground">
-                <li>Make the bank transfer using the details provided</li>
-                <li>Send the payment receipt to <span className='font-medium text-primary'>payments@retapcard.com</span> or via WhatsApp</li>
-              </ol>
-            </div>
-            <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-5 flex flex-col items-center shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageCircle className="w-7 h-7 text-green-600" />
-                <span className="font-semibold text-green-700 text-lg">Set up your business</span>
+                </CardHeader>
+                <CardContent className="px-4 sm:px-6">
+                  <ul className="space-y-2 mb-4">
+                    {SUBSCRIPTION.features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-[#FF3131] flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-center">
+                    <div className="bg-[#28A745]/10 text-[#28A745] text-xs sm:text-sm rounded-lg px-3 sm:px-4 py-2 mb-4 shadow-sm border border-[#28A745]/20 text-center">
+                      {SUBSCRIPTION.guarantee}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="px-4 sm:px-6">
+                  <Button 
+                    className="w-full h-14 text-lg sm:text-xl px-8 bg-[#1A1A1A] hover:bg-[#1A1A1A]/90 text-white" 
+                    style={{boxShadow: 'none'}}
+                    type="button"
+                    onClick={() => setStep(2)}
+                  >
+                    Activate now
+                  </Button>
+                </CardFooter>
+              </Card>
+              <div className="text-center text-lg text-black/70 mt-2">
+                ReTap is always free for end customers.
               </div>
-              <p className="text-center text-green-900 mb-4 text-base">Book your 30-minute onboarding call on WhatsApp: we'll help you configure and use ReTap with ease.</p>
-              <a 
-                href="https://wa.me/390212345678?text=Hi,%20I%20would%20like%20to%20book%20the%20setup%20call%20for%20ReTap" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-lg font-semibold text-white bg-green-600 rounded-lg shadow-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 mb-2"
-              >
-                <MessageCircle className="w-6 h-6" />
-                Chat with us on WhatsApp
-              </a>
-              <span className="text-green-700 font-bold text-base select-all mb-1">+39 02 12345678</span>
+            </>
+          )}
+          {step === 2 && (
+            <div className="w-full max-w-xl mx-auto mt-6">
+              <Card className="shadow-xl rounded-2xl border border-[#E6E6E6] px-0 sm:px-2">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <Button variant="ghost" size="sm" className="px-2 py-1 text-muted-foreground flex items-center gap-1" onClick={() => setStep(1)}>
+                      <ArrowLeft className="w-4 h-4" /> Back
+                    </Button>
+                    <div className="flex-1 text-center">
+                      <CardTitle className="text-2xl font-bold font-sans" style={{fontFamily: 'Fredoka, sans-serif'}}>Complete your subscription</CardTitle>
+                      <CardDescription className="text-muted-foreground text-base">Enter your billing and shipping details</CardDescription>
+                    </div>
+                    <div className="w-16"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 sm:px-6 py-4">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Personal Info Section */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label htmlFor="title" className="text-sm text-muted-foreground">Title</Label>
+                        <select
+                          id="title"
+                          name="title"
+                          value={form.title}
+                          onChange={handleChange}
+                          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-primary bg-white"
+                          required
+                        >
+                          <option value="">Not specified</option>
+                          <option value="Mr">Mr</option>
+                          <option value="Ms">Ms</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="first_name" className="text-sm text-muted-foreground">First name</Label>
+                        <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} required placeholder="First name" className="rounded-lg" />
+                      </div>
+                      <div>
+                        <Label htmlFor="last_name" className="text-sm text-muted-foreground">Last name</Label>
+                        <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} required placeholder="Last name" className="rounded-lg" />
+                      </div>
+                    </div>
+                    {/* Address Section */}
+                    <div className="space-y-3">
+                      <Label className="font-semibold text-base">Address</Label>
+                      <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Street and number" required className="rounded-lg" />
+                      <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Apartment, suite, building code (optional)" className="rounded-lg" />
+                      <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Other address info" className="rounded-lg" />
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <Label htmlFor="zip_code" className="text-sm text-muted-foreground">ZIP code</Label>
+                          <Input id="zip_code" name="zip_code" value={form.zip_code} onChange={handleChange} required placeholder="ZIP code" className="rounded-lg" />
+                        </div>
+                        <div>
+                          <Label htmlFor="city" className="text-sm text-muted-foreground">City</Label>
+                          <Input id="city" name="city" value={form.city} onChange={handleChange} required placeholder="City" className="rounded-lg" />
+                        </div>
+                        <div>
+                          <Label htmlFor="country" className="text-sm text-muted-foreground">Country</Label>
+                          <Input id="country" name="country" value={form.country} onChange={handleChange} required placeholder="Country" className="rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Company Section */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="is_company"
+                          name="is_company"
+                          checked={form.is_company}
+                          onChange={handleChange}
+                          className="accent-primary w-5 h-5 rounded"
+                        />
+                        <Label htmlFor="is_company" className="text-base">This is a company address</Label>
+                      </div>
+                      {form.is_company && (
+                        <div className="pt-1">
+                          <Label htmlFor="company_name" className="text-sm text-muted-foreground">Company name</Label>
+                          <Input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} required={form.is_company} placeholder="Company name" className="rounded-lg" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Contact Section */}
+                    <div className="space-y-2 pt-1">
+                      <Label className="font-semibold text-base">Contact information</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
+                          <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required className="rounded-lg" />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone" className="text-sm text-muted-foreground">Phone number</Label>
+                          <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Phone number" required className="rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Submit Button */}
+                    <CardFooter className="px-0 pt-3">
+                      <Button
+                        type="submit"
+                        className="w-full h-14 text-lg sm:text-xl px-8 bg-[#1A1A1A] hover:bg-[#1A1A1A]/90 text-white rounded-lg transition-colors mt-2"
+                        style={{boxShadow: 'none'}}
+                        disabled={loading}
+                      >
+                        {loading ? "Processing..." : "Continue"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
-            <div className="text-center text-sm text-muted-foreground mt-2">
-              Your account will be activated within 24 business hours after payment is received.
-            </div>
-          </div>
-          <div className="flex justify-center mt-5">
-            <Button
-              onClick={() => router.push('/dashboard')}
-              className="w-full h-12 text-base"
-            >
-              Go to Dashboard
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

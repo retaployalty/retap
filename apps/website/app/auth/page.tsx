@@ -268,15 +268,15 @@ export default function AuthPage() {
       <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-lg border border-border">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-[#1A1A1A]">
-            {isLogin ? "Accedi al tuo account" : "Crea il tuo account"}
+            {isLogin ? "Sign in to your account" : "Create your account"}
           </h2>
           <p className="mt-2 text-sm text-textSecondary">
-            {isLogin ? "Non hai un account?" : "Hai già un account?"}{" "}
+            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
             <button
               onClick={() => setIsLogin(!isLogin)}
               className="font-medium text-[#1A1A1A] hover:text-[#1A1A1A]/80 transition-colors"
             >
-              {isLogin ? "Registrati" : "Accedi"}
+              {isLogin ? "Sign up" : "Sign in"}
             </button>
           </p>
         </div>
@@ -301,7 +301,7 @@ export default function AuthPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="firstName" className="block text-sm font-medium text-[#1A1A1A]">
-                    Nome
+                    First name
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
@@ -316,7 +316,7 @@ export default function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="lastName" className="block text-sm font-medium text-[#1A1A1A]">
-                    Cognome
+                    Last name
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
@@ -332,7 +332,7 @@ export default function AuthPage() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="phone" className="block text-sm font-medium text-[#1A1A1A]">
-                  Numero di telefono
+                  Phone number
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-textSecondary" />
@@ -391,7 +391,7 @@ export default function AuthPage() {
               <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                {isLogin ? "Accedi" : "Registrati"}
+                {isLogin ? "Sign in" : "Sign up"}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </>
             )}
