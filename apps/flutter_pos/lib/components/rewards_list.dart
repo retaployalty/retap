@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/reward.dart';
 import '../models/card.dart';
-import '../services/reward_service.dart';
-import '../services/points_service.dart';
+import '../services/api_service.dart';
 import '../services/cache_service.dart';
+import 'package:flutter/foundation.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
@@ -53,39 +53,63 @@ class _RewardsListState extends State<RewardsList> {
     if (!mounted) return;
     
     try {
+      debugPrint('🔄 Iniziando fetch rewards per merchant: ${widget.merchantId}');
       setState(() {
         _isLoading = true;
         _error = null;
       });
 
-      final rewards = await RewardService.fetchRewards(widget.merchantId);
+      // Usa il cache intelligente
+      final rewards = await CacheService.getCachedData<List<Reward>>(
+        key: 'rewards',
+        merchantId: widget.merchantId,
+        fetchFunction: () async {
+          debugPrint('🌐 Fetching rewards da API...');
+          // Se abbiamo un cardId, usiamo l'endpoint completo per ottenere anche i checkpoint
+          if (widget.cardId != null) {
+            debugPrint('📋 Usando endpoint completo con cardId: ${widget.cardId}');
+            final rewardsData = await ApiService.get(
+              '/rewards-and-checkpoints',
+              merchantId: widget.merchantId,
+              queryParams: {'merchantId': widget.merchantId, if (widget.cardId != null) 'cardId': widget.cardId!},
+            );
+            debugPrint('📦 Risposta API rewards: ${rewardsData['rewards']?.length ?? 0} rewards trovati');
+            return (rewardsData['rewards'] as List?)?.map((r) => Reward.fromJson(r)).toList() ?? [];
+          } else {
+            debugPrint('📋 Usando endpoint solo rewards');
+            // Fallback: chiamata diretta per solo rewards
+            final data = await ApiService.fetchRewards(widget.merchantId);
+            debugPrint('📦 Risposta API rewards: ${data.length} rewards trovati');
+            return data.map((r) => Reward.fromJson(r)).toList();
+          }
+        },
+        useMemoryCache: true,
+        usePersistentCache: true,
+      );
       
       if (!mounted) return;
       
-      setState(() {
-        _rewards = rewards;
-        _isLoading = false;
-      });
+      if (rewards != null) {
+        debugPrint('✅ Rewards caricati con successo: ${rewards.length} rewards');
+        setState(() {
+          _rewards = rewards;
+          _isLoading = false;
+        });
 
-      // Cache in background
-      if (rewards.isNotEmpty) {
-        Future.microtask(() => CacheService.cacheRewards(widget.merchantId, rewards));
+        // Cache persistente in background
+        if (rewards.isNotEmpty) {
+          Future.microtask(() => CacheService.cacheRewards(widget.merchantId, rewards));
+        }
+      } else {
+        debugPrint('❌ Nessun reward trovato');
+        setState(() {
+          _error = 'Impossibile caricare i premi';
+          _isLoading = false;
+        });
       }
     } catch (e) {
+      debugPrint('❌ Errore durante fetch rewards: $e');
       if (!mounted) return;
-      
-      try {
-        final cachedRewards = await CacheService.getCachedRewards(widget.merchantId);
-        if (cachedRewards != null && mounted) {
-          setState(() {
-            _rewards = cachedRewards;
-            _isLoading = false;
-          });
-          return;
-        }
-      } catch (cacheError) {
-        debugPrint('Cache fallback failed: $cacheError');
-      }
       
       setState(() {
         _error = 'Errore: $e';
@@ -110,17 +134,17 @@ class _RewardsListState extends State<RewardsList> {
     try {
       setState(() => _isRedeeming = true);
 
-      final redeemedReward = await RewardService.redeemReward(
+      final response = await ApiService.redeemReward(
+        merchantId: widget.merchantId,
         customerId: widget.card!.customerId!,
         rewardId: reward.id,
         pointsSpent: reward.priceCoins,
-        merchantId: widget.merchantId,
       );
 
       if (!mounted) return;
 
       // Aggiorna i punti dopo il riscatto
-      final newPoints = await PointsService.getCardBalance(widget.card!.id!, widget.merchantId);
+      final newPoints = _userPoints - reward.priceCoins;
       
       setState(() {
         _userPoints = newPoints;
@@ -129,6 +153,9 @@ class _RewardsListState extends State<RewardsList> {
 
       // Notifica il parent component del cambiamento dei punti
       widget.onPointsUpdated?.call(newPoints);
+
+      // Invalida cache per forzare refresh
+      CacheService.clearCache(widget.merchantId);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -159,23 +186,70 @@ class _RewardsListState extends State<RewardsList> {
     }
 
     if (_rewards.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.card_giftcard_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Nessun premio disponibile',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.stars,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Premi Disponibili',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_error != null)
+                    IconButton(
+                      onPressed: _fetchRewards,
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Ricarica premi',
+                    ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.card_giftcard_outlined,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Nessun premio disponibile',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'I premi verranno mostrati qui quando saranno configurati.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
