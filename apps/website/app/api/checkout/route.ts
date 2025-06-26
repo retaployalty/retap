@@ -4,6 +4,9 @@ import Stripe from 'stripe';
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
+// Evita il pre-rendering di questa route
+export const dynamic = 'force-dynamic';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
@@ -24,10 +27,10 @@ export async function POST(request: Request) {
 
     // Usa gli URL passati dal frontend, con fallback sicuro
     const finalSuccessUrl = successUrl || 
-      (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/dashboard/settings?success=true';
+      (process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? 'https://retapcard.com' : 'http://localhost:3000')) + '/dashboard/settings?success=true';
     
     const finalCancelUrl = cancelUrl || 
-      (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/checkout';
+      (process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? 'https://retapcard.com' : 'http://localhost:3000')) + '/checkout';
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',

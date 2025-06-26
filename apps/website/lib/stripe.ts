@@ -1,11 +1,18 @@
 import Stripe from 'stripe';
 
+// Verifica che la chiave segreta sia presente
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+}
+
+// Verifica che la chiave sia in modalità live per produzione
+const isLiveMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_');
+if (process.env.NODE_ENV === 'production' && !isLiveMode) {
+  console.warn('⚠️  Using test keys in production environment');
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16', // Usa l'ultima versione dell'API
+  apiVersion: '2025-05-28.basil', // Versione più recente dell'API
   typescript: true,
 });
 

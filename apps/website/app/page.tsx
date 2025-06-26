@@ -47,7 +47,7 @@ const FAQS = [
   },
   {
     q: "How do I contact support?",
-    a: "You can contact us anytime at info@retap.com or via WhatsApp.",
+    a: "You can contact us anytime at info@retapcard.com or via WhatsApp.",
   },
   {
     q: "Can I use the points earned in one store at another?",
@@ -394,7 +394,7 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-center gap-1">
               <span className="font-semibold text-textPrimary">Contacts</span>
-              <a href="mailto:info@retap.com" className="hover:text-primary transition-colors">info@retap.com</a>
+              <a href="mailto:info@retapcard.com" className="hover:text-primary transition-colors">info@retapcard.com</a>
               <a href="https://wa.me/393331234567" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">WhatsApp: +39 333 1234567</a>
             </div>
             <div className="flex flex-col items-center md:items-end gap-1">

@@ -96,3 +96,38 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+# Apple Wallet Integration
+
+## Certificati Richiesti
+
+Per l'integrazione Apple Wallet, sono necessari i seguenti certificati:
+
+1. **Certificato Pass Type ID** (`.p12`)
+   - Ottieni da Apple Developer Console
+   - Pass Type ID: `pass.com.retapcard.loyalty`
+   - Team ID: `78S7N29429`
+
+2. **Certificato WWDR** (`.cer`)
+   - Apple Worldwide Developer Relations Certificate Authority
+   - Scarica da: https://developer.apple.com/certificationauthority/AppleWWDRCA.cer
+
+## Struttura Certificati
+
+```
+apps/api-bff/certs/
+├── retap-pass-certificato.p12    # Certificato Pass Type ID
+└── AppleWWDRCAG3.cer            # Certificato WWDR
+```
+
+## Configurazione
+
+1. Crea la cartella `certs` se non esiste
+2. Inserisci i certificati nella cartella
+3. Aggiorna la password del certificato in `apple-wallet.controller.ts`
+
+## Note
+
+- Il certificato `.p12` deve essere protetto da password
+- Assicurati che i certificati siano validi e non scaduti
+- Il Pass Type ID deve corrispondere a quello configurato in Apple Developer Console
