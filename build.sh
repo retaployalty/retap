@@ -13,6 +13,14 @@ export PATH="$PATH:`pwd`/flutter/bin"
 echo "🔨 Building Flutter Web Client..."
 cd apps/flutter-web-client
 flutter pub get
+
+# Create a minimal .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo "📝 Creating minimal .env file..."
+    echo "SUPABASE_URL=https://placeholder.supabase.co" > .env
+    echo "SUPABASE_ANON_KEY=placeholder_key" >> .env
+fi
+
 flutter build web --release
 cd ../..
 
