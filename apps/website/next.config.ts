@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
@@ -9,6 +10,7 @@ const nextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+    domains: ["images.unsplash.com", "lh3.googleusercontent.com"],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -17,7 +19,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/auth-helpers-nextjs'],
+    serverComponentsExternalPackages: ["@prisma/client", "bcrypt"],
   },
   async headers() {
     return [
@@ -38,6 +40,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/app/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
     ];
   },
   async redirects() {
@@ -46,6 +57,14 @@ const nextConfig = {
         source: '/www',
         destination: '/',
         permanent: true,
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/app/:path*",
+        destination: "/api/flutter-app/:path*",
       },
     ];
   },

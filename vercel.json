@@ -1,21 +1,43 @@
 {
-  "buildCommand": "chmod +x build.sh && ./build.sh",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "apps/flutter-web-client/build/web",
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/app/(.*)",
+      "destination": "/api/flutter-app/$1"
+    },
+    {
+      "source": "/c/:cardId",
+      "destination": "/api/flutter-app/c/$cardId"
     }
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/app/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
+    }
+  ],
+  "functions": {
+    "apps/website/app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "builds": [
+    {
+      "src": "apps/website/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
+    },
+    {
+      "src": "apps/flutter-web-client/build/web/**",
+      "use": "@vercel/static"
     }
   ]
 } 

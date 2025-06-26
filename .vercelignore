@@ -2,6 +2,7 @@
 .github
 node_modules
 **/node_modules
+apps/flutter_pos
 **/.dart_tool
 **/build
 **/.flutter-plugins
