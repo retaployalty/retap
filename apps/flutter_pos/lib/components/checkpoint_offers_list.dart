@@ -163,7 +163,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
       if (!mounted) return;
 
-      final data = response[0] as Map<String, dynamic>;
+      // La risposta è ora un oggetto singolo, non una lista
+      final data = response as Map<String, dynamic>;
       setState(() {
         _currentSteps[offerId] = (data['current_step'] as num?)?.toInt() ?? 1;
         _isAdvancing = false;
@@ -178,6 +179,51 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               ? '🎉 $rewardName sbloccato!' 
               : 'Checkpoint avanzato con successo!'),
             backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Invalida cache per forzare refresh
+      CacheService.clearCache(widget.merchantId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAdvancing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rewindCheckpoint(String offerId) async {
+    if (widget.cardId == null || _isAdvancing) return;
+    
+    try {
+      setState(() => _isAdvancing = true);
+      
+      final response = await ApiService.rewindCheckpoint(
+        merchantId: widget.merchantId,
+        cardId: widget.cardId!,
+        offerId: offerId,
+      );
+
+      if (!mounted) return;
+
+      // La risposta è ora un oggetto singolo, non una lista
+      final data = response as Map<String, dynamic>;
+      setState(() {
+        _currentSteps[offerId] = (data['current_step'] as num?)?.toInt() ?? 1;
+        _isAdvancing = false;
+      });
+
+      // Mostra feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⏪ Checkpoint tornato indietro con successo!'),
+            backgroundColor: Colors.orange,
           ),
         );
       }
@@ -449,7 +495,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     child: SizedBox(
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: _isAdvancing ? null : () => _advanceCheckpoint(_checkpoints.first.id),
+                        onPressed: _isAdvancing ? null : () => _rewindCheckpoint(_checkpoints.first.id),
                         icon: const Icon(Icons.remove, size: 24),
                         label: const Text(
                           'Togli',

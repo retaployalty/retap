@@ -95,12 +95,16 @@ class ApiService {
     final uri = Uri.parse('$_functionsUrl$endpoint');
     
     debugPrint('🌐 POST: $uri');
+    debugPrint('📦 Body: $body');
     
     final response = await http.post(
       uri,
       headers: _getHeaders(merchantId),
       body: body != null ? jsonEncode(body) : null,
     );
+
+    debugPrint('📡 Response status: ${response.statusCode}');
+    debugPrint('📡 Response body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -133,15 +137,63 @@ class ApiService {
     required String cardId,
     required String offerId,
   }) async {
-    return post(
-      '/checkpoints/advance',
-      merchantId: merchantId,
-      body: {
-        'cardId': cardId,
-        'offerId': offerId,
-      },
-      debounceKey: 'advance_${cardId}_$offerId',
-    );
+    debugPrint('🚀 Avanzamento checkpoint: merchantId=$merchantId, cardId=$cardId, offerId=$offerId');
+    
+    try {
+      final result = await post(
+        '/checkpoints/advance',
+        merchantId: merchantId,
+        body: {
+          'cardId': cardId,
+          'offerId': offerId,
+        },
+        debounceKey: 'advance_${cardId}_$offerId',
+      );
+      
+      debugPrint('✅ Checkpoint avanzato con successo: $result');
+      
+      // Ora il backend restituisce sempre un oggetto singolo
+      if (result is Map<String, dynamic>) {
+        return result;
+      } else {
+        throw Exception('Risposta API non valida: $result');
+      }
+    } catch (e) {
+      debugPrint('❌ Errore avanzamento checkpoint: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> rewindCheckpoint({
+    required String merchantId,
+    required String cardId,
+    required String offerId,
+  }) async {
+    debugPrint('⏪ Rewind checkpoint: merchantId=$merchantId, cardId=$cardId, offerId=$offerId');
+    
+    try {
+      final result = await post(
+        '/checkpoints/rewind',
+        merchantId: merchantId,
+        body: {
+          'cardId': cardId,
+          'offerId': offerId,
+        },
+        debounceKey: 'rewind_${cardId}_$offerId',
+      );
+      
+      debugPrint('✅ Checkpoint rewind con successo: $result');
+      
+      // Ora il backend restituisce sempre un oggetto singolo
+      if (result is Map<String, dynamic>) {
+        return result;
+      } else {
+        throw Exception('Risposta API non valida: $result');
+      }
+    } catch (e) {
+      debugPrint('❌ Errore rewind checkpoint: $e');
+      rethrow;
+    }
   }
 
   // Metodi specifici per i rewards
@@ -149,6 +201,16 @@ class ApiService {
     // L'endpoint corretto è /rewards-and-checkpoints che restituisce sia rewards che checkpoints
     final data = await get('/rewards-and-checkpoints', merchantId: merchantId);
     return (data['rewards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  // Nuovi metodi per dati generali del merchant (senza cardId)
+  static Future<List<Map<String, dynamic>>> fetchMerchantRewards(String merchantId) async {
+    final data = await get('/merchant-rewards', merchantId: merchantId);
+    return (data['rewards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  static Future<Map<String, dynamic>> fetchMerchantCheckpoints(String merchantId) async {
+    return get('/merchant-checkpoints', merchantId: merchantId);
   }
 
   static Future<Map<String, dynamic>> redeemReward({

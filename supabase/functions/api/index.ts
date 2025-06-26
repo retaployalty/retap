@@ -601,8 +601,11 @@ serve(async (req) => {
         )
       }
 
+      // La funzione SQL restituisce una lista, ma noi vogliamo il primo elemento
+      const result = Array.isArray(data) && data.length > 0 ? data[0] : data
+
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify(result),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -638,6 +641,7 @@ serve(async (req) => {
         .select('current_step')
         .eq('customer_id', card.customer_id)
         .eq('merchant_id', merchantId)
+        .eq('offer_id', offerId)
         .single()
 
       if (checkpointError) {
@@ -673,6 +677,7 @@ serve(async (req) => {
         .update({ current_step: previousStep })
         .eq('customer_id', card.customer_id)
         .eq('merchant_id', merchantId)
+        .eq('offer_id', offerId)
         .select()
         .single()
 
@@ -684,10 +689,10 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify([{
+        JSON.stringify({
           current_step: previousStep,
           total_steps: offer.total_steps
-        }]),
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
