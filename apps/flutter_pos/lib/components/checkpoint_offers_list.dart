@@ -115,9 +115,31 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   Future<void> _fetchRedeemedRewards() async {
     if (widget.customerId == null) return;
     
-    // Per ora, inizializza con lista vuota
-    // TODO: Implementare endpoint per reward riscattati dei checkpoint
-    setState(() => _redeemedRewardIds = []);
+    try {
+      final response = await ApiService.fetchRedeemedCheckpointRewards(
+        merchantId: widget.merchantId,
+        customerId: widget.customerId!,
+      );
+      
+      final redeemedRewards = response['redeemed_rewards'] as List? ?? [];
+      final redeemedIds = redeemedRewards
+          .map((reward) => reward['checkpoint_reward_id'] as String)
+          .toList();
+      
+      if (mounted) {
+        setState(() {
+          _redeemedRewardIds = redeemedIds;
+        });
+      }
+    } catch (e) {
+      debugPrint('Errore nel recupero dei premi riscattati: $e');
+      // In caso di errore, inizializza con lista vuota
+      if (mounted) {
+        setState(() {
+          _redeemedRewardIds = [];
+        });
+      }
+    }
   }
 
   Future<void> _advanceCheckpoint(String offerId) async {
@@ -388,13 +410,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                                     },
                                                   );
                                                   if (!mounted) return;
+                                                  
+                                                  // Aggiorna immediatamente l'UI
+                                                  setState(() {
+                                                    _redeemedRewardIds.add(step.rewardId!);
+                                                  });
+                                                  
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(
                                                       content: Text('🎉 ${step.rewardName} riscattato con successo!'),
                                                       backgroundColor: Colors.green,
                                                     ),
                                                   );
-                                                  _fetchCheckpoints();
                                                 } catch (e) {
                                                   if (!mounted) return;
                                                   ScaffoldMessenger.of(context).showSnackBar(

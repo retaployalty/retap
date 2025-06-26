@@ -159,14 +159,37 @@ class ApiService {
       
       debugPrint('✅ Checkpoint rewind con successo: $result');
       
-      // Ora il backend restituisce sempre un oggetto singolo
       if (result is Map<String, dynamic>) {
         return result;
       } else {
-        throw Exception('Risposta API non valida: $result');
+        throw Exception('Risposta inattesa dal server: $result');
       }
     } catch (e) {
       debugPrint('❌ Errore rewind checkpoint: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchRedeemedCheckpointRewards({
+    required String merchantId,
+    required String customerId,
+  }) async {
+    debugPrint('🔄 Fetching redeemed checkpoint rewards: merchantId=$merchantId, customerId=$customerId');
+    
+    try {
+      final result = await get(
+        '/checkpoints/redeemed-rewards',
+        merchantId: merchantId,
+        queryParams: {
+          'customerId': customerId,
+          'merchantId': merchantId,
+        },
+      );
+      
+      debugPrint('✅ Redeemed checkpoint rewards recuperati: $result');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Errore fetch redeemed checkpoint rewards: $e');
       rethrow;
     }
   }

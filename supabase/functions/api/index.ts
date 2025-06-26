@@ -1188,6 +1188,54 @@ serve(async (req) => {
       }
     }
 
+    // GET /checkpoints/redeemed-rewards?customerId=XXX&merchantId=XXX
+    if (path === 'checkpoints/redeemed-rewards' && req.method === 'GET') {
+      const customerId = params.customerId;
+      const merchantIdParam = params.merchantId;
+      
+      if (!customerId || !merchantIdParam) {
+        return new Response(
+          JSON.stringify({ error: 'Missing customerId or merchantId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        // Recupera i premi riscattati per questo customer e merchant
+        const { data: redeemedRewards, error } = await supabaseClient
+          .from('redeemed_checkpoint_rewards')
+          .select(`
+            checkpoint_reward_id,
+            checkpoint_step_id,
+            redeemed_at,
+            status
+          `)
+          .eq('customer_id', customerId)
+          .eq('merchant_id', merchantIdParam)
+          .eq('status', 'completed')
+          .order('redeemed_at', { ascending: false });
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            redeemed_rewards: redeemedRewards || []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
