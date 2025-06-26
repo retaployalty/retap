@@ -1,0 +1,5 @@
+# Gestione delle rotte per l'app Flutter
+/* /index.html 200
+
+# Redirect per www
+https://www.app.retapcard.com/* https://app.retapcard.com/:splat 301 
