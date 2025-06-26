@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../services/api_service.dart';
+import '../components/skeleton_components.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
@@ -36,7 +37,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     if (widget.initialCheckpointData != null) {
       _initializeFromData(widget.initialCheckpointData!);
     } else {
-      _fetchCheckpoints();
+      // Carica in background per non bloccare l'UI
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchCheckpoints();
+      });
     }
     _fetchRedeemedRewards();
   }
@@ -82,11 +86,11 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         _error = null;
       });
 
-      // Chiamata diretta all'API senza cache
+      // Chiamata diretta all'API con timeout ridotto
       final response = await ApiService.fetchCheckpoints(
         widget.merchantId,
         cardId: widget.cardId,
-      );
+      ).timeout(const Duration(seconds: 5));
       
       final checkpoints = (response['checkpoint_offers'] as List?)
           ?.map((o) => Checkpoint.fromJson(o))
@@ -119,7 +123,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       final response = await ApiService.fetchRedeemedCheckpointRewards(
         merchantId: widget.merchantId,
         customerId: widget.customerId!,
-      );
+      ).timeout(const Duration(seconds: 3));
       
       final redeemedRewards = response['redeemed_rewards'] as List? ?? [];
       final redeemedIds = redeemedRewards
@@ -238,31 +242,61 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return SkeletonComponents.buildCheckpointOffersSkeleton();
     }
 
     if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Icon(Icons.error, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(color: Colors.red, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchCheckpoints,
+                child: const Text('Riprova'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_checkpoints.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.card_giftcard_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Nessuna offerta disponibile',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Icon(
+                Icons.card_giftcard_outlined,
+                size: 48,
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Nessuna offerta disponibile',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

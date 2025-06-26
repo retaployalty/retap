@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/reward.dart';
 import '../services/api_service.dart';
 import '../models/card.dart';
+import '../components/skeleton_components.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
@@ -36,7 +37,10 @@ class _RewardsListState extends State<RewardsList> {
   void initState() {
     super.initState();
     _userPoints = widget.userPoints;
-    _fetchRewards();
+    // Carica in background per non bloccare l'UI
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchRewards();
+    });
   }
 
   @override
@@ -57,7 +61,7 @@ class _RewardsListState extends State<RewardsList> {
         _error = null;
       });
 
-      // Chiamata diretta all'API senza cache
+      // Chiamata diretta all'API con timeout ridotto
       debugPrint('🌐 Fetching rewards da API...');
       List<Reward> rewards;
       
@@ -68,13 +72,13 @@ class _RewardsListState extends State<RewardsList> {
           '/rewards-and-checkpoints',
           merchantId: widget.merchantId,
           queryParams: {'merchantId': widget.merchantId, if (widget.cardId != null) 'cardId': widget.cardId!},
-        );
+        ).timeout(const Duration(seconds: 5));
         debugPrint('📦 Risposta API rewards: ${rewardsData['rewards']?.length ?? 0} rewards trovati');
         rewards = (rewardsData['rewards'] as List?)?.map((r) => Reward.fromJson(r)).toList() ?? [];
       } else {
         debugPrint('📋 Usando endpoint solo rewards');
         // Fallback: chiamata diretta per solo rewards
-        final data = await ApiService.fetchRewards(widget.merchantId);
+        final data = await ApiService.fetchRewards(widget.merchantId).timeout(const Duration(seconds: 5));
         debugPrint('📦 Risposta API rewards: ${data.length} rewards trovati');
         rewards = data.map((r) => Reward.fromJson(r)).toList();
       }
@@ -154,11 +158,35 @@ class _RewardsListState extends State<RewardsList> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return SkeletonComponents.buildRewardsSkeleton();
     }
 
     if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Icon(Icons.error, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(color: Colors.red, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchRewards,
+                child: const Text('Riprova'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_rewards.isEmpty) {
