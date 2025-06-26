@@ -9,7 +9,9 @@ import {
   handleRedeemReward, 
   handleAdvanceCheckpoint, 
   handleRewindCheckpoint, 
-  handleGetRewardsAndCheckpoints 
+  handleGetRewardsAndCheckpoints,
+  handleGetMerchantRewards,
+  handleGetMerchantCheckpoints
 } from "./handlers/rewards.ts";
 import { handleGenerateAppleWallet, handleGenerateGoogleWallet } from "./handlers/wallet.ts";
 
@@ -79,6 +81,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     // GET /rewards-and-checkpoints?merchantId=XXX&cardId=XXX
     if (path === 'rewards-and-checkpoints' && req.method === 'GET') {
       return await handleGetRewardsAndCheckpoints(params.merchantId || '', params.cardId || '');
+    }
+
+    // GET /merchant-rewards?merchantId=XXX
+    if (path === 'merchant-rewards' && req.method === 'GET') {
+      return await handleGetMerchantRewards(params.merchantId || '');
+    }
+
+    // GET /merchant-checkpoints?merchantId=XXX
+    if (path === 'merchant-checkpoints' && req.method === 'GET') {
+      return await handleGetMerchantCheckpoints(params.merchantId || '');
     }
 
     // GET /merchant-details?merchantId=XXX&cardId=XXX

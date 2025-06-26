@@ -300,4 +300,86 @@ export async function handleGetRewardsAndCheckpoints(merchantId: string, cardId:
     checkpoint_offers: offersWithSteps,
     current_step: checkpoint?.current_step || 0
   });
+}
+
+export async function handleGetMerchantRewards(merchantId: string): Promise<Response> {
+  if (!merchantId) {
+    return createErrorResponse('Missing merchantId', 400);
+  }
+
+  const supabaseClient = createSupabaseClient();
+
+  // Get only rewards for this merchant (no customer-specific data)
+  const { data: rewards, error: rewardsError } = await supabaseClient
+    .from('rewards')
+    .select('id, name, description, image_path, price_coins, is_active')
+    .eq('merchant_id', merchantId)
+    .eq('is_active', true);
+  
+  if (rewardsError) {
+    return createErrorResponse(rewardsError.message, 400);
+  }
+
+  return createSuccessResponse({ rewards: rewards || [] });
+}
+
+export async function handleGetMerchantCheckpoints(merchantId: string): Promise<Response> {
+  if (!merchantId) {
+    return createErrorResponse('Missing merchantId', 400);
+  }
+
+  const supabaseClient = createSupabaseClient();
+
+  // Get only checkpoint offers for this merchant (no customer-specific data)
+  const { data: offers, error: offersError } = await supabaseClient
+    .from('checkpoint_offers')
+    .select('id, name, description, total_steps')
+    .eq('merchant_id', merchantId);
+  
+  if (offersError) {
+    return createErrorResponse(offersError.message, 400);
+  }
+
+  // For each offer, get steps and rewards
+  const offersWithSteps = await Promise.all(
+    (offers || []).map(async (offer) => {
+      const { data: steps, error: stepsError } = await supabaseClient
+        .from('checkpoint_steps')
+        .select('id, step_number, reward_id, offer_id')
+        .eq('offer_id', offer.id)
+        .order('step_number', { ascending: true });
+      
+      if (stepsError) {
+        throw new Error(stepsError.message);
+      }
+      
+      // For each step, if reward_id, fetch reward details
+      const stepsWithReward = await Promise.all(
+        (steps || []).map(async (step) => {
+          let reward = null;
+          if (step.reward_id) {
+            const { data: rewardData, error: rewardError } = await supabaseClient
+              .from('checkpoint_rewards')
+              .select('id, name, description, icon')
+              .eq('id', step.reward_id)
+              .single();
+            if (rewardError) throw new Error(rewardError.message);
+            reward = rewardData;
+          }
+          return { ...step, reward };
+        })
+      );
+      
+      return { 
+        ...offer, 
+        steps: stepsWithReward,
+        current_step: 0 // No customer-specific data
+      };
+    })
+  );
+
+  return createSuccessResponse({ 
+    checkpoint_offers: offersWithSteps,
+    current_step: 0
+  });
 } 

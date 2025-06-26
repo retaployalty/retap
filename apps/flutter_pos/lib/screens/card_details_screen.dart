@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/card.dart';
-import '../models/reward.dart';
-import '../models/checkpoint.dart';
 import '../components/rewards_list.dart';
 import '../components/checkpoint_offers_list.dart';
 import '../services/points_service.dart';
-import 'package:uuid/uuid.dart';
 import 'dart:async';
 
 class CardDetailsScreen extends StatefulWidget {
