@@ -601,8 +601,11 @@ serve(async (req) => {
         )
       }
 
+      // La funzione SQL restituisce una lista, ma noi vogliamo il primo elemento
+      const result = Array.isArray(data) && data.length > 0 ? data[0] : data
+
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify(result),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -638,6 +641,7 @@ serve(async (req) => {
         .select('current_step')
         .eq('customer_id', card.customer_id)
         .eq('merchant_id', merchantId)
+        .eq('offer_id', offerId)
         .single()
 
       if (checkpointError) {
@@ -673,6 +677,7 @@ serve(async (req) => {
         .update({ current_step: previousStep })
         .eq('customer_id', card.customer_id)
         .eq('merchant_id', merchantId)
+        .eq('offer_id', offerId)
         .select()
         .single()
 
@@ -684,10 +689,10 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify([{
+        JSON.stringify({
           current_step: previousStep,
           total_steps: offer.total_steps
-        }]),
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -1129,6 +1134,106 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // POST /checkpoints/redeem-reward
+    if (path === 'checkpoints/redeem-reward' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { customerId, rewardId, stepId } = await req.json()
+
+      if (!customerId || !rewardId || !stepId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters: customerId, rewardId, stepId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      try {
+        // Chiama la funzione SQL per riscattare il premio del checkpoint
+        const { error } = await supabaseClient
+          .rpc('redeem_checkpoint_reward', {
+            p_customer_id: customerId,
+            p_merchant_id: merchantId,
+            p_checkpoint_reward_id: rewardId,
+            p_checkpoint_step_id: stepId
+          })
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            message: 'Checkpoint reward redeemed successfully',
+            customerId,
+            rewardId,
+            stepId
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // GET /checkpoints/redeemed-rewards?customerId=XXX&merchantId=XXX
+    if (path === 'checkpoints/redeemed-rewards' && req.method === 'GET') {
+      const customerId = params.customerId;
+      const merchantIdParam = params.merchantId;
+      
+      if (!customerId || !merchantIdParam) {
+        return new Response(
+          JSON.stringify({ error: 'Missing customerId or merchantId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        // Recupera i premi riscattati per questo customer e merchant
+        const { data: redeemedRewards, error } = await supabaseClient
+          .from('redeemed_checkpoint_rewards')
+          .select(`
+            checkpoint_reward_id,
+            checkpoint_step_id,
+            redeemed_at,
+            status
+          `)
+          .eq('customer_id', customerId)
+          .eq('merchant_id', merchantIdParam)
+          .eq('status', 'completed')
+          .order('redeemed_at', { ascending: false });
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            redeemed_rewards: redeemedRewards || []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     return new Response(

@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../theme/text_styles.dart';
+import '../components/bottom_nav_bar.dart';
 import 'pos_home_page.dart';
 import 'settings_screen.dart';
-import '../components/bottom_nav_bar.dart';
 import 'offers_screen.dart';
-import '../services/checkpoint_service.dart';
-import '../components/checkpoint_reward_card.dart';
+import '../theme/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
   final String customerId;
@@ -24,8 +21,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final CheckpointService _checkpointService = CheckpointService();
-  Map<String, dynamic>? _currentReward;
 
   late final List<Widget> _screens;
 
@@ -43,36 +38,6 @@ class _MainScreenState extends State<MainScreen> {
       ),
       const SettingsScreen(),
     ];
-  }
-
-  Future<void> _advanceCheckpoint() async {
-    try {
-      final result = await _checkpointService.advanceCheckpoint(
-        customerId: widget.customerId,
-        merchantId: widget.merchantId,
-      );
-
-      if (result['reward_id'] != null) {
-        setState(() {
-          _currentReward = result;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Errore nell\'avanzamento: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _onRewardRedeemed() {
-    setState(() {
-      _currentReward = null;
-    });
   }
 
   void _onItemTapped(int index) {

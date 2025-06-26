@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
-import '../services/checkpoint_service.dart';
-import '../services/cache_service.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
@@ -45,6 +41,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     _fetchRedeemedRewards();
   }
 
+  @override
+  void didUpdateWidget(CheckpointOffersList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cardId != widget.cardId || oldWidget.initialCheckpointData != widget.initialCheckpointData) {
+      if (widget.initialCheckpointData != null) {
+        _initializeFromData(widget.initialCheckpointData!);
+      } else {
+        _fetchCheckpoints();
+      }
+    }
+  }
+
   void _initializeFromData(Map<String, dynamic> data) {
     try {
       final offers = (data['offers'] as List).map((o) => Checkpoint.fromJson(o)).toList();
@@ -65,18 +73,6 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     }
   }
 
-  @override
-  void didUpdateWidget(CheckpointOffersList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.cardId != widget.cardId || oldWidget.initialCheckpointData != widget.initialCheckpointData) {
-      if (widget.initialCheckpointData != null) {
-        _initializeFromData(widget.initialCheckpointData!);
-      } else {
-        _fetchCheckpoints();
-      }
-    }
-  }
-
   Future<void> _fetchCheckpoints() async {
     if (!mounted) return;
     
@@ -86,38 +82,28 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         _error = null;
       });
 
-      final response = await CheckpointService.fetchOffers(widget.merchantId, cardId: widget.cardId);
-      final offers = response['checkpoints'] as List<Checkpoint>;
-      final currentStep = response['currentStep'] as int;
+      // Chiamata diretta all'API senza cache
+      final response = await ApiService.fetchCheckpoints(
+        widget.merchantId,
+        cardId: widget.cardId,
+      );
       
+      final checkpoints = (response['checkpoint_offers'] as List?)
+          ?.map((o) => Checkpoint.fromJson(o))
+          .toList() ?? [];
+      final currentStep = response['current_step'] as int? ?? 0;
+
       if (!mounted) return;
       
       setState(() {
-        _checkpoints = offers;
-        _currentSteps = offers.isNotEmpty ? {offers.first.id: currentStep} : {};
+        _checkpoints = checkpoints;
+        _currentSteps = checkpoints.isNotEmpty 
+            ? {checkpoints.first.id: currentStep}
+            : {};
         _isLoading = false;
       });
-
-      // Cache in background
-      if (offers.isNotEmpty) {
-        Future.microtask(() => CacheService.cacheCheckpoints(widget.merchantId, offers));
-      }
     } catch (e) {
       if (!mounted) return;
-      
-      try {
-        final cachedCheckpoints = await CacheService.getCachedCheckpoints(widget.merchantId);
-        if (cachedCheckpoints != null && mounted) {
-          setState(() {
-            _checkpoints = cachedCheckpoints;
-            _currentSteps = {};
-            _isLoading = false;
-          });
-          return;
-        }
-      } catch (cacheError) {
-        debugPrint('Cache fallback failed: $cacheError');
-      }
       
       setState(() {
         _error = 'Errore: $e';
@@ -128,17 +114,31 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
   Future<void> _fetchRedeemedRewards() async {
     if (widget.customerId == null) return;
+    
     try {
-      final ids = await CheckpointService.fetchRedeemedCheckpointRewardIds(
-        customerId: widget.customerId!,
+      final response = await ApiService.fetchRedeemedCheckpointRewards(
         merchantId: widget.merchantId,
+        customerId: widget.customerId!,
       );
-      if (!mounted) return;
-      setState(() {
-        _redeemedRewardIds = ids;
-      });
+      
+      final redeemedRewards = response['redeemed_rewards'] as List? ?? [];
+      final redeemedIds = redeemedRewards
+          .map((reward) => reward['checkpoint_reward_id'] as String)
+          .toList();
+      
+      if (mounted) {
+        setState(() {
+          _redeemedRewardIds = redeemedIds;
+        });
+      }
     } catch (e) {
-      debugPrint('Errore fetch redeemed rewards: $e');
+      debugPrint('Errore nel recupero dei premi riscattati: $e');
+      // In caso di errore, inizializza con lista vuota
+      if (mounted) {
+        setState(() {
+          _redeemedRewardIds = [];
+        });
+      }
     }
   }
 
@@ -148,45 +148,36 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     try {
       setState(() => _isAdvancing = true);
       
-      final response = await http.post(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/advance'),
-        headers: {
-          'x-merchant-id': widget.merchantId,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'cardId': widget.cardId,
-          'offerId': offerId,
-        }),
+      final response = await ApiService.advanceCheckpoint(
+        merchantId: widget.merchantId,
+        cardId: widget.cardId!,
+        offerId: offerId,
       );
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)[0];
-        setState(() {
-          _currentSteps[offerId] = data['current_step'];
-          _isAdvancing = false;
-        });
+      // La risposta è ora un oggetto singolo, non una lista
+      final data = response as Map<String, dynamic>;
+      setState(() {
+        _currentSteps[offerId] = (data['current_step'] as num?)?.toInt() ?? 1;
+        _isAdvancing = false;
+      });
 
-        if (data['reward_name'] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🎉 ${data['reward_name']} sbloccato!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Checkpoint avanzato con successo!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        throw Exception('Errore ${response.statusCode}: ${response.body}');
+      // Mostra feedback
+      final rewardName = data['reward_name'] as String?;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(rewardName != null 
+              ? '🎉 $rewardName sbloccato!' 
+              : 'Checkpoint avanzato con successo!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
+
+      // Ricarica i dati per aggiornare l'UI
+      _fetchCheckpoints();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
@@ -205,36 +196,33 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     try {
       setState(() => _isAdvancing = true);
       
-      final response = await http.post(
-        Uri.parse('https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/checkpoints/rewind'),
-        headers: {
-          'x-merchant-id': widget.merchantId,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'cardId': widget.cardId,
-          'offerId': offerId,
-        }),
+      final response = await ApiService.rewindCheckpoint(
+        merchantId: widget.merchantId,
+        cardId: widget.cardId!,
+        offerId: offerId,
       );
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)[0];
-        setState(() {
-          _currentSteps[offerId] = data['current_step'];
-          _isAdvancing = false;
-        });
+      // La risposta è ora un oggetto singolo, non una lista
+      final data = response as Map<String, dynamic>;
+      setState(() {
+        _currentSteps[offerId] = (data['current_step'] as num?)?.toInt() ?? 1;
+        _isAdvancing = false;
+      });
 
+      // Mostra feedback
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Checkpoint arretrato con successo!'),
+            content: Text('⏪ Checkpoint tornato indietro con successo!'),
             backgroundColor: Colors.orange,
           ),
         );
-      } else {
-        throw Exception('Errore ${response.statusCode}: ${response.body}');
       }
+
+      // Ricarica i dati per aggiornare l'UI
+      _fetchCheckpoints();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
@@ -412,20 +400,28 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                                   if (widget.customerId == null) {
                                                     throw Exception('CustomerId non disponibile');
                                                   }
-                                                  await CheckpointService().redeemCheckpointReward(
-                                                    customerId: widget.customerId!,
+                                                  await ApiService.post(
+                                                    '/checkpoints/redeem-reward',
                                                     merchantId: widget.merchantId,
-                                                    rewardId: step.rewardId!,
-                                                    stepId: step.id,
+                                                    body: {
+                                                      'customerId': widget.customerId!,
+                                                      'rewardId': step.rewardId!,
+                                                      'stepId': step.id,
+                                                    },
                                                   );
                                                   if (!mounted) return;
+                                                  
+                                                  // Aggiorna immediatamente l'UI
+                                                  setState(() {
+                                                    _redeemedRewardIds.add(step.rewardId!);
+                                                  });
+                                                  
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(
                                                       content: Text('🎉 ${step.rewardName} riscattato con successo!'),
                                                       backgroundColor: Colors.green,
                                                     ),
                                                   );
-                                                  _fetchCheckpoints();
                                                 } catch (e) {
                                                   if (!mounted) return;
                                                   ScaffoldMessenger.of(context).showSnackBar(

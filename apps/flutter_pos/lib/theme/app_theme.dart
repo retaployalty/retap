@@ -45,7 +45,7 @@ final ThemeData appTheme = ThemeData(
     error: Colors.red,
     brightness: Brightness.light,
   ),
-  scaffoldBackgroundColor: AppColors.background,
+  scaffoldBackgroundColor: const Color(0xFFF5F5F5),
   appBarTheme: const AppBarTheme(
     backgroundColor: AppColors.background,
     foregroundColor: AppColors.primary,

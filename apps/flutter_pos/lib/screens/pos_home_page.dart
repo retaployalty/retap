@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
 import 'card_details_screen.dart';
 import 'qr_scanner_screen.dart';
+import '../services/api_service.dart';
+import '../models/card.dart';
 
 class POSHomePage extends StatefulWidget {
   final String merchantId;
@@ -31,8 +33,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkNfcAvailability();
-    _startPolling();
+    _initializeNfc();
   }
 
   @override
@@ -45,9 +46,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _checkNfcAvailability();
-      _startPolling();
+      debugPrint('App ripresa, controllo NFC e riavvio polling');
+      _initializeNfc();
     } else if (state == AppLifecycleState.paused) {
+      debugPrint('App in pausa, fermo polling');
+      _isPolling = false;
+    } else if (state == AppLifecycleState.detached) {
+      debugPrint('App distaccata, fermo polling');
       _isPolling = false;
     }
   }
@@ -80,23 +85,30 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _startPolling() async {
-    if (_isPolling || !_nfcAvailable) return;
+    if (_isPolling || !_nfcAvailable) {
+      debugPrint('Polling non avviato: _isPolling=$_isPolling, _nfcAvailable=$_nfcAvailable');
+      return;
+    }
+    
+    debugPrint('🚀 Avvio polling NFC...');
     _isPolling = true;
+    setState(() {}); // Aggiorna l'UI per mostrare che il polling è attivo
 
     try {
       while (_isPolling && _nfcAvailable) {
         try {
-          debugPrint('In attesa di una carta NFC...');
+          debugPrint('📱 In attesa di una carta NFC...');
           final tag = await FlutterNfcKit.poll();
-          debugPrint('Carta rilevata!');
-          debugPrint('UID: ${tag.id}');
+          debugPrint('✅ Carta rilevata! UID: ${tag.id}');
 
           if (_isScreenOpen) {
-            debugPrint('Una schermata è già aperta, ignoro la rilevazione');
+            debugPrint('⚠️ Una schermata è già aperta, ignoro la rilevazione');
+            await FlutterNfcKit.finish();
             continue;
           }
 
           if (mounted) {
+            debugPrint('🔄 Apertura schermata dettagli carta...');
             _isScreenOpen = true;
             await Navigator.push(
               context,
@@ -108,18 +120,44 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
               ),
             );
             _isScreenOpen = false;
-            // Riavvia il polling dopo il ritorno dalla schermata
-            _startPolling();
+            debugPrint('✅ Schermata chiusa, continuo polling...');
           }
 
           await FlutterNfcKit.finish();
         } catch (e) {
-          debugPrint('Errore durante il polling NFC: $e');
+          debugPrint('❌ Errore durante il polling NFC: $e');
           await FlutterNfcKit.finish();
+          
+          // Se l'errore è dovuto a un timeout o comunicazione, riprova dopo un breve delay
+          if (e.toString().contains('Timeout') || e.toString().contains('Communication error')) {
+            debugPrint('⏳ Timeout/comunicazione, attendo 500ms prima di riprovare...');
+            await Future.delayed(const Duration(milliseconds: 500));
+          } else if (e.toString().contains('User cancelled')) {
+            debugPrint('👤 Utente ha annullato, continuo polling...');
+            await Future.delayed(const Duration(milliseconds: 100));
+          } else {
+            debugPrint('⚠️ Errore sconosciuto, attendo 1 secondo...');
+            await Future.delayed(const Duration(seconds: 1));
+          }
         }
       }
     } catch (e) {
-      debugPrint('Errore durante il polling NFC: $e');
+      debugPrint('💥 Errore fatale durante il polling NFC: $e');
+    } finally {
+      debugPrint('🛑 Polling fermato. _isPolling=$_isPolling, _nfcAvailable=$_nfcAvailable');
+      _isPolling = false;
+      setState(() {}); // Aggiorna l'UI
+      
+      // Se il polling si è fermato ma NFC è ancora disponibile, riavvialo
+      if (_nfcAvailable && mounted) {
+        debugPrint('🔄 Polling fermato, riavvio automatico tra 1 secondo...');
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted && !_isPolling && _nfcAvailable) {
+            debugPrint('🔄 Riavvio automatico del polling...');
+            _startPolling();
+          }
+        });
+      }
     }
   }
 
@@ -492,6 +530,16 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _initializeNfc() async {
+    await _checkNfcAvailability();
+    if (_nfcAvailable) {
+      debugPrint('✅ NFC disponibile, avvio polling...');
+      _startPolling();
+    } else {
+      debugPrint('❌ NFC non disponibile');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -525,6 +573,46 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            
+            // Indicatore stato polling NFC
+            if (_nfcAvailable)
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isPolling ? Icons.nfc : Icons.wifi_off,
+                      color: _isPolling ? Colors.green : Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _isPolling 
+                          ? 'NFC attivo - In attesa di carte...'
+                          : 'NFC disponibile ma non attivo',
+                        style: TextStyle(
+                          color: _isPolling ? Colors.green : Colors.orange,
+                        ),
+                      ),
+                    ),
+                    if (!_isPolling)
+                      IconButton(
+                        icon: Icon(Icons.refresh, color: Colors.blue),
+                        onPressed: () {
+                          debugPrint('🔄 Riavvio manuale del polling NFC...');
+                          _startPolling();
+                        },
+                        tooltip: 'Riavvia NFC',
+                      ),
                   ],
                 ),
               ),
