@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -6,7 +7,8 @@ import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
 import 'card_details_screen.dart';
 import 'qr_scanner_screen.dart';
-import '../services/cache_service.dart';
+import '../services/api_service.dart';
+import '../models/card.dart';
 
 class POSHomePage extends StatefulWidget {
   final String merchantId;
@@ -32,9 +34,6 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeNfc();
-    
-    // Precarica i dati comuni per questo merchant
-    CacheService.preloadMerchantData(widget.merchantId);
   }
 
   @override

@@ -1136,6 +1136,58 @@ serve(async (req) => {
       )
     }
 
+    // POST /checkpoints/redeem-reward
+    if (path === 'checkpoints/redeem-reward' && req.method === 'POST') {
+      if (!merchantId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing merchant ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { customerId, rewardId, stepId } = await req.json()
+
+      if (!customerId || !rewardId || !stepId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters: customerId, rewardId, stepId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      try {
+        // Chiama la funzione SQL per riscattare il premio del checkpoint
+        const { error } = await supabaseClient
+          .rpc('redeem_checkpoint_reward', {
+            p_customer_id: customerId,
+            p_merchant_id: merchantId,
+            p_checkpoint_reward_id: rewardId,
+            p_checkpoint_step_id: stepId
+          })
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            message: 'Checkpoint reward redeemed successfully',
+            customerId,
+            rewardId,
+            stepId
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: 'Not found' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

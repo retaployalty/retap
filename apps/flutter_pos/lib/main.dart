@@ -4,7 +4,6 @@ import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'services/cache_service.dart';
 import 'services/api_service.dart';
 
 void main() async {
@@ -32,18 +31,8 @@ void main() async {
   } catch (e) {
     debugPrint('❌ Error initializing Supabase: $e');
   }
-  
-  // Precarica rewards e checkpoints per migliorare le performance
-  _preloadCommonData();
 
   runApp(const ReTapPOS());
-}
-
-// Precarica rewards e checkpoints per migliorare le performance
-void _preloadCommonData() {
-  // Questo verrà chiamato solo se abbiamo un merchantId di default
-  // Per ora è un placeholder per future ottimizzazioni
-  debugPrint('🚀 Precaricamento dati comuni in background...');
 }
 
 class ReTapPOS extends StatelessWidget {

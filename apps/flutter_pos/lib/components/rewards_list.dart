@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/reward.dart';
-import '../models/card.dart';
 import '../services/api_service.dart';
-import '../services/cache_service.dart';
+import '../models/card.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
@@ -58,54 +57,35 @@ class _RewardsListState extends State<RewardsList> {
         _error = null;
       });
 
-      // Usa il cache intelligente
-      final rewards = await CacheService.getCachedData<List<Reward>>(
-        key: 'rewards',
-        merchantId: widget.merchantId,
-        fetchFunction: () async {
-          debugPrint('🌐 Fetching rewards da API...');
-          // Se abbiamo un cardId, usiamo l'endpoint completo per ottenere anche i checkpoint
-          if (widget.cardId != null) {
-            debugPrint('📋 Usando endpoint completo con cardId: ${widget.cardId}');
-            final rewardsData = await ApiService.get(
-              '/rewards-and-checkpoints',
-              merchantId: widget.merchantId,
-              queryParams: {'merchantId': widget.merchantId, if (widget.cardId != null) 'cardId': widget.cardId!},
-            );
-            debugPrint('📦 Risposta API rewards: ${rewardsData['rewards']?.length ?? 0} rewards trovati');
-            return (rewardsData['rewards'] as List?)?.map((r) => Reward.fromJson(r)).toList() ?? [];
-          } else {
-            debugPrint('📋 Usando endpoint solo rewards');
-            // Fallback: chiamata diretta per solo rewards
-            final data = await ApiService.fetchRewards(widget.merchantId);
-            debugPrint('📦 Risposta API rewards: ${data.length} rewards trovati');
-            return data.map((r) => Reward.fromJson(r)).toList();
-          }
-        },
-        useMemoryCache: true,
-        usePersistentCache: true,
-      );
+      // Chiamata diretta all'API senza cache
+      debugPrint('🌐 Fetching rewards da API...');
+      List<Reward> rewards;
+      
+      // Se abbiamo un cardId, usiamo l'endpoint completo per ottenere anche i checkpoint
+      if (widget.cardId != null) {
+        debugPrint('📋 Usando endpoint completo con cardId: ${widget.cardId}');
+        final rewardsData = await ApiService.get(
+          '/rewards-and-checkpoints',
+          merchantId: widget.merchantId,
+          queryParams: {'merchantId': widget.merchantId, if (widget.cardId != null) 'cardId': widget.cardId!},
+        );
+        debugPrint('📦 Risposta API rewards: ${rewardsData['rewards']?.length ?? 0} rewards trovati');
+        rewards = (rewardsData['rewards'] as List?)?.map((r) => Reward.fromJson(r)).toList() ?? [];
+      } else {
+        debugPrint('📋 Usando endpoint solo rewards');
+        // Fallback: chiamata diretta per solo rewards
+        final data = await ApiService.fetchRewards(widget.merchantId);
+        debugPrint('📦 Risposta API rewards: ${data.length} rewards trovati');
+        rewards = data.map((r) => Reward.fromJson(r)).toList();
+      }
       
       if (!mounted) return;
       
-      if (rewards != null) {
-        debugPrint('✅ Rewards caricati con successo: ${rewards.length} rewards');
-        setState(() {
-          _rewards = rewards;
-          _isLoading = false;
-        });
-
-        // Cache persistente in background
-        if (rewards.isNotEmpty) {
-          Future.microtask(() => CacheService.cacheRewards(widget.merchantId, rewards));
-        }
-      } else {
-        debugPrint('❌ Nessun reward trovato');
-        setState(() {
-          _error = 'Impossibile caricare i premi';
-          _isLoading = false;
-        });
-      }
+      debugPrint('✅ Rewards caricati con successo: ${rewards.length} rewards');
+      setState(() {
+        _rewards = rewards;
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint('❌ Errore durante fetch rewards: $e');
       if (!mounted) return;
@@ -152,9 +132,6 @@ class _RewardsListState extends State<RewardsList> {
 
       // Notifica il parent component del cambiamento dei punti
       widget.onPointsUpdated?.call(newPoints);
-
-      // Invalida cache per forzare refresh
-      CacheService.clearCache(widget.merchantId);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

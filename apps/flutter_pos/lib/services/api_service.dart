@@ -7,11 +7,6 @@ class ApiService {
   static const String _baseUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co';
   static const String _functionsUrl = '$_baseUrl/functions/v1/api';
   
-  // Cache in memoria per performance
-  static final Map<String, dynamic> _memoryCache = {};
-  static final Map<String, DateTime> _cacheTimestamps = {};
-  static const Duration _cacheDuration = Duration(minutes: 5);
-  
   // Debouncing per evitare chiamate multiple
   static final Map<String, Timer> _debounceTimers = {};
   static const Duration _debounceDelay = Duration(milliseconds: 300);
@@ -24,24 +19,12 @@ class ApiService {
     };
   }
 
-  // Metodo generico per chiamate GET con cache
+  // Metodo generico per chiamate GET
   static Future<Map<String, dynamic>> get(
     String endpoint, {
     required String merchantId,
     Map<String, String>? queryParams,
-    bool useCache = true,
   }) async {
-    final cacheKey = '${endpoint}_${merchantId}_${queryParams?.toString() ?? ''}';
-    
-    // Controlla cache in memoria
-    if (useCache && _memoryCache.containsKey(cacheKey)) {
-      final timestamp = _cacheTimestamps[cacheKey];
-      if (timestamp != null && DateTime.now().difference(timestamp) < _cacheDuration) {
-        debugPrint('📦 Cache hit: $cacheKey');
-        return _memoryCache[cacheKey];
-      }
-    }
-
     final uri = Uri.parse('$_functionsUrl$endpoint').replace(queryParameters: queryParams);
     
     debugPrint('🌐 API call: $uri');
@@ -53,14 +36,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      // Salva in cache
-      if (useCache) {
-        _memoryCache[cacheKey] = data;
-        _cacheTimestamps[cacheKey] = DateTime.now();
-        debugPrint('💾 Cached: $cacheKey');
-      }
-      
       return data;
     } else {
       throw Exception('API Error ${response.statusCode}: ${response.body}');
@@ -276,18 +251,6 @@ class ApiService {
       merchantId: merchantId,
       body: {'merchant_id': merchantId},
     );
-  }
-
-  // Utility per pulire la cache
-  static void clearCache([String? pattern]) {
-    if (pattern != null) {
-      _memoryCache.removeWhere((key, value) => key.contains(pattern));
-      _cacheTimestamps.removeWhere((key, value) => key.contains(pattern));
-    } else {
-      _memoryCache.clear();
-      _cacheTimestamps.clear();
-    }
-    debugPrint('🧹 Cache cleared${pattern != null ? ' for pattern: $pattern' : ''}');
   }
 
   // Utility per pulire i timer di debouncing

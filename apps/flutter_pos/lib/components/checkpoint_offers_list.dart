@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../services/api_service.dart';
-import '../services/cache_service.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
@@ -83,54 +82,26 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         _error = null;
       });
 
-      // Usa il cache intelligente
-      final data = await CacheService.getCachedData<Map<String, dynamic>>(
-        key: 'checkpoints',
-        merchantId: widget.merchantId,
-        fetchFunction: () async {
-          final response = await ApiService.fetchCheckpoints(
-            widget.merchantId,
-            cardId: widget.cardId,
-          );
-          
-          final checkpoints = (response['checkpoint_offers'] as List?)
-              ?.map((o) => Checkpoint.fromJson(o))
-              .toList() ?? [];
-          final currentStep = response['current_step'] as int? ?? 0;
-          
-          return {
-            'checkpoints': checkpoints,
-            'currentStep': currentStep,
-          };
-        },
-        useMemoryCache: true,
-        usePersistentCache: true,
+      // Chiamata diretta all'API senza cache
+      final response = await ApiService.fetchCheckpoints(
+        widget.merchantId,
+        cardId: widget.cardId,
       );
+      
+      final checkpoints = (response['checkpoint_offers'] as List?)
+          ?.map((o) => Checkpoint.fromJson(o))
+          .toList() ?? [];
+      final currentStep = response['current_step'] as int? ?? 0;
 
       if (!mounted) return;
       
-      if (data != null) {
-        setState(() {
-          _checkpoints = data['checkpoints'] as List<Checkpoint>;
-          _currentSteps = data['checkpoints'].isNotEmpty 
-              ? {data['checkpoints'].first.id: data['currentStep'] as int}
-              : {};
-          _isLoading = false;
-        });
-
-        // Cache persistente in background
-        if (data['checkpoints'].isNotEmpty) {
-          Future.microtask(() => CacheService.cacheCheckpoints(
-            widget.merchantId, 
-            data['checkpoints'] as List<Checkpoint>
-          ));
-        }
-      } else {
-        setState(() {
-          _error = 'Impossibile caricare i checkpoint';
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _checkpoints = checkpoints;
+        _currentSteps = checkpoints.isNotEmpty 
+            ? {checkpoints.first.id: currentStep}
+            : {};
+        _isLoading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       
@@ -183,8 +154,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         );
       }
 
-      // Invalida cache per forzare refresh
-      CacheService.clearCache(widget.merchantId);
+      // Ricarica i dati per aggiornare l'UI
+      _fetchCheckpoints();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
@@ -228,8 +199,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         );
       }
 
-      // Invalida cache per forzare refresh
-      CacheService.clearCache(widget.merchantId);
+      // Ricarica i dati per aggiornare l'UI
+      _fetchCheckpoints();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
