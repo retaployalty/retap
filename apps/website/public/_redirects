@@ -1,0 +1,6 @@
+# Redirect per l'app Flutter
+/c/* https://app.retapcard.com/:splat 301
+/c https://app.retapcard.com 301
+
+# Redirect per www
+https://www.retapcard.com/* https://retapcard.com/:splat 301 

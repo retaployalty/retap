@@ -60,6 +60,7 @@ class ReTapWeb extends StatelessWidget {
       urlCardId = segments[1];
       print('Customer card URL detected: $urlCardId'); // Debug log
     } else if (segments.isNotEmpty && segments.last.isNotEmpty) {
+      // Se non c'è il prefisso 'c', prendi l'ultimo segmento come card ID
       urlCardId = segments.last;
     }
     
@@ -141,7 +142,7 @@ class ReTapWeb extends StatelessWidget {
           theme: appTheme,
           debugShowCheckedModeBanner: false,
           routerConfig: GoRouter(
-            initialLocation: '/c/uid',
+            initialLocation: '/splash',
             redirect: (context, state) async {
               print('Router redirect called for: ${state.matchedLocation}'); // Debug log
               if (state.matchedLocation == '/splash') {
@@ -241,10 +242,6 @@ class ReTapWeb extends StatelessWidget {
                     builder: (context, state) => const SettingsScreen(),
                   ),
                 ],
-              ),
-              GoRoute(
-                path: '/c/:uid',
-                builder: (context, state) => ClienteScreen(uid: state.params['uid']),
               ),
             ],
           ),
