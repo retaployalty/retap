@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
 import 'card_details_screen.dart';

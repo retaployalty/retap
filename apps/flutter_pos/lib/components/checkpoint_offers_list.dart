@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/checkpoint.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
-import 'package:flutter/foundation.dart';
 
 class CheckpointOffersList extends StatefulWidget {
   final String merchantId;
@@ -166,7 +165,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
       final data = response[0] as Map<String, dynamic>;
       setState(() {
-        _currentSteps[offerId] = data['current_step'] as int;
+        _currentSteps[offerId] = (data['current_step'] as num?)?.toInt() ?? 1;
         _isAdvancing = false;
       });
 

@@ -155,7 +155,7 @@ class CacheService {
   }) async {
     // 1. Prova cache in memoria (più veloce)
     if (useMemoryCache) {
-      final memoryData = getFromMemory<T>('${key}_$merchantId');
+      final memoryData = getFromMemory<T>('${merchantId}_$key');
       if (memoryData != null) return memoryData;
     }
 
@@ -165,13 +165,13 @@ class CacheService {
       if (T == List<Reward>) {
         final persistentData = await getCachedRewards(merchantId);
         if (persistentData != null) {
-          cacheInMemory('${key}_$merchantId', persistentData);
+          cacheInMemory('${merchantId}_$key', persistentData);
           return persistentData as T;
         }
       } else if (T == List<Checkpoint>) {
         final persistentData = await getCachedCheckpoints(merchantId);
         if (persistentData != null) {
-          cacheInMemory('${key}_$merchantId', persistentData);
+          cacheInMemory('${merchantId}_$key', persistentData);
           return persistentData as T;
         }
       }
@@ -183,7 +183,7 @@ class CacheService {
       
       // Cache il risultato
       if (useMemoryCache) {
-        cacheInMemory('${key}_$merchantId', data);
+        cacheInMemory('${merchantId}_$key', data);
       }
       
       return data;

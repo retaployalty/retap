@@ -3,7 +3,6 @@ import '../models/reward.dart';
 import '../models/card.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
-import 'package:flutter/foundation.dart';
 
 class RewardsList extends StatefulWidget {
   final String merchantId;
@@ -134,7 +133,7 @@ class _RewardsListState extends State<RewardsList> {
     try {
       setState(() => _isRedeeming = true);
 
-      final response = await ApiService.redeemReward(
+      await ApiService.redeemReward(
         merchantId: widget.merchantId,
         customerId: widget.card!.customerId!,
         rewardId: reward.id,
