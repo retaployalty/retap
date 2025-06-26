@@ -239,7 +239,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       }
 
       // 3. Crea il link
-      final cardUrl = 'https://retapcard.com/c/$cardId';
+      final cardUrl = 'https://app.retapcard.com/c/$cardId';
       debugPrint('Link generato: $cardUrl');
 
       // 4. Scrivi il link sul chip in formato NDEF
@@ -327,6 +327,19 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
             throw Exception('Errore nella creazione della carta: ${res.body}');
           }
           debugPrint('✅ Carta creata nel database');
+
+          // Apri subito la schermata dettagli della carta appena creata
+          if (context.mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CardDetailsScreen(
+                  cardUid: tag.id,
+                  merchantId: widget.merchantId,
+                ),
+              ),
+            );
+          }
         }
 
         // 6. Blocca il chip in sola lettura (se supportato)
@@ -452,7 +465,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       }
 
       // 2. Crea il link specifico per il merchant
-      final cardUrl = 'https://retapcard.com/m/${widget.merchantId}';
+      final cardUrl = 'https://app.retapcard.com/m/${widget.merchantId}';
       debugPrint('Link merchant generato: $cardUrl');
 
       // 3. Scrivi il link sul chip in formato NDEF
@@ -542,6 +555,9 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonSize = (screenWidth - 96) / 2; // 2 colonne con padding
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('ReTap POS - ${widget.merchantName}'),
@@ -549,9 +565,8 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         foregroundColor: Colors.white,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Indicatore stato NFC
             if (!_nfcAvailable)
@@ -560,17 +575,17 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.red),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.wifi_off, color: Colors.red),
-                    const SizedBox(width: 8),
+                    Icon(Icons.wifi_off, color: Colors.red, size: 24),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'NFC non disponibile su questo dispositivo',
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Colors.red, fontSize: 16),
                       ),
                     ),
                   ],
@@ -584,7 +599,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green),
                 ),
                 child: Row(
@@ -592,8 +607,9 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                     Icon(
                       _isPolling ? Icons.nfc : Icons.wifi_off,
                       color: _isPolling ? Colors.green : Colors.orange,
+                      size: 24,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         _isPolling 
@@ -601,12 +617,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                           : 'NFC disponibile ma non attivo',
                         style: TextStyle(
                           color: _isPolling ? Colors.green : Colors.orange,
+                          fontSize: 16,
                         ),
                       ),
                     ),
                     if (!_isPolling)
                       IconButton(
-                        icon: Icon(Icons.refresh, color: Colors.blue),
+                        icon: Icon(Icons.refresh, color: Colors.blue, size: 24),
                         onPressed: () {
                           debugPrint('🔄 Riavvio manuale del polling NFC...');
                           _startPolling();
@@ -617,53 +634,163 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 ),
               ),
             
-            Text(
-              'Avvicina una carta NFC per i dettagli o usa il QR Code del Wallet.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scannerizza QR Code'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 60),
-                textStyle: const TextStyle(fontSize: 18),
+            // Titolo principale
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => QRScannerScreen(merchantId: widget.merchantId),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.touch_app,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-            const Divider(height: 1),
-            const SizedBox(height: 16),
-            Text(
-              'Programmazione Carte',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Seleziona un\'azione',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              child: const Text('Scrivi Carta Standard'),
-              onPressed: _nfcAvailable ? () => _writeCard(context) : null,
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                foregroundColor: Colors.white,
+            
+            // Griglia di pulsanti principali
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.0,
+                children: [
+                  // Pulsante 1: Lettura automatica carte
+                  _buildActionButton(
+                    icon: Icons.credit_card,
+                    title: 'Leggi Carta',
+                    subtitle: 'Automatico',
+                    color: Colors.blue,
+                    onTap: () {
+                      // L'azione è automatica, mostra solo un messaggio informativo
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Avvicina una carta NFC per leggere i dettagli'),
+                          backgroundColor: Colors.blue,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  // Pulsante 2: Scanner QR Code
+                  _buildActionButton(
+                    icon: Icons.qr_code_scanner,
+                    title: 'Scanner QR',
+                    subtitle: 'Wallet',
+                    color: Colors.green,
+                    onTap: () {
+                      // Pre-carica lo scanner per velocizzare l'apertura
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => QRScannerScreen(merchantId: widget.merchantId),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  // Pulsante 3: Programma carta cliente
+                  _buildActionButton(
+                    icon: Icons.person_add,
+                    title: 'Nuova Carta',
+                    subtitle: 'Cliente',
+                    color: Colors.orange,
+                    onTap: _nfcAvailable ? () => _writeCard(context) : null,
+                    disabled: !_nfcAvailable,
+                  ),
+                  
+                  // Pulsante 4: Programma carta merchant
+                  _buildActionButton(
+                    icon: Icons.store,
+                    title: 'Carta Negozio',
+                    subtitle: 'Promozioni',
+                    color: Colors.purple,
+                    onTap: _nfcAvailable ? () => _writeMerchantCard(context) : null,
+                    disabled: !_nfcAvailable,
+                  ),
+                ],
               ),
-              child: const Text('Scrivi Carta Merchant'),
-              onPressed: _nfcAvailable ? () => _writeMerchantCard(context) : null,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback? onTap,
+    bool disabled = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: disabled ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: disabled ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: disabled ? Colors.grey : color.withOpacity(0.3),
+              width: 2,
+            ),
+            boxShadow: disabled ? null : [
+              BoxShadow(
+                color: color.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: disabled ? Colors.grey : color,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: disabled ? Colors.grey : color,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: disabled ? Colors.grey : color.withOpacity(0.8),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
