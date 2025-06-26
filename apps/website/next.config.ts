@@ -60,14 +60,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [
-      {
-        source: "/app/:path*",
-        destination: "/api/flutter-app/:path*",
-      },
-    ];
-  },
-}
+};
 
-export default nextConfig
+export default nextConfig;

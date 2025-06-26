@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run vercel-build",
-  "outputDirectory": "apps/flutter-web-client/build/web",
+  "outputDirectory": "apps/website/.next",
   "rewrites": [
     {
       "source": "/app/(.*)",
@@ -20,24 +20,6 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
-    }
-  ],
-  "functions": {
-    "apps/website/app/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "builds": [
-    {
-      "src": "apps/website/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
-    },
-    {
-      "src": "apps/flutter-web-client/build/web/**",
-      "use": "@vercel/static"
     }
   ]
 } 

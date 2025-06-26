@@ -16,6 +16,11 @@ flutter pub get
 flutter build web --release
 cd ../..
 
+# Copy Flutter build to Next.js public directory
+echo "📁 Copiando file Flutter in Next.js public..."
+mkdir -p apps/website/public/app
+cp -r apps/flutter-web-client/build/web/* apps/website/public/app/
+
 # Build Next.js website
 echo "🌐 Building Next.js Website..."
 cd apps/website

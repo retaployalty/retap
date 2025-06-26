@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const path = params.path;
-    const filePath = join(process.cwd(), '..', '..', 'flutter-web-client', 'build', 'web', ...path);
+    const filePath = join(process.cwd(), 'public', 'app', ...path);
     
     // Se non c'è estensione, assume che sia index.html
     const finalPath = path.length === 0 || !path[path.length - 1].includes('.') 
