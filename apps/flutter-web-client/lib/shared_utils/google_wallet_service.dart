@@ -2,6 +2,24 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class GoogleWalletService {
+  // URL dell'API in base all'ambiente
+  static String get _apiUrl {
+    // Forza l'URL di produzione per testare l'API deployata
+    return 'https://api-bff.vercel.app';
+    
+    // Codice originale commentato per riferimento
+    /*
+    // In production, usa l'URL di Vercel
+    if (Uri.base.host == 'localhost' || 
+        Uri.base.host.contains('127.0.0.1')) {
+      return 'http://localhost:4000';
+    } else {
+      // URL di production - sostituisci con il tuo dominio Vercel
+      return 'https://api-bff.vercel.app';
+    }
+    */
+  }
+
   static Future<String> createLoyaltyCard({
     required String cardId,
     required String customerName,
@@ -9,10 +27,11 @@ class GoogleWalletService {
   }) async {
     try {
       print('Richiesta creazione pass Google Wallet per carta: $cardId');
+      print('🌐 API URL: $_apiUrl');
       
       // Chiama il controller NestJS per creare il pass Google Wallet
       final response = await http.post(
-        Uri.parse('http://localhost:4000/google-wallet/generate'),
+        Uri.parse('$_apiUrl/google-wallet/generate'),
         headers: {
           'Content-Type': 'application/json',
         },
