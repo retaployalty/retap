@@ -85,15 +85,27 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
       print('Debug - API Response: ${data['_debug']}'); // Debug log
       
       List<dynamic> businesses = data['merchants'] ?? [];
+      print('BusinessListScreen: Ricevuti ${businesses.length} business dall\'API');
+      
+      // Log delle coordinate dei primi business per debug
+      for (int i = 0; i < businesses.length && i < 3; i++) {
+        final business = businesses[i];
+        print('BusinessListScreen: Business ${i+1} - ${business['name']} - lat: ${business['latitude']}, lon: ${business['longitude']}');
+      }
       
       // Se abbiamo la posizione dell'utente, ordina per distanza
       final locationState = ref.read(locationProvider);
+      print('BusinessListScreen: Stato posizione - lat: ${locationState.latitude}, lon: ${locationState.longitude}');
+      
       if (locationState.latitude != null && locationState.longitude != null) {
+        print('BusinessListScreen: Ordinamento business per distanza');
         businesses = DistanceCalculator.sortByDistance(
           businesses.cast<Map<String, dynamic>>(),
           locationState.latitude!,
           locationState.longitude!,
         );
+      } else {
+        print('BusinessListScreen: Posizione non disponibile, business non ordinati per distanza');
       }
       
       setState(() {

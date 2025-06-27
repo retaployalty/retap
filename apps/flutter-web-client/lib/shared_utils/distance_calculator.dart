@@ -51,13 +51,21 @@ class DistanceCalculator {
     double userLat,
     double userLon,
   ) {
+    print('DistanceCalculator: Calcolo distanze per ${businesses.length} business');
+    print('DistanceCalculator: Posizione utente: $userLat, $userLon');
+    
     final businessesWithDistance = businesses.map((business) {
       final lat = business['latitude'];
       final lon = business['longitude'];
       
+      print('DistanceCalculator: Business ${business['name']} - lat: $lat, lon: $lon');
+      
       double distance = double.infinity;
       if (lat != null && lon != null) {
         distance = calculateDistance(userLat, userLon, lat.toDouble(), lon.toDouble());
+        print('DistanceCalculator: Distanza calcolata per ${business['name']}: ${formatDistance(distance)}');
+      } else {
+        print('DistanceCalculator: Coordinate mancanti per ${business['name']}');
       }
       
       return {
@@ -85,6 +93,7 @@ class DistanceCalculator {
       return 0;
     });
 
+    print('DistanceCalculator: Ordinamento completato');
     return businessesWithDistance;
   }
 } 

@@ -139,25 +139,56 @@ class BusinessCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header con nome e distanza
+                    // Header con nome
+                    Text(
+                      name,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    // Stato apertura e distanza sulla stessa linea
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: AppTextStyles.titleMedium.copyWith(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        // Stato apertura
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isOpen ? Colors.green : Colors.red,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isOpen ? 'Open' : 'Closed',
+                                style: TextStyle(
+                                  color: isOpen ? Colors.green : Colors.red,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(width: 8),
                         // Distanza
                         if (distance != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(6),
@@ -166,12 +197,12 @@ class BusinessCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.location_on, color: Colors.grey[600], size: 10),
-                                const SizedBox(width: 2),
+                                const SizedBox(width: 3),
                                 Text(
                                   distance!,
                                   style: TextStyle(
                                     color: Colors.grey[600],
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -180,57 +211,72 @@ class BusinessCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // Stato apertura sotto il nome
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isOpen ? Colors.green : Colors.red,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isOpen ? 'Open' : 'Closed',
-                            style: TextStyle(
-                              color: isOpen ? Colors.green : Colors.red,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     const Spacer(),
-                    // Barra di progresso
-                    Stack(
+                    // Barra di progresso migliorata
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Background della barra
-                        Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
+                        // Header della barra di progresso
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Progress',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              '$checkpointsCurrent/$checkpointsTotal',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                        // Progresso
-                        Container(
-                          height: 6,
-                          width: MediaQuery.of(context).size.width * (checkpointsCurrent / checkpointsTotal),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
+                        const SizedBox(height: 6),
+                        // Barra di progresso
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Stack(
+                              children: [
+                                // Background della barra
+                                Container(
+                                  height: 8,
+                                  width: constraints.maxWidth,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                // Progresso
+                                Container(
+                                  height: 8,
+                                  width: constraints.maxWidth * (checkpointsCurrent / checkpointsTotal),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.primary.withOpacity(0.8),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.3),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
