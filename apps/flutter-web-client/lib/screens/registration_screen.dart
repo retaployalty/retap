@@ -862,10 +862,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
           customerName: customerName,
           cardUid: cardUid,
         );
-        
+
         print('🔗 Google Wallet URL: $saveUrl');
-        // Apri l'URL in una nuova tab
-        html.window.open(saveUrl, '_blank');
+      // Apri l'URL in una nuova tab
+      html.window.open(saveUrl, '_blank');
         print('✅ Google Wallet completato');
       }
 
