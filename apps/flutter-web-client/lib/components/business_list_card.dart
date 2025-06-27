@@ -96,40 +96,17 @@ class BusinessListCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Distance Badge
-                      if (distance != null)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.location_on, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                distance!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       // Open/Closed Badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B),
+                          color: isOpen ? Colors.white : const Color(0xFFFF4B4B),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: (isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B)).withOpacity(0.3),
+                              color: isOpen 
+                                ? Colors.black.withOpacity(0.15)
+                                : const Color(0xFFFF4B4B).withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -143,14 +120,14 @@ class BusinessListCard extends StatelessWidget {
                               height: 6,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white,
+                                color: isOpen ? const Color(0xFF4CAF50) : Colors.white,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
                               isOpen ? 'Open' : 'Closed',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: isOpen ? const Color(0xFF4CAF50) : Colors.white,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -228,36 +205,76 @@ class BusinessListCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hours
+                  // Hours and Distance
                   if (formattedHours.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE5E5E5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[200]!, width: 1),
                             ),
-                            child: Icon(Icons.access_time, color: Colors.grey[700], size: 14),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.access_time, color: Colors.grey[600], size: 14),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  formattedHours,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                        if (distance != null) ...[
                           const SizedBox(width: 8),
-                          Text(
-                            formattedHours,
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[200]!, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.location_on, color: Colors.grey[600], size: 14),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  distance!,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
                   const SizedBox(height: 16),
                   // Rewards Section
@@ -266,26 +283,23 @@ class BusinessListCard extends StatelessWidget {
                       // Checkpoint Reward
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF6565).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFFF6565).withOpacity(0.3),
-                              width: 1,
-                            ),
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!, width: 1),
                           ),
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFF6565).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: const Color(0xFFFF6565).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.card_giftcard, color: Color(0xFFFF6565), size: 18),
+                                child: const Icon(Icons.card_giftcard, color: Color(0xFFFF6565), size: 16),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,29 +330,26 @@ class BusinessListCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       // Points Rewards
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primary.withOpacity(0.3),
-                            width: 1,
-                          ),
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!, width: 1),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.stars, color: AppColors.primary, size: 18),
+                              child: Icon(Icons.stars, color: AppColors.primary, size: 16),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -366,41 +377,6 @@ class BusinessListCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (address != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              address!,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
