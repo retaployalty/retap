@@ -4,9 +4,9 @@ import * as jwt from 'jsonwebtoken';
 
 @Controller('google-wallet')
 export class GoogleWalletController {
-  private readonly issuerId = '3388000000022918092';
-  private readonly serviceAccountEmail = 'retap-wallet-212@retap-460215.iam.gserviceaccount.com';
-  private readonly privateKey = `-----BEGIN PRIVATE KEY-----
+  private readonly issuerId = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000022918092';
+  private readonly serviceAccountEmail = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || 'retap-wallet-212@retap-460215.iam.gserviceaccount.com';
+  private readonly privateKey = (process.env.GOOGLE_WALLET_PRIVATE_KEY || `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDekvbfNZt7p4gx
 VzrWBHdWFCIk4m0J65M9HzROKRFZTdK9IwCKiQsD4db6vqqHKbMfTvtN1MmAJfUb
 e6dsH1Us922PlmMwhBq/nEGWCEcujyq8iujDK8Bprxr01Ye0GoKaSA3t7PBTkha6
@@ -33,22 +33,35 @@ cNZJIsprk3K0UMYhil2AMQahM2Oq/xAGH/l/golEnR98b9mBm/yWioSoR0Txhm/V
 9ZcKzkjGPT1AsWsrEU0n5+7Eg7WCBkOC4nk7dEIHpgDD1r4F5rLwYimpBGUyrTnx
 bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
 8xN9xjWMYEUFHCSu0S9lPfA5
------END PRIVATE KEY-----`;
+-----END PRIVATE KEY-----`).replace(/\\n/g, '\n');
+  private readonly privateKeyId = process.env.GOOGLE_WALLET_PRIVATE_KEY_ID || '3be4fed613691c1bfdae290fc499c8b2be84697e';
+  private readonly projectId = process.env.GOOGLE_WALLET_PROJECT_ID || 'retap-460215';
+  private readonly clientId = process.env.GOOGLE_WALLET_CLIENT_ID || '101881625879357914024';
 
   @Post('generate')
   async generatePass(@Body() body: { cardId: string; customerName: string; cardUid: string }) {
     try {
       console.log('Generazione pass Google Wallet per carta:', body.cardId);
 
+      // Verifica che le variabili d'ambiente siano configurate
+      if (!process.env.GOOGLE_WALLET_PRIVATE_KEY) {
+        console.warn('⚠️ GOOGLE_WALLET_PRIVATE_KEY non configurata, usando valore di fallback');
+      } else {
+        console.log('✅ GOOGLE_WALLET_PRIVATE_KEY configurata dalle variabili d\'ambiente');
+        console.log('🔑 Chiave privata (primi 50 caratteri):', this.privateKey.substring(0, 50));
+        console.log('🔑 Chiave privata contiene \\n:', this.privateKey.includes('\\n'));
+        console.log('🔑 Chiave privata contiene newline reali:', this.privateKey.includes('\n'));
+      }
+
       // Crea il client Google Wallet
       const auth = new google.auth.GoogleAuth({
         credentials: {
           type: 'service_account',
-          project_id: 'retap-460215',
-          private_key_id: '3be4fed613691c1bfdae290fc499c8b2be84697e',
+          project_id: this.projectId,
+          private_key_id: this.privateKeyId,
           private_key: this.privateKey,
           client_email: this.serviceAccountEmail,
-          client_id: '101881625879357914024'
+          client_id: this.clientId
         },
         scopes: ['https://www.googleapis.com/auth/wallet_object.issuer']
       });
@@ -176,7 +189,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         header: {
           alg: 'RS256',
           typ: 'JWT',
-          kid: '3be4fed613691c1bfdae290fc499c8b2be84697e'
+          kid: this.privateKeyId
         }
       });
 

@@ -137,7 +137,9 @@ export async function handleAdvanceCheckpoint(merchantId: string, body: any) {
     return createErrorResponse(error.message, 400);
   }
 
-  return createSuccessResponse(data);
+  // Restituisci sempre un oggetto, non una lista
+  const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+  return createSuccessResponse(result);
 }
 
 export async function handleRewindCheckpoint(merchantId: string, body: any) {
@@ -201,10 +203,9 @@ export async function handleRewindCheckpoint(merchantId: string, body: any) {
     return createErrorResponse(updateError.message, 400);
   }
 
-  return createSuccessResponse([{
-    current_step: previousStep,
-    total_steps: offer.total_steps
-  }]);
+  // Restituisci sempre un oggetto, non una lista
+  const result = { current_step: previousStep, total_steps: offer.total_steps };
+  return createSuccessResponse(result);
 }
 
 export async function handleGetRewardsAndCheckpoints(merchantId: string, cardId: string): Promise<Response> {
@@ -382,4 +383,42 @@ export async function handleGetMerchantCheckpoints(merchantId: string): Promise<
     checkpoint_offers: offersWithSteps,
     current_step: 0
   });
+}
+
+export async function handleRedeemCheckpointReward(merchantId: string, body: any): Promise<Response> {
+  if (!merchantId) {
+    return createErrorResponse('Missing merchant ID', 400);
+  }
+
+  const { customerId, rewardId, stepId } = body;
+
+  if (!customerId || !rewardId || !stepId) {
+    return createErrorResponse('Missing required parameters: customerId, rewardId, stepId', 400);
+  }
+
+  const supabaseClient = createSupabaseClient();
+
+  try {
+    // Chiama la funzione SQL per riscattare il premio del checkpoint
+    const { error } = await supabaseClient
+      .rpc('redeem_checkpoint_reward', {
+        p_customer_id: customerId,
+        p_merchant_id: merchantId,
+        p_checkpoint_reward_id: rewardId,
+        p_checkpoint_step_id: stepId
+      });
+
+    if (error) {
+      return createErrorResponse(error.message, 400);
+    }
+
+    return createSuccessResponse({ 
+      message: 'Checkpoint reward redeemed successfully',
+      customerId,
+      rewardId,
+      stepId
+    });
+  } catch (error) {
+    return createErrorResponse(error.message, 500);
+  }
 } 

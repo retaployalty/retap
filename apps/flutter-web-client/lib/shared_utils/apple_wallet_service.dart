@@ -3,6 +3,24 @@ import 'package:http/http.dart' as http;
 import 'dart:html' as html;
 
 class AppleWalletService {
+  // URL dell'API in base all'ambiente
+  static String get _apiUrl {
+    // Forza l'URL di produzione per testare l'API deployata
+    return 'https://api-bff.vercel.app';
+    
+    // Codice originale commentato per riferimento
+    /*
+    final hostname = html.window.location.hostname;
+    if (hostname == 'localhost' || 
+        hostname?.contains('127.0.0.1') == true) {
+      return 'http://localhost:4000';
+    } else {
+      // URL di production - sostituisci con il tuo dominio Vercel
+      return 'https://api-bff.vercel.app';
+    }
+    */
+  }
+
   static Future<void> createPass({
     required String cardId,
     required String customerName,
@@ -10,10 +28,11 @@ class AppleWalletService {
   }) async {
     try {
       print('Richiesta creazione pass Apple Wallet per carta: $cardId');
+      print('🌐 API URL: $_apiUrl');
       
       // Chiama l'API NestJS per creare il pass Apple Wallet
       final response = await http.post(
-        Uri.parse('http://localhost:4000/apple-wallet/generate'),
+        Uri.parse('$_apiUrl/apple-wallet/generate'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -56,12 +75,13 @@ Nota: ${data['note']}
             ''');
             
             return;
-          } else {
-            // Modalità test - certificati non configurati
-            print('Modalità test attivata: ${data['message']}');
-            
-            // Mostra messaggio informativo
-            html.window.alert('''
+          }
+          
+          // Modalità test - certificati non configurati
+          print('Modalità test attivata: ${data['message']}');
+          
+          // Mostra messaggio informativo
+          html.window.alert('''
 Certificati Apple Wallet non configurati.
 
 Per completare l'integrazione:
@@ -71,10 +91,9 @@ Dati carta per test:
 - ID: $cardId
 - Nome: $customerName
 - UID: $cardUid
-            ''');
-            
-            return;
-          }
+          ''');
+          
+          return;
         } else if (contentType.contains('application/vnd.apple.pkpass')) {
           // Modalità normale - certificati configurati e file .pkpass generato
           // Crea un blob dal contenuto della risposta
@@ -91,7 +110,22 @@ Dati carta per test:
           // Pulisci l'URL dopo il download
           html.Url.revokeObjectUrl(url);
           
-          print('Pass Apple Wallet generato con successo');
+          print('✅ Pass Apple Wallet scaricato con successo');
+          
+          // Mostra messaggio di successo
+          html.window.alert('''
+Pass Apple Wallet scaricato con successo!
+
+Il file .pkpass è stato scaricato. Per aggiungerlo al Wallet:
+1. Apri il file scaricato
+2. Tocca "Aggiungi" quando richiesto
+3. La carta sarà disponibile nel tuo Apple Wallet
+
+Dati carta:
+- ID: $cardId
+- Nome: $customerName
+- UID: $cardUid
+          ''');
         }
       } else {
         print('Errore nella risposta del server: ${response.statusCode}');
