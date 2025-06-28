@@ -77,38 +77,55 @@ export default function BusinessProfilePage() {
 
   useEffect(() => {
     const fetchMerchant = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const { data: merchant, error } = await supabase
-        .from('merchants')
-        .select('*')
-        .eq('profile_id', user.id)
-        .single();
+        const { data: merchant, error } = await supabase
+          .from('merchants')
+          .select('*')
+          .eq('profile_id', user.id)
+          .single();
 
-      if (merchant) {
-        setProfile(prev => ({
-          ...prev,
-          name: merchant.name || "",
-          phone: merchant.phone || "",
-          googleMapsUrl: merchant.google_maps_url || "",
-          logoUrl: merchant.logo_url || "",
-          coverImages: merchant.cover_image_url || [],
-          hours: merchant.hours || prev.hours,
-          annualClosures: merchant.annual_closures || [],
-          galleryImages: merchant.gallery_images || [],
-        }));
-
-        // Imposta l'indirizzo e le coordinate se disponibili
-        if (merchant.address) {
-          setAddress(merchant.address);
+        if (error && error.code === 'PGRST116') {
+          // Merchant non esiste, mostra un messaggio informativo
+          console.log("No merchant found, user needs to create one");
+          toast.info("Completa il profilo del tuo negozio per iniziare");
+          return;
         }
-        if (merchant.latitude && merchant.longitude) {
-          setCoordinates({
-            latitude: merchant.latitude,
-            longitude: merchant.longitude
-          });
+
+        if (error) {
+          console.error("Error fetching merchant:", error);
+          toast.error("Errore nel caricamento del profilo");
+          return;
         }
+
+        if (merchant) {
+          setProfile(prev => ({
+            ...prev,
+            name: merchant.name || "",
+            phone: merchant.phone || "",
+            googleMapsUrl: merchant.google_maps_url || "",
+            logoUrl: merchant.logo_url || "",
+            coverImages: merchant.cover_image_url || [],
+            hours: merchant.hours || prev.hours,
+            annualClosures: merchant.annual_closures || [],
+            galleryImages: merchant.gallery_images || [],
+          }));
+
+          // Imposta l'indirizzo e le coordinate se disponibili
+          if (merchant.address) {
+            setAddress(merchant.address);
+          }
+          if (merchant.latitude && merchant.longitude) {
+            setCoordinates({
+              latitude: merchant.latitude,
+              longitude: merchant.longitude
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error in fetchMerchant:", error);
       }
     };
 
@@ -301,11 +318,69 @@ export default function BusinessProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      console.log("Current profile data:", profile);
+      console.log("Current address:", address);
+      console.log("Current coordinates:", coordinates);
+
       const { data: merchant, error: merchantError } = await supabase
         .from('merchants')
         .select('id, country, industry, address')
         .eq('profile_id', user.id)
         .single();
+
+      // Se non esiste un merchant, crealo
+      if (merchantError && merchantError.code === 'PGRST116') {
+        console.log("Creating new merchant...");
+        
+        // Validazione campi obbligatori
+        if (!profile.name || profile.name.trim() === '') {
+          toast.error("Il nome del negozio è obbligatorio");
+          return;
+        }
+        
+        if (!address || address.trim() === '') {
+          toast.error("L'indirizzo è obbligatorio");
+          return;
+        }
+
+        const merchantData = {
+          profile_id: user.id,
+          name: profile.name.trim(),
+          country: 'Italia', // Default value
+          industry: 'Retail', // Default value
+          address: address.trim(),
+          phone: profile.phone || null,
+          google_maps_url: profile.googleMapsUrl || null,
+          logo_url: profile.logoUrl || null,
+          cover_image_url: profile.coverImages && profile.coverImages.length > 0 ? profile.coverImages : null,
+          hours: profile.hours || null,
+          annual_closures: profile.annualClosures && profile.annualClosures.length > 0 ? profile.annualClosures : null,
+          latitude: coordinates?.latitude || null,
+          longitude: coordinates?.longitude || null,
+        };
+
+        console.log("Creating merchant with data:", merchantData);
+        
+        const { data: newMerchant, error: createError } = await supabase
+          .from('merchants')
+          .insert(merchantData)
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating merchant:", createError);
+          console.error("Error details:", JSON.stringify(createError, null, 2));
+          throw new Error(`Merchant creation error: ${createError.message}`);
+        }
+
+        console.log("Merchant created successfully:", newMerchant);
+        setHasChanges(false);
+        toast.success("Profilo creato con successo!");
+        
+        // Ricarica la pagina per aggiornare la dashboard
+        window.location.reload();
+        return;
+      }
 
       if (merchantError) {
         console.error("Error fetching merchant:", merchantError);

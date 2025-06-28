@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GB, US, IT, CH, AT, FR, DE, ES, CA, AU, JP, CN, IN, BR, RU } from 'country-flag-icons/react/3x2';
+import { GB, US, IT, CH, AT, FR, DE, ES, CA, AU, JP, CN, IN, BR, RU, PT, BE, NL, IE, DK, SE, NO, FI, PL, CZ, SK, HU, SI, HR, RO, BG, GR, EE, LV, LT, LU, MT, CY } from 'country-flag-icons/react/3x2';
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +48,29 @@ const COUNTRIES = [
   { code: "FR", name: "France", flag: FR },
   { code: "DE", name: "Germany", flag: DE },
   { code: "ES", name: "Spain", flag: ES },
+  { code: "PT", name: "Portugal", flag: PT },
+  { code: "BE", name: "Belgium", flag: BE },
+  { code: "NL", name: "Netherlands", flag: NL },
+  { code: "IE", name: "Ireland", flag: IE },
+  { code: "DK", name: "Denmark", flag: DK },
+  { code: "SE", name: "Sweden", flag: SE },
+  { code: "NO", name: "Norway", flag: NO },
+  { code: "FI", name: "Finland", flag: FI },
+  { code: "PL", name: "Poland", flag: PL },
+  { code: "CZ", name: "Czech Republic", flag: CZ },
+  { code: "SK", name: "Slovakia", flag: SK },
+  { code: "HU", name: "Hungary", flag: HU },
+  { code: "SI", name: "Slovenia", flag: SI },
+  { code: "HR", name: "Croatia", flag: HR },
+  { code: "RO", name: "Romania", flag: RO },
+  { code: "BG", name: "Bulgaria", flag: BG },
+  { code: "GR", name: "Greece", flag: GR },
+  { code: "EE", name: "Estonia", flag: EE },
+  { code: "LV", name: "Latvia", flag: LV },
+  { code: "LT", name: "Lithuania", flag: LT },
+  { code: "LU", name: "Luxembourg", flag: LU },
+  { code: "MT", name: "Malta", flag: MT },
+  { code: "CY", name: "Cyprus", flag: CY },
   { code: "CA", name: "Canada", flag: CA },
   { code: "AU", name: "Australia", flag: AU },
   { code: "JP", name: "Japan", flag: JP },
@@ -101,7 +124,7 @@ export default function OnboardingPage() {
 
       if (merchantError) throw merchantError;
 
-      toast.success("Registrazione completata con successo!");
+      toast.success("Registration completed successfully!");
       
       // Redirect to dashboard
       router.push('/dashboard');
@@ -121,25 +144,25 @@ export default function OnboardingPage() {
 
   const handleCoordinatesChange = (latitude: number, longitude: number) => {
     setCoordinates({ latitude, longitude });
-    toast.success("Coordinate trovate e salvate!");
+    toast.success("Coordinates found and saved!");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[#1A1A1A] mb-2">
-            Registra il tuo Negozio
+            Register your Business
           </h1>
           <p className="text-gray-600">
-            Completa la registrazione per iniziare a utilizzare ReTap
+            Complete the registration to start using ReTap
           </p>
         </div>
 
         <Card className="shadow-lg border-0">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-[#1A1A1A]">
-              Informazioni Negozio
+              Business Information
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -152,44 +175,41 @@ export default function OnboardingPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="companyName" className="text-[#1A1A1A]">Nome Negozio</Label>
+                <Label htmlFor="companyName" className="text-[#1A1A1A]">Business Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="companyName"
                   name="companyName"
                   type="text"
                   required
-                  placeholder="es. Pizzeria da Mario"
+                  placeholder="e.g. Mario's Pizzeria"
                   className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="country" className="text-[#1A1A1A]">Paese</Label>
+                <Label htmlFor="country" className="text-[#1A1A1A]">Country <span className="text-red-500">*</span></Label>
                 <Select name="country" required>
                   <SelectTrigger className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all">
-                    <SelectValue placeholder="Seleziona il paese" />
+                    <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((country) => {
-                      const FlagComponent = country.flag;
-                      return (
-                        <SelectItem key={country.code} value={country.code}>
-                          <div className="flex items-center gap-2">
-                            <FlagComponent className="w-4 h-3" />
-                            {country.name}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
+                    {COUNTRIES.sort((a, b) => a.name.localeCompare(b.name)).map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        <div className="flex items-center gap-2">
+                          {country.flag ? <country.flag className="w-4 h-3" /> : null}
+                          {country.name}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="industry" className="text-[#1A1A1A]">Categoria</Label>
+                <Label htmlFor="industry" className="text-[#1A1A1A]">Category <span className="text-red-500">*</span></Label>
                 <Select name="industry" required>
                   <SelectTrigger className="rounded-lg border border-input bg-background px-3 py-2.5 focus:ring-2 focus:ring-[#FF3131]/20 focus:border-[#FF3131] transition-all">
-                    <SelectValue placeholder="Seleziona la categoria" />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     {BUSINESS_CATEGORIES.map((category) => (
@@ -205,8 +225,8 @@ export default function OnboardingPage() {
                 value={address}
                 onChange={handleAddressChange}
                 onCoordinatesChange={handleCoordinatesChange}
-                label="Indirizzo Negozio"
-                placeholder="es. Via Roma 123, Milano, Italia"
+                label="Business Address"
+                placeholder="e.g. 123 Main St, Milan, Italy"
                 required
                 className="rounded-lg"
               />
@@ -214,7 +234,7 @@ export default function OnboardingPage() {
               {coordinates && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-700">
-                    <strong>Coordinate trovate:</strong><br />
+                    <strong>Coordinates found:</strong><br />
                     Lat: {coordinates.latitude.toFixed(6)}<br />
                     Lon: {coordinates.longitude.toFixed(6)}
                   </p>
@@ -230,7 +250,7 @@ export default function OnboardingPage() {
                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    Completa Registrazione
+                    Complete Registration
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}

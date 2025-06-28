@@ -12,6 +12,7 @@ const fredoka = Fredoka({
 export const metadata: Metadata = {
   title: "ReTap - Loyalty made simple for business",
   description: "One NFC card for all your favorite shops. Earn points everywhere you go with ReTap.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default function RootLayout({
@@ -21,6 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="it">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
       <body
         className={`${fredoka.variable} font-sans antialiased`}
         suppressHydrationWarning={true}

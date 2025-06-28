@@ -109,11 +109,13 @@ export function CheckpointsList() {
       
       if (userError) {
         console.error("Auth error:", userError)
+        toast.error("Errore di autenticazione")
         return
       }
 
       if (!user) {
         console.error("No user found")
+        toast.error("Utente non trovato")
         return
       }
 
@@ -127,11 +129,31 @@ export function CheckpointsList() {
 
       if (merchantError) {
         console.error("Error fetching merchant:", merchantError)
+        console.error("Error details:", {
+          message: merchantError.message,
+          details: merchantError.details,
+          hint: merchantError.hint,
+          code: merchantError.code
+        })
+        
+        // Gestione specifica degli errori
+        if (merchantError.code === 'PGRST116') {
+          toast.error("Nessun negozio trovato. Completa il profilo del tuo negozio.")
+          // Reindirizza al profilo per completare il setup
+          setTimeout(() => {
+            window.location.href = '/dashboard/profile';
+          }, 2000);
+        } else if (merchantError.code === '42501') {
+          toast.error("Errore di permessi. Contatta il supporto.")
+        } else {
+          toast.error(`Errore nel caricamento del negozio: ${merchantError.message}`)
+        }
         return
       }
 
       if (!merchant) {
         console.error("No merchant found")
+        toast.error("Nessun negozio trovato")
         return
       }
 
@@ -145,7 +167,8 @@ export function CheckpointsList() {
 
       if (offersError) {
         console.error("Error fetching offers:", offersError)
-        throw offersError
+        toast.error(`Errore nel caricamento delle offerte: ${offersError.message}`)
+        return
       }
 
       console.log("Loaded offers:", offers)
@@ -158,7 +181,11 @@ export function CheckpointsList() {
       }
     } catch (error) {
       console.error("Error loading offers:", error)
-      toast.error("Error loading offers")
+      if (error instanceof Error) {
+        toast.error(`Errore: ${error.message}`)
+      } else {
+        toast.error("Errore sconosciuto nel caricamento delle offerte")
+      }
     } finally {
       setLoading(false)
     }
