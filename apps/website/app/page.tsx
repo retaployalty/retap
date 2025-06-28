@@ -18,40 +18,32 @@ const fredoka = Fredoka({
 
 const FAQS = [
   {
-    q: "Do I need to download an app?",
-    a: "No, there's no need to download anything. ReTap works through a web app—accessible instantly via your browser.",
+    q: "Do I or my customers need to download an app?",
+    a: "No. ReTap works without any app—making onboarding smooth and frictionless for both you and your customers.",
   },
   {
-    q: "What if I lose my card?",
-    a: "You can get a new card at any partner store and transfer your points.",
-  },
-  {
-    q: "How do I check my points?",
-    a: "You can check your points anytime through the ReTap web app—no installation needed.",
-  },
-  {
-    q: "Is my data safe?",
-    a: "Yes. Your data is protected and only visible to you and the store where you use your card.",
-  },
-  {
-    q: "Can I use ReTap in multiple stores?",
-    a: "Yes! Your ReTap card works in all affiliated stores. Earn and redeem points everywhere.",
+    q: "Can ReTap be used across multiple stores or locations?",
+    a: "Yes. ReTap is network-enabled, meaning your customers can earn and redeem points at any participating location—yours or others.",
   },
   {
     q: "How much does it cost for customers?",
-    a: "ReTap is always free for end customers. Only merchants pay a subscription.",
+    a: "Nothing. ReTap is 100% free for your customers. You only pay a flat business fee with no hidden costs.",
   },
   {
-    q: "Can I use ReTap with my phone?",
-    a: "Yes, you can use the digital pass on your phone or the physical NFC card.",
+    q: "Can ReTap integrate with mobile phones or digital wallets?",
+    a: "Yes. While cards are the core tool, ReTap is also compatible with mobile numbers and QR scans for full flexibility.",
   },
   {
-    q: "How do I contact support?",
-    a: "You can contact us anytime at info@retapcard.com or via WhatsApp.",
+    q: "How can I reach ReTap support?",
+    a: "You'll have access to our dedicated business support via email, chat, or phone—always fast and human.",
   },
   {
-    q: "Can I use the points earned in one store at another?",
-    a: "No, points can only be redeemed at the store where they were earned. Each business has its own rewards system within ReTap.",
+    q: "Can points earned in one store be used in another?",
+    a: "No. Points can only be redeemed in the same store where they were earned. This protects your budget and keeps rewards exclusive to your brand.",
+  },
+  {
+    q: "What if I'm not satisfied after the first month?",
+    a: "No problem at all. If ReTap isn't the right fit for your business, we'll give you a full refund—no questions asked.",
   },
 ];
 
@@ -180,7 +172,7 @@ export default function Home() {
       <section className="w-full flex flex-col items-center justify-center py-16 sm:py-20 lg:py-24 bg-white px-4" id="how-it-works">
         <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 text-textPrimary text-center">How ReTap works</h2>
         <p className="text-lg sm:text-xl md:text-2xl text-textSecondary mb-8 sm:mb-12 max-w-3xl text-center px-4">
-          Discover how ReTap helps you increase customer retention and boost sales with one universal, hassle-free loyalty system.
+        Boost customer loyalty, drive sales, and grow your business with one simple, powerful loyalty system.
         </p>
         <div className="w-full max-w-7xl flex flex-col lg:flex-row items-stretch justify-center gap-8 lg:gap-8 mt-8 px-4">
           {/* Colonna 1 */}
@@ -189,7 +181,7 @@ export default function Home() {
               <img src="/retapG5.png" alt="More Returning Customers" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
             <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Launch Promotions</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Launch personalized offers in minutes.</p>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Create personalized promotions in just a few clicks and bring customers back—fast.</p>
           </div>
           {/* Freccia 1 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -202,8 +194,8 @@ export default function Home() {
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
               <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Give Loyalty Card to Your Customers</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">No app needed, no friction. They can use it in your store and others.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Hand Out the ReTap Loyalty Card</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">No app, no friction. Just give the card and let customers start earning rewards across the ReTap network.</p>
           </div>
           {/* Freccia 2 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -216,8 +208,8 @@ export default function Home() {
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
               <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Customer Retention</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Get back your customers and get new ones from the ReTap network.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Keep Customers Coming Back</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Reward your loyal shoppers and attract new ones from the growing ReTap ecosystem.</p>
           </div>
         </div>
       </section>
