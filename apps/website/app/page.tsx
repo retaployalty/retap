@@ -129,7 +129,7 @@ export default function Home() {
                 className="bg-[#1A1A1A] text-white h-12 sm:h-14 lg:h-16 px-6 sm:px-8 lg:px-10 rounded-xl font-bold text-base sm:text-lg lg:text-xl shadow hover:bg-[#FF3131] transition-colors flex items-center justify-center gap-2 group"
                 style={{ minWidth: 0 }}
               >
-                Start Now
+                Get Started
               </a>
               <a 
                 href="#what-is-retap" 
@@ -390,16 +390,18 @@ export default function Home() {
           <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-4 px-4">
             <div className="flex flex-col items-center lg:items-start gap-1">
               <span className="font-bold text-primary text-base sm:text-lg">ReTap S.r.l.</span>
-              <span className="text-xs sm:text-sm">VAT IT12345678901</span>
               <span className="text-xs text-textDisabled">&copy; {new Date().getFullYear()} ReTap. All rights reserved.</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <span className="font-semibold text-textPrimary text-sm sm:text-base">Contacts</span>
               <a href="mailto:info@retapcard.com" className="hover:text-primary transition-colors text-xs sm:text-sm">info@retapcard.com</a>
-              <a href="https://wa.me/393331234567" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors text-xs sm:text-sm">WhatsApp: +39 333 1234567</a>
+              <a href="https://wa.me/393802418839" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors text-xs sm:text-sm">WhatsApp: +39 380 2418839</a>
             </div>
             <div className="flex flex-col items-center lg:items-end gap-1">
-              <a href="#" className="hover:text-primary transition-colors text-xs sm:text-sm">Privacy Policy</a>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <Link href="/privacy-policy" className="hover:text-primary transition-colors text-xs sm:text-sm">Privacy Policy</Link>
+                <Link href="/terms-of-service" className="hover:text-primary transition-colors text-xs sm:text-sm">Terms of Service</Link>
+              </div>
               <span className="text-xs text-textDisabled">ReTap - Loyalty made simple for business</span>
             </div>
           </div>
@@ -407,7 +409,7 @@ export default function Home() {
 
         {/* Bottone WhatsApp fisso in basso a destra */}
         <a
-          href="https://wa.me/393331234567"
+          href="https://wa.me/393802418839"
           target="_blank"
           rel="noopener noreferrer"
           className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 bg-[#25D366] hover:bg-[#1ebe5d] rounded-full shadow-lg w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center transition-colors"
