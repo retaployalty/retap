@@ -102,7 +102,7 @@ export default function Home() {
               <span className="whitespace-nowrap">your business needs</span>
             </h1>
             <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-textSecondary mb-6 sm:mb-8 max-w-xl leading-snug">
-              One card, more loyal customers. No app, no friction — just results and insights.
+              Attract new customers and retain current ones through promotions. Full refund if you change your mind.
             </p>
             
             {/* Stats */}
@@ -186,10 +186,10 @@ export default function Home() {
           {/* Colonna 1 */}
           <div className="flex flex-col items-center w-full lg:w-1/3 px-2 sm:px-4">
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
-              <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-48 sm:w-56 lg:w-64 h-auto" />
+              <img src="/retapG5.png" alt="More Returning Customers" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Universal Loyalty Card</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">One NFC card for all your locations. No apps, no logins — just tap and earn rewards.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Launch Promotions</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Launch personalized offers in minutes.</p>
           </div>
           {/* Freccia 1 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -200,10 +200,10 @@ export default function Home() {
           {/* Colonna 2 */}
           <div className="flex flex-col items-center w-full lg:w-1/3 px-2 sm:px-4">
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
-              <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-48 sm:w-56 lg:w-64 h-auto" />
+              <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Instant Promotions</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Launch personalized offers in minutes. No technical skills required — engage your customers with ease.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Give Loyalty Card to Your Customers</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">No app needed, no friction. They can use it in your store and others.</p>
           </div>
           {/* Freccia 2 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -214,10 +214,10 @@ export default function Home() {
           {/* Colonna 3 */}
           <div className="flex flex-col items-center w-full lg:w-1/3 px-2 sm:px-4">
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
-              <img src="/retapG5.png" alt="More Returning Customers" className="w-48 sm:w-56 lg:w-64 h-auto" />
+              <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
             <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Customer Retention</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Turn visitors into loyal customers and attract new ones through the ReTap network.</p>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Get back your customers and get new ones from the ReTap network.</p>
           </div>
         </div>
       </section>
@@ -239,8 +239,8 @@ export default function Home() {
               />
             </div>
             <div className="w-full lg:w-1/2 flex flex-col items-start justify-center lg:pl-12 order-1 lg:order-2">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-textPrimary leading-tight mb-4 sm:mb-6">Turn loyalty into profit</h3>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-textSecondary leading-relaxed">Bring customers back — more often and with higher spending. ReTap's universal loyalty card works seamlessly across all your locations. No app downloads, no friction, just results.</p>
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-textPrimary leading-tight mb-4 sm:mb-6">Bring customers back and get new ones</h3>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-textSecondary leading-relaxed">Give cards to your customers. They tap their phone to check points (no app needed). They use the same card everywhere. Your customers return for promotions, and new ones discover your business through the ReTap network.</p>
             </div>
           </div>
           {/* Block 2: text left, image right */}
