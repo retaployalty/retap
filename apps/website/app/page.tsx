@@ -18,6 +18,14 @@ const fredoka = Fredoka({
 
 const FAQS = [
   {
+    q: "What if I'm not satisfied after the first month?",
+    a: "No problem at all. If ReTap isn't the right fit for your business, we'll give you a full refund—no questions asked.",
+  },
+  {
+    q: "How much does it cost for customers?",
+    a: "Nothing. ReTap is 100% free for your customers. You only pay a flat business fee with no hidden costs.",
+  },
+  {
     q: "Do I or my customers need to download an app?",
     a: "No. ReTap works without any app—making onboarding smooth and frictionless for both you and your customers.",
   },
@@ -26,24 +34,8 @@ const FAQS = [
     a: "Yes. ReTap is network-enabled, meaning your customers can earn and redeem points at any participating location—yours or others.",
   },
   {
-    q: "How much does it cost for customers?",
-    a: "Nothing. ReTap is 100% free for your customers. You only pay a flat business fee with no hidden costs.",
-  },
-  {
-    q: "Can ReTap integrate with mobile phones or digital wallets?",
-    a: "Yes. While cards are the core tool, ReTap is also compatible with mobile numbers and QR scans for full flexibility.",
-  },
-  {
-    q: "How can I reach ReTap support?",
-    a: "You'll have access to our dedicated business support via email, chat, or phone—always fast and human.",
-  },
-  {
     q: "Can points earned in one store be used in another?",
     a: "No. Points can only be redeemed in the same store where they were earned. This protects your budget and keeps rewards exclusive to your brand.",
-  },
-  {
-    q: "What if I'm not satisfied after the first month?",
-    a: "No problem at all. If ReTap isn't the right fit for your business, we'll give you a full refund—no questions asked.",
   },
 ];
 
@@ -97,22 +89,6 @@ export default function Home() {
               Attract new customers and retain current ones through promotions. Full refund if you change your mind.
             </p>
             
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 sm:gap-8 mb-8 sm:mb-10 w-full">
-              <div className="flex flex-col">
-                <span className="text-2xl sm:text-3xl font-bold text-[#f8494c]">50+</span>
-                <span className="text-xs sm:text-sm text-textSecondary">Businesses onboard</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl sm:text-3xl font-bold text-[#f8494c]">50,000+</span>
-                <span className="text-xs sm:text-sm text-textSecondary">Happy customers</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl sm:text-3xl font-bold text-[#f8494c]">1M+</span>
-                <span className="text-xs sm:text-sm text-textSecondary">Rewards redeemed</span>
-              </div>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
               <a 
                 href="/auth" 
@@ -181,7 +157,7 @@ export default function Home() {
               <img src="/retapG5.png" alt="More Returning Customers" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
             <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Launch Promotions</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Create personalized promotions in just a few clicks and bring customers back—fast.</p>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Launch personalized offers in minutes.</p>
           </div>
           {/* Freccia 1 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -194,8 +170,8 @@ export default function Home() {
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
               <img src="/retap-card-stack.png" alt="Your Loyalty Card" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Hand Out the ReTap Loyalty Card</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">No app, no friction. Just give the card and let customers start earning rewards across the ReTap network.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Give Loyalty Card to Your Customers</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">No app needed, no friction. They can use it in your store and others.</p>
           </div>
           {/* Freccia 2 */}
           <div className="hidden lg:flex items-center justify-center w-16">
@@ -208,8 +184,8 @@ export default function Home() {
             <div className="h-48 sm:h-56 lg:h-64 flex items-center justify-center mb-4 sm:mb-6">
               <img src="/retapG4.png" alt="Custom Offers in Clicks" className="w-48 sm:w-56 lg:w-64 h-auto" />
             </div>
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Keep Customers Coming Back</h3>
-            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Reward your loyal shoppers and attract new ones from the growing ReTap ecosystem.</p>
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-textPrimary mb-2 sm:mb-3 text-center">Customer Retention</h3>
+            <p className="text-base sm:text-lg text-textSecondary text-center min-h-[4rem] sm:min-h-[4.5rem] lg:min-h-[4rem]">Get back your customers and get new ones from the ReTap network.</p>
           </div>
         </div>
       </section>
