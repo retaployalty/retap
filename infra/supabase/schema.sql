@@ -235,7 +235,15 @@ CREATE OR REPLACE FUNCTION "public"."create_customer_checkpoint"() RETURNS "trig
     AS $$
 DECLARE
   offer_record RECORD;
+  v_customer_id uuid;
 BEGIN
+  -- Recupera il customer_id dalla tabella cards usando NEW.card_id
+  SELECT customer_id INTO v_customer_id FROM public.cards WHERE id = NEW.card_id;
+
+  IF v_customer_id IS NULL THEN
+    RAISE EXCEPTION 'Customer_id non trovato per la card_id %', NEW.card_id;
+  END IF;
+
   -- Get all active offers for this merchant
   FOR offer_record IN 
     SELECT id FROM public.checkpoint_offers 
@@ -249,7 +257,7 @@ BEGIN
       current_step
     )
     VALUES (
-      NEW.customer_id, 
+      v_customer_id, 
       NEW.merchant_id, 
       offer_record.id,
       0
