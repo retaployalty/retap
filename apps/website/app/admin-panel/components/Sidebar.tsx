@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import {
+import { Gift, usePathname } from "next/navigation";
+import { Gift, cn } from "@/lib/utils";
+import { Gift,
   LayoutDashboard,
   Store,
   CreditCard,
@@ -13,26 +13,51 @@ import {
 
 const navigation = [
   {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
     name: "Dashboard",
     href: "/admin-panel/dashboard",
     icon: LayoutDashboard,
   },
   {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
     name: "Merchants",
     href: "/admin-panel/merchants",
     icon: Store,
   },
   {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
     name: "Subscriptions",
     href: "/admin-panel/subscriptions",
     icon: CreditCard,
   },
   {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
     name: "Transactions",
     href: "/admin-panel/transactions",
     icon: Receipt,
   },
   {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
     name: "Settings",
     href: "/admin-panel/settings",
     icon: Settings,
@@ -49,6 +74,11 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navigation.map((item) => {
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
           const isActive = pathname === item.href;
           return (
             <Link
@@ -68,6 +98,11 @@ export function Sidebar() {
                 )}
               />
               {item.name}
+  {
+    name: "Grant Access",
+    href: "/admin-panel/grant-access",
+    icon: Gift,
+  },
             </Link>
           );
         })}
