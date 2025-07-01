@@ -320,6 +320,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
               'cardId': cardId,
               'uid': tag.id,
               'customerId': customerId,
+              'issuing_merchant_id': widget.merchantId,
             }),
           );
 

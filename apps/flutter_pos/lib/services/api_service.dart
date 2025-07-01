@@ -247,6 +247,7 @@ class ApiService {
         'cardId': cardId,
         'uid': uid,
         'customerId': customerId,
+        'issuing_merchant_id': merchantId,
       },
     );
   }

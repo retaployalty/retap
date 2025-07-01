@@ -79,7 +79,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         programName: 'ReTap Loyalty',
         programLogo: {
           sourceUri: {
-            uri: 'https://i.ibb.co/mCDvGs8M/160x160.png'
+            uri: 'https://i.ibb.co/B5yvhF7p/logo.png' // TODO: Sostituisci con immagine 160x160 con sfondo rosso #ff3131
           }
         },
         reviewStatus: 'APPROVED',
@@ -97,7 +97,10 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
             body: 'ReTap Loyalty Program',
             id: 'program'
           }
-        ]
+        ],
+        hexBackgroundColor: '#ff3131',
+        hexSecondaryColor: '#ffffff',
+        hexForegroundColor: '#ffffff'
       };
 
       try {
@@ -117,7 +120,7 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
         state: 'ACTIVE',
         heroImage: {
           sourceUri: {
-            uri: 'https://i.ibb.co/ycNhdKK1/960x320.png'
+            uri: 'https://i.ibb.co/ycNhdKK1/960x320.png' // TODO: Sostituisci con immagine 960x320 con sfondo rosso #ff3131
           }
         },
         textModulesData: [
@@ -147,7 +150,10 @@ bgXcMc/NC84FVcIwygUgbdepC9AfFJ998X1CFlhDB5ALszZ9q6Dr4DhWDF3478v9
           alternateText: body.cardUid
         },
         accountId: body.cardId,
-        accountName: body.customerName
+        accountName: body.customerName,
+        hexBackgroundColor: '#ff3131',
+        hexSecondaryColor: '#ffffff',
+        hexForegroundColor: '#ffffff'
       };
 
       try {
