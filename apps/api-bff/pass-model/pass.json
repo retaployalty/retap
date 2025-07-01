@@ -5,12 +5,12 @@
     "organizationName": "ReTap",
     "description": "ReTap Loyalty Card",
     "logoText": "ReTap",
-    "foregroundColor": "rgb(255, 101, 101)",
-    "backgroundColor": "rgb(255, 255, 255)",
-    "generic": {
+    "foregroundColor": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(255, 49, 49)",
+    "labelColor": "rgb(255, 255, 255)",
+    "storeCard": {
       "primaryFields": [],
-      "secondaryFields": [],
-      "auxiliaryFields": []
+      "secondaryFields": []
     },
     "barcode": {
       "format": "PKBarcodeFormatQR",
