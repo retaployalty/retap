@@ -66,6 +66,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
     );
     _animationController.forward();
     _extractCardIdAndLoad();
+    // Redirect to home if app is running in standalone mode (PWA from home)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        // ignore: undefined_prefixed_name
+        final isStandalone = html.window.matchMedia('(display-mode: standalone)').matches;
+        if (isStandalone) {
+          context.go('/');
+        }
+      } catch (_) {}
+    });
   }
 
   Future<void> _extractCardIdAndLoad() async {
@@ -98,7 +108,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       await _loadCustomerData();
     } else {
       setState(() {
-        _error = "Card ID non trovata nell'URL";
+        _error = "Card ID not found in URL";
       });
     }
   }
@@ -113,7 +123,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
           .maybeSingle();
 
       if (cardResponse == null) {
-        throw Exception('Carta non trovata');
+        throw Exception('Card not found');
       }
 
       _customerId = cardResponse['customer_id'] as String;
@@ -126,7 +136,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
           .maybeSingle();
 
       if (customerResponse == null) {
-        throw Exception('Cliente non trovato');
+        throw Exception('Customer not found');
       }
 
       // Popoliamo i campi del form con i dati esistenti
@@ -146,7 +156,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
     if (!_formKey.currentState!.validate()) return;
     if (_customerId == null) {
       setState(() {
-        _error = "ID cliente non trovato";
+        _error = "Customer ID not found";
       });
       return;
     }
@@ -169,7 +179,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
           .single();
 
       if (response == null) {
-        throw Exception('Errore durante l\'aggiornamento del profilo');
+        throw Exception('Error updating profile');
       }
 
       _nextStep();
@@ -319,7 +329,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       child: Column(
                         children: [
                           const Text(
-                            'Informazioni personali',
+                            'Personal Information',
                             style: TextStyle(
                               fontSize: 24,
                               fontFamily: 'Fredoka',
@@ -331,11 +341,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                           const SizedBox(height: 32),
                           _buildTextField(
                             controller: _firstNameController,
-                            label: 'Nome',
+                            label: 'First Name',
                             icon: Icons.person_outline,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Per favore inserisci il tuo nome';
+                                return 'Please enter your first name';
                               }
                               return null;
                             },
@@ -343,11 +353,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                           const SizedBox(height: 16),
                           _buildTextField(
                             controller: _lastNameController,
-                            label: 'Cognome',
+                            label: 'Last Name',
                             icon: Icons.person_outline,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Per favore inserisci il tuo cognome';
+                                return 'Please enter your last name';
                               }
                               return null;
                             },
@@ -355,7 +365,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                           const SizedBox(height: 16),
                           _buildTextField(
                             controller: _phoneController,
-                            label: 'Numero di telefono',
+                            label: 'Phone Number',
                             icon: Icons.phone_outlined,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
@@ -363,13 +373,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Per favore inserisci il tuo numero di telefono';
+                                return 'Please enter your phone number';
                               }
                               if (value.length < 10 || value.length > 11) {
-                                return 'Il numero deve essere di 10 o 11 cifre';
+                                return 'The number must be 10 or 11 digits';
                               }
                               if (!value.startsWith('3')) {
-                                return 'Il numero deve iniziare con 3';
+                                return 'The number must start with 3';
                               }
                               return null;
                             },
@@ -408,7 +418,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       ),
                     )
                   : const Text(
-                      'Continua',
+                      'Continue',
                       style: TextStyle(
                         fontSize: 16,
                         fontFamily: 'Fredoka',
@@ -491,7 +501,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                     ),
                     const SizedBox(height: 48),
                     const Text(
-                      'Aggiungi al Wallet',
+                      'Add to Wallet',
                       style: TextStyle(
                         fontSize: 28,
                         fontFamily: 'Fredoka',
@@ -502,7 +512,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Aggiungi la tua carta ReTap al wallet digitale del tuo dispositivo',
+                      'Add your ReTap card to your device digital wallet',
                       style: TextStyle(
                         fontSize: 16,
                         fontFamily: 'Fredoka',
@@ -535,7 +545,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                   ),
                   icon: const Icon(Icons.add_to_home_screen, size: 24),
                   label: const Text(
-                    'Aggiungi al Wallet',
+                    'Add to Wallet',
                     style: TextStyle(
                       fontSize: 16,
                       fontFamily: 'Fredoka',
@@ -551,7 +561,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                   foregroundColor: const Color(0xFF666666),
                 ),
                 child: const Text(
-                  'Indietro',
+                  'Back',
                   style: TextStyle(
                     fontSize: 16,
                     fontFamily: 'Fredoka',
@@ -593,7 +603,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Come installare ReTap',
+                  'How to install ReTap',
                   style: TextStyle(
                     fontSize: 20,
                     fontFamily: 'Fredoka',
@@ -603,7 +613,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '1. Tocca l\'icona di condivisione\n2. Seleziona "Aggiungi a Home"\n3. Conferma l\'installazione',
+                  '1. Tap the share icon\n2. Select "Add to Home"\n3. Confirm installation',
                   style: TextStyle(
                     fontSize: 16,
                     fontFamily: 'Fredoka',
@@ -630,7 +640,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Ho capito',
+                      'Got it',
                       style: TextStyle(
                         fontSize: 16,
                         fontFamily: 'Fredoka',
@@ -675,7 +685,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                         ),
                         const SizedBox(height: 48),
                         const Text(
-                          'Installa App',
+                          'Install App',
                           style: TextStyle(
                             fontSize: 28,
                             fontFamily: 'Fredoka',
@@ -686,7 +696,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Aggiungi ReTap alla schermata Home per un accesso rapido',
+                          'Add ReTap to your Home screen for quick access',
                           style: TextStyle(
                             fontSize: 16,
                             fontFamily: 'Fredoka',
@@ -750,7 +760,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       ),
                       icon: const Icon(Icons.add_to_home_screen, size: 24),
                       label: const Text(
-                        'Aggiungi alla Home',
+                        'Add to Home',
                         style: TextStyle(
                           fontSize: 16,
                           fontFamily: 'Fredoka',
@@ -775,7 +785,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Continua senza installare',
+                        'Continue',
                         style: TextStyle(
                           fontSize: 16,
                           fontFamily: 'Fredoka',
@@ -791,7 +801,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       foregroundColor: const Color(0xFF666666),
                     ),
                     child: const Text(
-                      'Indietro',
+                      'Back',
                       style: TextStyle(
                         fontSize: 16,
                         fontFamily: 'Fredoka',
@@ -874,8 +884,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isApplePlatform 
-              ? 'Pass Apple Wallet scaricato con successo. Apri il file per aggiungerlo al Wallet.'
-              : 'Carta aggiunta al Google Wallet con successo'
+              ? 'Apple Wallet pass successfully downloaded. Open the file to add it to your Wallet.'
+              : 'Card successfully added to Google Wallet'
             ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 5),
@@ -895,7 +905,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Errore nell\'aggiunta al wallet: ${e.toString()}'),
+            content: Text('Error adding to wallet: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),

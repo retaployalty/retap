@@ -18,19 +18,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     OnboardingPage(
       title: 'Benvenuto su ReTap',
       description: 'La tua carta fedeltà universale per tutti i negozi',
-      image: 'assets/images/onboarding1.png',
+      image: 'assets/images/card.png',
       color: Color(0xFFFF5A5F), // Airbnb red
     ),
     OnboardingPage(
       title: 'Come funziona',
       description: 'Usa un\'unica carta NFC o il tuo wallet digitale in tutti i negozi affiliati',
-      image: 'assets/images/onboarding2.png',
+      image: 'assets/images/nfc.png',
       color: Color(0xFF00A699), // Airbnb teal
     ),
     OnboardingPage(
       title: 'Guadagna punti',
       description: 'Accumula punti in ogni negozio e riscatta premi esclusivi',
-      image: 'assets/images/onboarding3.png',
+      image: 'assets/images/monete.png',
       color: Color(0xFFFFB400), // Airbnb yellow
     ),
   ];
