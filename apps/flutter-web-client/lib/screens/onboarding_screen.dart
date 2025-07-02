@@ -16,6 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
+<<<<<<< HEAD
       title: 'Benvenuto su ReTap',
       description: 'La tua carta fedeltà universale per tutti i negozi',
       image: 'assets/images/card.png',
@@ -31,6 +32,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Guadagna punti',
       description: 'Accumula punti in ogni negozio e riscatta premi esclusivi',
       image: 'assets/images/monete.png',
+=======
+      title: 'Welcome to ReTap',
+      description: 'Your universal loyalty card for every store',
+      image: 'assets/icons/retapO1.png',
+      color: Color(0xFFFF5A5F), // Airbnb red
+    ),
+    OnboardingPage(
+      title: 'How it works',
+      description: 'Use a single NFC card or your digital wallet in all affiliated stores',
+      image: 'assets/images/onboarding2.png',
+      color: Color(0xFF00A699), // Airbnb teal
+    ),
+    OnboardingPage(
+      title: 'Earn points',
+      description: 'Collect points in every store and redeem exclusive rewards',
+      image: 'assets/images/onboarding3.png',
+>>>>>>> f97066b (ddd)
       color: Color(0xFFFFB400), // Airbnb yellow
     ),
   ];
@@ -56,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: TextButton(
                   onPressed: () => context.go('/onboarding/register'),
                   child: Text(
-                    'Salta',
+                    'Skip',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
@@ -128,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _currentPage < _pages.length - 1 ? 'Continua' : 'Inizia',
+                        _currentPage < _pages.length - 1 ? 'Continue' : 'Get Started',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
