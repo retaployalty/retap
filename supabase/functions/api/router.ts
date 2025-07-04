@@ -2,7 +2,7 @@ import { corsHeaders, createErrorResponse } from "./utils/cors.ts";
 
 // Import handlers
 import { handleCreateCustomer } from "./handlers/customers.ts";
-import { handleGetCard, handleCreateCard, handleGetCardStatus } from "./handlers/cards.ts";
+import { handleGetCard, handleCreateCard, handleGetCardStatus, handleReplaceCard } from "./handlers/cards.ts";
 import { handleGetBalance, handleCreateTransaction } from "./handlers/transactions.ts";
 import { handleGetMerchants, handleGetMerchantDetails, handleGetMerchantHistory } from "./handlers/merchants.ts";
 import { 
@@ -120,6 +120,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (path === 'google-wallet/generate' && req.method === 'POST') {
       const body = await req.json();
       return await handleGenerateGoogleWallet(body);
+    }
+
+    // POST /cards/replace
+    if (path === 'cards/replace' && req.method === 'POST') {
+      const body = await req.json();
+      return await handleReplaceCard(merchantId || '', body);
     }
 
     // GET /cards/status?uid=XXX
