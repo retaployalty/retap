@@ -420,6 +420,10 @@ export async function handleRedeemCheckpointReward(merchantId: string, body: any
       });
 
     if (error) {
+      // Gestione specifica per errori di riscatto duplicato
+      if (error.message && error.message.includes('already redeemed')) {
+        return createErrorResponse('Questo premio è già stato riscattato per questo step.', 409);
+      }
       return createErrorResponse(error.message, 400);
     }
 
