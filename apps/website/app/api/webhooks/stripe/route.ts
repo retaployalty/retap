@@ -32,34 +32,53 @@ export async function POST(request: Request) {
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object as Stripe.Checkout.Session;
+        console.log('Checkout session completed:', session.id);
         
-        // Gestisci solo i pagamenti di merchant signup
-        if (session.metadata?.type === 'merchant-signup') {
-          console.log('Processing merchant signup payment:', session.id);
-          
-          const { firstName, lastName, companyName, userId } = session.metadata;
-          
-          // Aggiorna lo stato del merchant
-          const { error: updateError } = await supabase
+        // Se è una subscription, il webhook customer.subscription.created gestirà la creazione
+        if (session.mode === 'subscription') {
+          console.log('Subscription checkout completed, waiting for subscription creation');
+        }
+        break;
+
+      case 'customer.subscription.created':
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log('Subscription created:', subscription.id);
+        
+        // Trova il merchant basandosi sull'email del customer
+        const customer = await stripe.customers.retrieve(subscription.customer as string);
+        const customerEmail = (customer as any).email;
+        
+        if (customerEmail) {
+          // Trova il merchant tramite l'email
+          const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
-            .update({
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: null, // Non è una subscription
-              subscription_status: 'active',
-              subscription_start_date: new Date().toISOString(),
-              subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 giorni
-              payment_status: 'paid',
-              last_payment_date: new Date().toISOString(),
-              activation_fee_paid: true
-            })
-            .eq('profile_id', userId);
+            .select('id, profile_id')
+            .eq('profile_id', (customer as any).metadata?.supabase_id)
+            .single();
 
-          if (updateError) {
-            console.error('Error updating merchant:', updateError);
-            return NextResponse.json({ error: 'Failed to update merchant' }, { status: 500 });
+          if (merchantError) {
+            console.error('Error finding merchant:', merchantError);
+          } else if (merchant) {
+            // Aggiorna il merchant con i dati della subscription
+            const { error: updateError } = await supabase
+              .from('merchants')
+              .update({
+                stripe_customer_id: subscription.customer as string,
+                stripe_subscription_id: subscription.id,
+                subscription_status: subscription.status,
+                subscription_start_date: new Date((subscription as any).current_period_start * 1000).toISOString(),
+                subscription_end_date: new Date((subscription as any).current_period_end * 1000).toISOString(),
+                payment_status: 'active',
+                last_payment_date: new Date().toISOString()
+              })
+              .eq('id', merchant.id);
+
+            if (updateError) {
+              console.error('Error updating merchant subscription:', updateError);
+            } else {
+              console.log('Merchant subscription updated successfully:', merchant.id);
+            }
           }
-
-          console.log('Merchant activated successfully:', userId);
         }
         break;
 

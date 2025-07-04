@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -14,25 +13,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = [
+  final List<OnboardingPage> _pages = const [
     OnboardingPage(
-<<<<<<< HEAD
-      title: 'Benvenuto su ReTap',
-      description: 'La tua carta fedeltà universale per tutti i negozi',
-      image: 'assets/images/card.png',
-      color: Color(0xFFFF5A5F), // Airbnb red
-    ),
-    OnboardingPage(
-      title: 'Come funziona',
-      description: 'Usa un\'unica carta NFC o il tuo wallet digitale in tutti i negozi affiliati',
-      image: 'assets/images/nfc.png',
-      color: Color(0xFF00A699), // Airbnb teal
-    ),
-    OnboardingPage(
-      title: 'Guadagna punti',
-      description: 'Accumula punti in ogni negozio e riscatta premi esclusivi',
-      image: 'assets/images/monete.png',
-=======
       title: 'Welcome to ReTap',
       description: 'Your universal loyalty card for every store',
       image: 'assets/icons/retapO1.png',
@@ -48,7 +30,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Earn points',
       description: 'Collect points in every store and redeem exclusive rewards',
       image: 'assets/images/onboarding3.png',
->>>>>>> f97066b (ddd)
       color: Color(0xFFFFB400), // Airbnb yellow
     ),
   ];
@@ -174,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: 280,
             height: 280,
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
+              color: page.color.withAlpha((0.1 * 255).toInt()),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -218,7 +199,7 @@ class OnboardingPage {
   final String image;
   final Color color;
 
-  OnboardingPage({
+  const OnboardingPage({
     required this.title,
     required this.description,
     required this.image,
