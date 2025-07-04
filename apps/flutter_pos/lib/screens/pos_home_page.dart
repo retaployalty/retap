@@ -29,6 +29,8 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   bool _isPolling = false;
   bool _isScreenOpen = false;
   bool _nfcAvailable = false;
+  bool _isWritingCard = false;
+  bool _isWritingMerchantCard = false;
 
   @override
   void initState() {
@@ -93,7 +95,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     
     debugPrint('🚀 Avvio polling NFC...');
     _isPolling = true;
-    setState(() {}); // Aggiorna l'UI per mostrare che il polling è attivo
+    setState(() {}); // Update UI to show that polling is active
 
     try {
       while (_isPolling && _nfcAvailable) {
@@ -129,15 +131,15 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
           debugPrint('❌ Errore durante il polling NFC: $e');
           await FlutterNfcKit.finish();
           
-          // Se l'errore è dovuto a un timeout o comunicazione, riprova dopo un breve delay
+          // If the error is due to timeout or communication, retry after a short delay
           if (e.toString().contains('Timeout') || e.toString().contains('Communication error')) {
-            debugPrint('⏳ Timeout/comunicazione, attendo 500ms prima di riprovare...');
+            debugPrint('⏳ Timeout/communication, waiting 500ms before retrying...');
             await Future.delayed(const Duration(milliseconds: 500));
           } else if (e.toString().contains('User cancelled')) {
-            debugPrint('👤 Utente ha annullato, continuo polling...');
+            debugPrint('👤 User cancelled, continuing polling...');
             await Future.delayed(const Duration(milliseconds: 100));
           } else {
-            debugPrint('⚠️ Errore sconosciuto, attendo 1 secondo...');
+            debugPrint('⚠️ Unknown error, waiting 1 second...');
             await Future.delayed(const Duration(seconds: 1));
           }
         }
@@ -166,12 +168,17 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     if (!_nfcAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('NFC non disponibile su questo dispositivo'),
+          content: Text('NFC not available on this device'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
+
+    // Set loading state
+    setState(() {
+      _isWritingCard = true;
+    });
 
     try {
       debugPrint('Starting card writing...');
@@ -432,6 +439,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       }
       
       await FlutterNfcKit.finish(iosAlertMessage: errorMessage);
+    } finally {
+      // Reset loading state
+      if (mounted) {
+        setState(() {
+          _isWritingCard = false;
+        });
+      }
     }
   }
 
@@ -445,6 +459,11 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       );
       return;
     }
+
+    // Set loading state
+    setState(() {
+      _isWritingMerchantCard = true;
+    });
 
     try {
       debugPrint('Starting merchant card writing...');
@@ -466,15 +485,15 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         throw Exception('This card is read-only');
       }
 
-      // 2. Crea il link specifico per il merchant
+      // 2. Create the merchant-specific link
       final cardUrl = 'https://app.retapcard.com/m/${widget.merchantId}';
-      debugPrint('Link merchant generato: $cardUrl');
+      debugPrint('Merchant link generated: $cardUrl');
 
-      // 3. Scrivi il link sul chip in formato NDEF
+      // 3. Write the link to the chip in NDEF format
       try {
         final uriRecord = ndef.UriRecord.fromUri(Uri.parse(cardUrl));
         await FlutterNfcKit.writeNDEFRecords([uriRecord]);
-        debugPrint('Link scritto sul chip con successo');
+        debugPrint('Link written to chip successfully');
 
         // 4. Lock the chip in read-only mode (if supported)
         if (tag.type == NFCTagType.iso15693) {
@@ -542,6 +561,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       }
       
       await FlutterNfcKit.finish(iosAlertMessage: errorMessage);
+    } finally {
+      // Reset loading state
+      if (mounted) {
+        setState(() {
+          _isWritingMerchantCard = false;
+        });
+      }
     }
   }
 
@@ -691,12 +717,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                   
                   // Button 2: Program customer card
                   _buildActionButton(
-                    icon: Icons.person_add,
-                    title: 'New Card',
-                    subtitle: 'Customer',
-                    color: Colors.orange,
-                    onTap: _nfcAvailable ? () => _writeCard(context) : null,
-                    disabled: !_nfcAvailable,
+                    icon: _isWritingCard ? Icons.hourglass_empty : Icons.person_add,
+                    title: _isWritingCard ? 'Writing...' : 'New Card',
+                    subtitle: _isWritingCard ? 'Please wait' : 'Customer',
+                    color: _isWritingCard ? Colors.blue : Colors.orange,
+                    onTap: (_nfcAvailable && !_isWritingCard) ? () => _writeCard(context) : null,
+                    disabled: !_nfcAvailable || _isWritingCard,
+                    isLoading: _isWritingCard,
                   ),
                   
                   // Button 3: Lost card
@@ -719,12 +746,13 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                   
                   // Button 4: Program merchant card
                   _buildActionButton(
-                    icon: Icons.store,
-                    title: 'Store Card',
-                    subtitle: 'Promotions',
-                    color: Colors.purple,
-                    onTap: _nfcAvailable ? () => _writeMerchantCard(context) : null,
-                    disabled: !_nfcAvailable,
+                    icon: _isWritingMerchantCard ? Icons.hourglass_empty : Icons.store,
+                    title: _isWritingMerchantCard ? 'Writing...' : 'Store Card',
+                    subtitle: _isWritingMerchantCard ? 'Please wait' : 'Promotions',
+                    color: _isWritingMerchantCard ? Colors.blue : Colors.purple,
+                    onTap: (_nfcAvailable && !_isWritingMerchantCard) ? () => _writeMerchantCard(context) : null,
+                    disabled: !_nfcAvailable || _isWritingMerchantCard,
+                    isLoading: _isWritingMerchantCard,
                   ),
                 ],
               ),
@@ -742,6 +770,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     required Color color,
     required VoidCallback? onTap,
     bool disabled = false,
+    bool isLoading = false,
   }) {
     return Material(
       color: Colors.transparent,
@@ -750,16 +779,16 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
-            color: disabled ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.1),
+            color: disabled ? Colors.grey.withOpacity(0.3) : (isLoading ? Colors.blue.withOpacity(0.2) : color.withOpacity(0.1)),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: disabled ? Colors.grey : color.withOpacity(0.3),
-              width: 2,
+              color: disabled ? Colors.grey : (isLoading ? Colors.blue : color.withOpacity(0.3)),
+              width: isLoading ? 3 : 2,
             ),
             boxShadow: disabled ? null : [
               BoxShadow(
-                color: color.withOpacity(0.2),
-                blurRadius: 8,
+                color: (isLoading ? Colors.blue : color).withOpacity(0.3),
+                blurRadius: isLoading ? 12 : 8,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -767,18 +796,28 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 48,
-                color: disabled ? Colors.grey : color,
-              ),
+              if (isLoading)
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                )
+              else
+                Icon(
+                  icon,
+                  size: 48,
+                  color: disabled ? Colors.grey : color,
+                ),
               const SizedBox(height: 12),
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: disabled ? Colors.grey : color,
+                  color: disabled ? Colors.grey : (isLoading ? Colors.blue : color),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -787,7 +826,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 subtitle,
                 style: TextStyle(
                   fontSize: 14,
-                  color: disabled ? Colors.grey : color.withOpacity(0.8),
+                  color: disabled ? Colors.grey : (isLoading ? Colors.blue.withOpacity(0.8) : color.withOpacity(0.8)),
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -12,7 +12,8 @@ import {
   handleGetRewardsAndCheckpoints,
   handleGetMerchantRewards,
   handleGetMerchantCheckpoints,
-  handleRedeemCheckpointReward
+  handleRedeemCheckpointReward,
+  handleGetRedeemedCheckpointRewards
 } from "./handlers/rewards.ts";
 import { handleGenerateAppleWallet, handleGenerateGoogleWallet } from "./handlers/wallet.ts";
 
@@ -83,6 +84,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (path === 'checkpoints/redeem-reward' && req.method === 'POST') {
       const body = await req.json();
       return await handleRedeemCheckpointReward(merchantId || '', body);
+    }
+
+    // GET /checkpoints/redeemed-rewards?merchantId=XXX&customerId=XXX
+    if (path === 'checkpoints/redeemed-rewards' && req.method === 'GET') {
+      return await handleGetRedeemedCheckpointRewards(merchantId || '', params.customerId || '');
     }
 
     // GET /rewards-and-checkpoints?merchantId=XXX&cardId=XXX

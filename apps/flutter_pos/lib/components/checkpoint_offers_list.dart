@@ -9,6 +9,7 @@ class CheckpointOffersList extends StatefulWidget {
   final String? customerId;
   final bool compactMode;
   final Map<String, dynamic>? initialCheckpointData;
+  final VoidCallback? onCheckpointAdvanced;
 
   const CheckpointOffersList({
     super.key,
@@ -17,6 +18,7 @@ class CheckpointOffersList extends StatefulWidget {
     this.customerId,
     this.compactMode = false,
     this.initialCheckpointData,
+    this.onCheckpointAdvanced,
   });
 
   @override
@@ -180,8 +182,12 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         );
       }
 
+      // Notifica che un checkpoint è stato avanzato per aggiornare la history
+      widget.onCheckpointAdvanced?.call();
+
       // Ricarica i dati per aggiornare l'UI
       _fetchCheckpoints();
+      _fetchRedeemedRewards();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
@@ -225,14 +231,69 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         );
       }
 
+      // Notifica che un checkpoint è stato modificato per aggiornare la history
+      widget.onCheckpointAdvanced?.call();
+
       // Ricarica i dati per aggiornare l'UI
       _fetchCheckpoints();
+      _fetchRedeemedRewards();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Errore: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _redeemCheckpointReward(String stepId, String rewardId, String rewardName) async {
+    if (widget.cardId == null || _isAdvancing) return;
+    
+    try {
+      setState(() => _isAdvancing = true);
+      
+      final response = await ApiService.redeemCheckpointReward(
+        merchantId: widget.merchantId,
+        cardId: widget.cardId!,
+        stepId: stepId,
+        rewardId: rewardId,
+      );
+
+      if (!mounted) return;
+
+      setState(() => _isAdvancing = false);
+
+      // Aggiungi il reward alla lista dei riscattati
+      setState(() {
+        _redeemedRewardIds.add(rewardId);
+      });
+
+      // Mostra feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎁 $rewardName riscattato con successo!'),
+            backgroundColor: Colors.green,
+
+          ),
+        );
+      }
+
+      // Notifica che un reward è stato riscattato per aggiornare la history
+      widget.onCheckpointAdvanced?.call();
+      
+      // Ricarica i dati per aggiornare l'UI
+      _fetchRedeemedRewards();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAdvancing = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore nel riscatto: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -246,325 +307,412 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     }
 
     if (_error != null) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Icon(Icons.error, size: 48, color: Colors.red[300]),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: TextStyle(color: Colors.red, fontSize: 16),
-                textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error, size: 48, color: Colors.orange[700]),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.orange, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchCheckpoints,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[700],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchCheckpoints,
-                child: const Text('Riprova'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     if (_checkpoints.isEmpty) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Icon(
-                Icons.card_giftcard_outlined,
-                size: 48,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.card_giftcard_outlined, size: 48, color: Colors.orange[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No offers available',
+              style: TextStyle(
+                color: Colors.orange[700],
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Nessuna offerta disponibile',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ..._checkpoints.map((checkpoint) {
-              final currentStep = _currentSteps[checkpoint.id] ?? 1;
-              final progress = (currentStep / checkpoint.totalSteps).clamp(0.0, 1.0);
-              
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                            minHeight: 8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$currentStep/${checkpoint.totalSteps}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header con progresso generale
+          Row(
+            children: [
+              Icon(Icons.flag, color: Colors.orange[700], size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Checkpoint Progress',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
-                  const SizedBox(height: 8),
-                  if (checkpoint.steps != null && checkpoint.steps!.isNotEmpty)
-                    ...checkpoint.steps!.map<Widget>((step) {
-                      final isCurrentStep = step.stepNumber == currentStep;
-                      final isCompleted = step.stepNumber < currentStep;
-                      
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isCurrentStep
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                              : Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isCurrentStep
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.outline.withOpacity(0.1),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: isCompleted
-                                    ? Colors.green
-                                    : isCurrentStep
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: isCompleted
-                                    ? const Icon(Icons.check, color: Colors.white, size: 16)
-                                    : Text(
-                                        '${step.stepNumber}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (step.rewardName != null) ...[
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                step.rewardName!,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isCurrentStep
-                                                      ? Theme.of(context).colorScheme.primary
-                                                      : Theme.of(context).colorScheme.onSurface,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              if (step.rewardDescription?.isNotEmpty ?? false) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  step.rewardDescription!,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        if (isCurrentStep && step.rewardId != null && !_redeemedRewardIds.contains(step.rewardId)) ...[
-                                          const SizedBox(width: 8),
-                                          SizedBox(
-                                            height: 32,
-                                            child: ElevatedButton.icon(
-                                              onPressed: () async {
-                                                try {
-                                                  if (widget.customerId == null) {
-                                                    throw Exception('CustomerId non disponibile');
-                                                  }
-                                                  await ApiService.post(
-                                                    '/checkpoints/redeem-reward',
-                                                    merchantId: widget.merchantId,
-                                                    body: {
-                                                      'customerId': widget.customerId!,
-                                                      'rewardId': step.rewardId!,
-                                                      'stepId': step.id,
-                                                    },
-                                                  );
-                                                  if (!mounted) return;
-                                                  
-                                                  // Aggiorna immediatamente l'UI
-                                                  setState(() {
-                                                    _redeemedRewardIds.add(step.rewardId!);
-                                                  });
-                                                  
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('🎉 ${step.rewardName} riscattato con successo!'),
-                                                      backgroundColor: Colors.green,
-                                                    ),
-                                                  );
-                                                } catch (e) {
-                                                  if (!mounted) return;
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('Errore: $e'),
-                                                      backgroundColor: Colors.red,
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                              icon: const Icon(Icons.card_giftcard, size: 16),
-                                              label: const Text('Riscatta'),
-                                              style: ElevatedButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                                backgroundColor: Colors.amber[700],
-                                                foregroundColor: Colors.white,
-                                                elevation: 2,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                        if (isCurrentStep && step.rewardId != null && _redeemedRewardIds.contains(step.rewardId)) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            height: 32,
-                                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[300],
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                                                const SizedBox(width: 4),
-                                                const Text('Già riscattato', style: TextStyle(color: Colors.black54)),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ] else ...[
-                                    Text(
-                                      'Step ${step.stepNumber}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                ],
-              );
-            }).toList(),
-
-            const SizedBox(height: 16),
-
-            if (widget.cardId != null && _checkpoints.isNotEmpty)
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isAdvancing ? null : () => _rewindCheckpoint(_checkpoints.first.id),
-                        icon: const Icon(Icons.remove, size: 24),
-                        label: const Text(
-                          'Togli',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: SizedBox(
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isAdvancing ? null : () => _advanceCheckpoint(_checkpoints.first.id),
-                        icon: const Icon(Icons.add, size: 24),
-                        label: const Text(
-                          'Avanza Checkpoint',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-          ],
-        ),
+              if (_checkpoints.isNotEmpty)
+                Builder(
+                  builder: (context) {
+                    final currentStep = _currentSteps[_checkpoints.first.id] ?? 1;
+                    final totalSteps = _checkpoints.first.totalSteps;
+                    return Text(
+                      '$currentStep/$totalSteps',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Progress bar principale
+          if (_checkpoints.isNotEmpty)
+            Builder(
+              builder: (context) {
+                final currentStep = _currentSteps[_checkpoints.first.id] ?? 1;
+                final totalSteps = _checkpoints.first.totalSteps;
+                final progress = (currentStep / totalSteps).clamp(0.0, 1.0);
+                return Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.orange[100],
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[700]!),
+                        minHeight: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
+
+          // Sezione rewards disponibili per il riscatto
+          if (_checkpoints.isNotEmpty && _checkpoints.first.steps != null)
+            Builder(
+              builder: (context) {
+                final availableRewards = _checkpoints.first.steps!.where((step) => 
+                  step.rewardId != null && 
+                  step.stepNumber <= (_currentSteps[_checkpoints.first.id] ?? 1) &&
+                  !_redeemedRewardIds.contains(step.rewardId)
+                ).toList();
+                
+                if (availableRewards.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Available Rewards',
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...availableRewards.map((step) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.card_giftcard,
+                              color: Colors.orange[700],
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  step.rewardName ?? 'Reward',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                if (step.rewardDescription?.isNotEmpty ?? false) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    step.rewardDescription!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Step ${step.stepNumber}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              onPressed: _isAdvancing ? null : () => _redeemCheckpointReward(
+                                step.id,
+                                step.rewardId!,
+                                step.rewardName ?? 'Reward',
+                              ),
+                              icon: const Icon(Icons.card_giftcard, size: 18),
+                              label: const Text('Redeem'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
+
+          // Sezione rewards già riscattati
+          if (_checkpoints.isNotEmpty && _checkpoints.first.steps != null)
+            Builder(
+              builder: (context) {
+                final redeemedRewards = _checkpoints.first.steps!.where((step) => 
+                  step.rewardId != null && 
+                  _redeemedRewardIds.contains(step.rewardId)
+                ).toList();
+                
+                if (redeemedRewards.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Redeemed Rewards',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...redeemedRewards.map((step) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.green[100],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  step.rewardName ?? 'Reward',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                if (step.rewardDescription?.isNotEmpty ?? false) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    step.rewardDescription!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Step ${step.stepNumber}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.green[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Redeemed',
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
+
+          // Pulsanti di controllo
+          if (widget.cardId != null && _checkpoints.isNotEmpty)
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: _isAdvancing ? null : () => _rewindCheckpoint(_checkpoints.first.id),
+                      icon: const Icon(Icons.remove, size: 22),
+                      label: const Text('Previous Step', style: TextStyle(fontSize: 15)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                        foregroundColor: Colors.grey[700],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: _isAdvancing ? null : () => _advanceCheckpoint(_checkpoints.first.id),
+                      icon: const Icon(Icons.arrow_forward, size: 22),
+                      label: const Text('Next Step', style: TextStyle(fontSize: 15)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[700],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
