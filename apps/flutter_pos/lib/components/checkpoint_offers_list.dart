@@ -300,6 +300,264 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
     }
   }
 
+  Future<void> _showAllOffersPreview() async {
+    if (_checkpoints.isEmpty) return;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header della modal
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.card_giftcard, color: Colors.orange[700], size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'All Checkpoint Offers',
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Contenuto scrollabile
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _checkpoints.length,
+                itemBuilder: (context, index) {
+                  final checkpoint = _checkpoints[index];
+                  final currentStep = _currentSteps[checkpoint.id] ?? 0;
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header dell'offerta
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      checkpoint.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    if (checkpoint.description.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        checkpoint.description,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[700],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$currentStep/${checkpoint.totalSteps}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Progress bar
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: (currentStep / checkpoint.totalSteps).clamp(0.0, 1.0),
+                                  backgroundColor: Colors.orange[100],
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[700]!),
+                                  minHeight: 8,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Lista degli step con rewards
+                              if (checkpoint.steps != null) ...[
+                                Text(
+                                  'Steps & Rewards:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...checkpoint.steps!.map((step) {
+                                  final isCompleted = step.stepNumber <= currentStep;
+                                  final isRedeemed = step.rewardId != null && 
+                                      _redeemedRewardIds.contains(step.rewardId);
+                                  
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isCompleted ? Colors.green[50] : Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isCompleted ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: isCompleted ? Colors.green : Colors.grey,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            isCompleted ? Icons.check : Icons.circle,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Step ${step.stepNumber}',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: isCompleted ? Colors.green[700] : Colors.grey[700],
+                                                ),
+                                              ),
+                                              if (step.rewardName != null) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  step.rewardName!,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: isCompleted ? Colors.green[600] : Colors.grey[600],
+                                                  ),
+                                                ),
+                                                if (step.rewardDescription?.isNotEmpty ?? false) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    step.rewardDescription!,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey[500],
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        if (isRedeemed)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green[100],
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'Redeemed',
+                                              style: TextStyle(
+                                                color: Colors.green[700],
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -399,7 +657,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                   ),
                 ),
               ),
-              if (_checkpoints.isNotEmpty)
+              if (_checkpoints.isNotEmpty) ...[
                 Builder(
                   builder: (context) {
                     final currentStep = _currentSteps[_checkpoints.first.id] ?? 1;
@@ -414,6 +672,17 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     );
                   },
                 ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: () => _showAllOffersPreview(),
+                  icon: Icon(Icons.visibility, color: Colors.orange[700], size: 20),
+                  tooltip: 'View All Offers',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.orange[100],
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 16),

@@ -253,17 +253,23 @@ class _RewardsListState extends State<RewardsList> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Header con pulsante preview
+          Row(
+            children: [
+              Expanded(child: Container()),
+            ],
+          ),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 140,
+            height: 180,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _rewards.length,
               itemBuilder: (context, index) {
                 final reward = _rewards[index];
                 final canRedeem = _userPoints >= reward.priceCoins && !_isRedeeming;
-                final alreadyRedeemed = false; // Placeholder, implement logic if needed
                 return Container(
-                  width: 220,
+                  width: 260,
                   margin: const EdgeInsets.only(right: 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -281,7 +287,7 @@ class _RewardsListState extends State<RewardsList> {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
