@@ -29,6 +29,7 @@ api/
 ### Cards
 - `GET /cards?uid=XXX` - Ottiene informazioni su una carta
 - `POST /cards` - Crea una nuova carta
+- `POST /cards/replace` - Sostituisce una carta persa con una nuova carta fisica
 - `GET /cards/status?uid=XXX` - Verifica lo stato di una carta
 
 ### Transactions

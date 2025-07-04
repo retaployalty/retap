@@ -2,7 +2,7 @@ import { corsHeaders, createErrorResponse } from "./utils/cors.ts";
 
 // Import handlers
 import { handleCreateCustomer } from "./handlers/customers.ts";
-import { handleGetCard, handleCreateCard, handleGetCardStatus } from "./handlers/cards.ts";
+import { handleGetCard, handleCreateCard, handleGetCardStatus, handleReplaceCard } from "./handlers/cards.ts";
 import { handleGetBalance, handleCreateTransaction } from "./handlers/transactions.ts";
 import { handleGetMerchants, handleGetMerchantDetails, handleGetMerchantHistory } from "./handlers/merchants.ts";
 import { 
@@ -12,7 +12,8 @@ import {
   handleGetRewardsAndCheckpoints,
   handleGetMerchantRewards,
   handleGetMerchantCheckpoints,
-  handleRedeemCheckpointReward
+  handleRedeemCheckpointReward,
+  handleGetRedeemedCheckpointRewards
 } from "./handlers/rewards.ts";
 import { handleGenerateAppleWallet, handleGenerateGoogleWallet } from "./handlers/wallet.ts";
 
@@ -85,6 +86,11 @@ export async function handleRequest(req: Request): Promise<Response> {
       return await handleRedeemCheckpointReward(merchantId || '', body);
     }
 
+    // GET /checkpoints/redeemed-rewards?merchantId=XXX&customerId=XXX
+    if (path === 'checkpoints/redeemed-rewards' && req.method === 'GET') {
+      return await handleGetRedeemedCheckpointRewards(merchantId || '', params.customerId || '');
+    }
+
     // GET /rewards-and-checkpoints?merchantId=XXX&cardId=XXX
     if (path === 'rewards-and-checkpoints' && req.method === 'GET') {
       return await handleGetRewardsAndCheckpoints(params.merchantId || '', params.cardId || '');
@@ -120,6 +126,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (path === 'google-wallet/generate' && req.method === 'POST') {
       const body = await req.json();
       return await handleGenerateGoogleWallet(body);
+    }
+
+    // POST /cards/replace
+    if (path === 'cards/replace' && req.method === 'POST') {
+      const body = await req.json();
+      return await handleReplaceCard(merchantId || '', body);
     }
 
     // GET /cards/status?uid=XXX

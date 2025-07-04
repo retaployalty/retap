@@ -51,7 +51,7 @@ class MerchantHistory extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Storico attività',
+            'Activity History',
             style: TextStyle(
               color: Color(0xFF1A1A1A),
               fontSize: 22,
@@ -63,7 +63,7 @@ class MerchantHistory extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Tutte le tue attività con questo negozio',
+            'All your activities with this business',
             style: TextStyle(
               color: Color(0xFF1A1A1A),
               fontSize: 16,
@@ -79,7 +79,7 @@ class MerchantHistory extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
-                  'Nessuna attività da mostrare',
+                  'No activity to show',
                   style: TextStyle(
                     color: Color(0xFF666666),
                     fontSize: 15,
@@ -186,9 +186,9 @@ class _HistoryItem extends StatelessWidget {
     final dateToCheck = DateTime(date.year, date.month, date.day);
 
     if (dateToCheck == today) {
-      return 'Oggi';
+      return 'Today';
     } else if (dateToCheck == yesterday) {
-      return 'Ieri';
+      return 'Yesterday';
     } else {
       return '${date.day}/${date.month}';
     }

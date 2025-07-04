@@ -218,4 +218,112 @@ export async function handleGetCardStatus(merchantId: string, uid: string): Prom
       ? 'Card already associated with this merchant'
       : 'Card exists but not associated with this merchant'
   });
+}
+
+export async function handleReplaceCard(merchantId: string, body: any): Promise<Response> {
+  if (!merchantId) {
+    return createErrorResponse('Missing merchant ID', 400);
+  }
+  
+  const { oldCardId, newUid } = body;
+
+  // Validazione dei parametri
+  if (!oldCardId || !newUid) {
+    return createErrorResponse('Missing required parameters: oldCardId, newUid', 400);
+  }
+
+  const supabaseClient = createSupabaseClient();
+
+  // Verifica che la carta esistente esista e appartenga al merchant
+  const { data: existingCard, error: existingError } = await supabaseClient
+    .from('cards')
+    .select('id, uid, customer_id, issuing_merchant_id')
+    .eq('id', oldCardId)
+    .single();
+
+  if (existingError || !existingCard) {
+    return createErrorResponse('Original card not found', 404);
+  }
+
+  // Verifica che il merchant abbia accesso a questa carta (sia issuer o associato)
+  const isIssuer = existingCard.issuing_merchant_id === merchantId;
+  const { data: cardMerchant, error: cmError } = await supabaseClient
+    .from('card_merchants')
+    .select('id')
+    .eq('card_id', existingCard.id)
+    .eq('merchant_id', merchantId)
+    .single();
+
+  const isAssociated = !cmError && cardMerchant;
+
+  if (!isIssuer && !isAssociated) {
+    return createErrorResponse('Merchant not authorized to replace this card', 403);
+  }
+
+  // Verifica che la nuova carta non sia già in uso
+  const { data: newCardExists, error: newCardError } = await supabaseClient
+    .from('cards')
+    .select('id, customer_id')
+    .eq('uid', newUid)
+    .single();
+
+  if (newCardError && newCardError.code !== 'PGRST116') {
+    return createErrorResponse(`Error checking new card: ${newCardError.message}`, 400);
+  }
+
+  if (newCardExists) {
+    // Se la nuova carta esiste, verifica che appartenga allo stesso customer
+    if (newCardExists.customer_id !== existingCard.customer_id) {
+      return createErrorResponse('New card UID already exists with different customer', 409);
+    }
+    
+    // Se appartiene allo stesso customer, aggiorna l'UID della carta esistente
+    const { error: updateError } = await supabaseClient
+      .from('cards')
+      .update({ uid: newUid })
+      .eq('id', existingCard.id);
+
+    if (updateError) {
+      return createErrorResponse(`Error updating card UID: ${updateError.message}`, 400);
+    }
+
+    return createSuccessResponse({
+      message: 'Card UID updated successfully',
+      oldUid: existingCard.uid,
+      newUid: newUid,
+      cardId: existingCard.id
+    });
+  }
+
+  // Aggiorna l'UID della carta esistente
+  const { error: updateError } = await supabaseClient
+    .from('cards')
+    .update({ uid: newUid })
+    .eq('id', existingCard.id);
+
+  if (updateError) {
+    return createErrorResponse(`Error updating card UID: ${updateError.message}`, 400);
+  }
+
+  // Se il merchant non era associato, crea la relazione
+  if (!isAssociated) {
+    const { error: insertError } = await supabaseClient
+      .from('card_merchants')
+      .insert({
+        card_id: existingCard.id,
+        merchant_id: merchantId,
+      });
+
+    if (insertError) {
+      return createErrorResponse(`Error creating card-merchant relationship: ${insertError.message}`, 400);
+    }
+  }
+
+  return createSuccessResponse({
+    message: 'Card replaced successfully',
+    oldUid: existingCard.uid,
+    newUid: newUid,
+    cardId: existingCard.id,
+    customerId: existingCard.customer_id
+  });
 } 

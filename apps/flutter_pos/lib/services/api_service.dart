@@ -16,6 +16,7 @@ class ApiService {
     return {
       'Content-Type': 'application/json',
       'x-merchant-id': merchantId,
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
     };
   }
 
@@ -190,6 +191,34 @@ class ApiService {
       return result;
     } catch (e) {
       debugPrint('❌ Errore fetch redeemed checkpoint rewards: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> redeemCheckpointReward({
+    required String merchantId,
+    required String cardId,
+    required String stepId,
+    required String rewardId,
+  }) async {
+    debugPrint('🎁 Redeeming checkpoint reward: merchantId=$merchantId, cardId=$cardId, stepId=$stepId, rewardId=$rewardId');
+    
+    try {
+      final result = await post(
+        '/checkpoints/redeem-reward',
+        merchantId: merchantId,
+        body: {
+          'cardId': cardId,
+          'stepId': stepId,
+          'rewardId': rewardId,
+        },
+        debounceKey: 'redeem_checkpoint_${cardId}_$rewardId',
+      );
+      
+      debugPrint('✅ Checkpoint reward riscattato con successo: $result');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Errore riscatto checkpoint reward: $e');
       rethrow;
     }
   }
