@@ -1658,9 +1658,6 @@ CREATE POLICY "Users can view their own subscriptions" ON "public"."subscription
 
 
 
-ALTER TABLE "public"."checkpoint_advancements" ENABLE ROW LEVEL SECURITY;
-
-
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";

@@ -390,35 +390,102 @@ export async function handleRedeemCheckpointReward(merchantId: string, body: any
     return createErrorResponse('Missing merchant ID', 400);
   }
 
-  const { customerId, rewardId, stepId } = body;
+  const { cardId, rewardId, stepId } = body;
 
-  if (!customerId || !rewardId || !stepId) {
-    return createErrorResponse('Missing required parameters: customerId, rewardId, stepId', 400);
+  if (!cardId || !rewardId || !stepId) {
+    return createErrorResponse('Missing required parameters: cardId, rewardId, stepId', 400);
   }
 
   const supabaseClient = createSupabaseClient();
 
   try {
+    // Get the customer ID from the card
+    const { data: card, error: cardError } = await supabaseClient
+      .from('cards')
+      .select('customer_id')
+      .eq('id', cardId)
+      .single();
+
+    if (cardError || !card) {
+      return createErrorResponse('Card not found', 404);
+    }
+
     // Chiama la funzione SQL per riscattare il premio del checkpoint
     const { error } = await supabaseClient
       .rpc('redeem_checkpoint_reward', {
-        p_customer_id: customerId,
+        p_customer_id: card.customer_id,
         p_merchant_id: merchantId,
         p_checkpoint_reward_id: rewardId,
         p_checkpoint_step_id: stepId
       });
 
     if (error) {
+      // Gestione specifica per errori di riscatto duplicato
+      if (error.message && error.message.includes('already redeemed')) {
+        return createErrorResponse('Questo premio è già stato riscattato per questo step.', 409);
+      }
       return createErrorResponse(error.message, 400);
     }
 
     return createSuccessResponse({ 
       message: 'Checkpoint reward redeemed successfully',
-      customerId,
+      customerId: card.customer_id,
       rewardId,
       stepId
     });
   } catch (error) {
     return createErrorResponse(error.message, 500);
+  }
+}
+
+export async function handleGetRedeemedCheckpointRewards(merchantId: string, customerId: string): Promise<Response> {
+  if (!merchantId) {
+    return createErrorResponse('Missing merchant ID', 400);
+  }
+
+  if (!customerId) {
+    return createErrorResponse('Missing customer ID', 400);
+  }
+
+  const supabaseClient = createSupabaseClient();
+
+  try {
+    // Get redeemed checkpoint rewards with details
+    const { data: redeemedRewards, error } = await supabaseClient
+      .from('redeemed_checkpoint_rewards')
+      .select(`
+        id,
+        redeemed_at,
+        status,
+        reward:checkpoint_rewards (
+          id,
+          name,
+          description,
+          icon
+        ),
+        step:checkpoint_steps (
+          id,
+          step_number,
+          offer:checkpoint_offers (
+            id,
+            name,
+            total_steps
+          )
+        )
+      `)
+      .eq('merchant_id', merchantId)
+      .eq('customer_id', customerId)
+      .eq('status', 'completed')
+      .order('redeemed_at', { ascending: false });
+
+    if (error) {
+      return createErrorResponse(error.message, 400);
+    }
+
+    return createSuccessResponse({ 
+      redeemed_rewards: redeemedRewards || []
+    });
+  } catch (error: any) {
+    return createErrorResponse(error.message || 'Errore interno del server', 500);
   }
 } 
