@@ -63,6 +63,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
   Future<void> _checkNfcAvailability() async {
     try {
       final availability = await FlutterNfcKit.nfcAvailability;
+      if (!mounted) return;
       setState(() {
         _nfcAvailable = availability == NFCAvailability.available;
       });
@@ -81,6 +82,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Errore nel controllo disponibilità NFC: $e');
+      if (!mounted) return;
       setState(() {
         _nfcAvailable = false;
       });
@@ -95,6 +97,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     
     debugPrint('🚀 Avvio polling NFC...');
     _isPolling = true;
+    if (!mounted) return;
     setState(() {}); // Update UI to show that polling is active
 
     try {
@@ -149,13 +152,15 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     } finally {
       debugPrint('🛑 Polling fermato. _isPolling=$_isPolling, _nfcAvailable=$_nfcAvailable');
       _isPolling = false;
+      if (!mounted) return;
       setState(() {}); // Aggiorna l'UI
       
       // Se il polling si è fermato ma NFC è ancora disponibile, riavvialo
       if (_nfcAvailable && mounted) {
         debugPrint('🔄 Polling fermato, riavvio automatico tra 1 secondo...');
         Future.delayed(const Duration(seconds: 1), () {
-          if (mounted && !_isPolling && _nfcAvailable) {
+          if (!mounted) return;
+          if (!_isPolling && _nfcAvailable) {
             debugPrint('🔄 Riavvio automatico del polling...');
             _startPolling();
           }
@@ -176,6 +181,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     }
 
     // Set loading state
+    if (!mounted) return;
     setState(() {
       _isWritingCard = true;
     });
@@ -461,6 +467,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
     }
 
     // Set loading state
+    if (!mounted) return;
     setState(() {
       _isWritingMerchantCard = true;
     });

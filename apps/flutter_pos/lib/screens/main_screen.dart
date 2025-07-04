@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../components/bottom_nav_bar.dart';
 import 'pos_home_page.dart';
 import 'settings_screen.dart';
-import 'offers_screen.dart';
 import '../theme/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
@@ -32,10 +31,6 @@ class _MainScreenState extends State<MainScreen> {
         merchantId: widget.merchantId,
         merchantName: widget.merchantId,
       ),
-      OffersScreen(
-        merchantId: widget.merchantId,
-        merchantName: widget.merchantId,
-      ),
       const SettingsScreen(),
     ];
   }
@@ -58,10 +53,6 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.nfc),
             label: 'NFC',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.card_giftcard),
-            label: 'Offerte',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
