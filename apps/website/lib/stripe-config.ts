@@ -18,6 +18,8 @@ export function getStripePriceId(billingCycle: 'monthly' | 'yearly'): string {
     throw new Error(`STRIPE_${billingCycle.toUpperCase()}_PRICE_ID is not configured`);
   }
   
+  console.log('DEBUG ENV STRIPE_MONTHLY_PRICE_ID:', process.env.STRIPE_MONTHLY_PRICE_ID);
+  
   return priceId;
 }
 

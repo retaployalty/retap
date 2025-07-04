@@ -357,114 +357,254 @@ function CheckoutPage() {
             </>
           )}
           {step === 2 && (
-            <div className="w-full max-w-xl mx-auto mt-6">
-              <Card className="shadow-xl rounded-2xl border border-[#E6E6E6] px-0 sm:px-2">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <Button variant="ghost" size="sm" className="px-2 py-1 text-muted-foreground flex items-center gap-1" onClick={() => setStep(1)}>
+            <div className="w-full max-w-2xl mx-auto">
+              <Card className="shadow-xl border-0">
+                <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Button variant="ghost" size="sm" className="px-2 py-1 text-gray-600 flex items-center gap-1" onClick={() => setStep(1)}>
                       <ArrowLeft className="w-4 h-4" /> Back
                     </Button>
-                    <div className="flex-1 text-center">
-                      <CardTitle className="text-2xl font-bold font-sans" style={{fontFamily: 'Fredoka, sans-serif'}}>Complete your subscription</CardTitle>
-                      <CardDescription className="text-muted-foreground text-base">Enter your billing and shipping details</CardDescription>
-                    </div>
-                    <div className="w-16"></div>
+                  </div>
+                  <div className="text-center">
+                    <CardTitle className="flex items-center justify-center gap-2 sm:gap-3 text-xl sm:text-2xl mb-2">
+                      <User className="h-5 w-5 sm:h-6 sm:w-6" />
+                      Complete Your Subscription
+                    </CardTitle>
+                    <p className="text-gray-600">Enter your billing and shipping details</p>
                   </div>
                 </CardHeader>
-                <CardContent className="px-4 sm:px-6 py-4">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Personal Info Section */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <Label htmlFor="title" className="text-sm text-muted-foreground">Title</Label>
-                        <select
-                          id="title"
-                          name="title"
-                          value={form.title}
-                          onChange={handleChange}
-                          className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-primary bg-white"
-                          required
-                        >
-                          <option value="">Not specified</option>
-                          <option value="Mr">Mr</option>
-                          <option value="Ms">Ms</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="first_name" className="text-sm text-muted-foreground">First name</Label>
-                        <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} required placeholder="First name" className="rounded-lg" />
-                      </div>
-                      <div>
-                        <Label htmlFor="last_name" className="text-sm text-muted-foreground">Last name</Label>
-                        <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} required placeholder="Last name" className="rounded-lg" />
+                <CardContent className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+                  <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+                    {/* Personal Information */}
+                    <div className="space-y-4 sm:space-y-6">
+                      <h3 className="text-lg sm:text-xl font-semibold flex items-center gap-2 sm:gap-3 pb-2 border-b border-gray-200">
+                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Personal Information
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="title" className="text-sm font-medium text-gray-700">Title</Label>
+                          <select
+                            id="title"
+                            name="title"
+                            value={form.title}
+                            onChange={handleChange}
+                            className="w-full h-11 sm:h-12 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white px-3 pr-10 text-gray-900 appearance-none"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                              backgroundPosition: 'right 12px center',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundSize: '16px 12px'
+                            }}
+                            required
+                          >
+                            <option value="">Not specified</option>
+                            <option value="Mr">Mr</option>
+                            <option value="Ms">Ms</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="first_name" className="text-sm font-medium text-gray-700">First name *</Label>
+                          <Input 
+                            id="first_name" 
+                            name="first_name" 
+                            value={form.first_name} 
+                            onChange={handleChange} 
+                            required 
+                            placeholder="Enter your first name" 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
+                        </div>
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="last_name" className="text-sm font-medium text-gray-700">Last name *</Label>
+                          <Input 
+                            id="last_name" 
+                            name="last_name" 
+                            value={form.last_name} 
+                            onChange={handleChange} 
+                            required 
+                            placeholder="Enter your last name" 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
+                        </div>
                       </div>
                     </div>
-                    {/* Address Section */}
-                    <div className="space-y-3">
-                      <Label className="font-semibold text-base">Address</Label>
-                      <Input id="street_address" name="street_address" value={form.street_address} onChange={handleChange} placeholder="Street and number" required className="rounded-lg" />
-                      <Input id="address_extra" name="address_extra" value={form.address_extra} onChange={handleChange} placeholder="Apartment, suite, building code (optional)" className="rounded-lg" />
-                      <Input id="address_info" name="address_info" value={form.address_info} onChange={handleChange} placeholder="Other address info" className="rounded-lg" />
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <Label htmlFor="zip_code" className="text-sm text-muted-foreground">ZIP code</Label>
-                          <Input id="zip_code" name="zip_code" value={form.zip_code} onChange={handleChange} required placeholder="ZIP code" className="rounded-lg" />
+
+                    {/* Address Information */}
+                    <div className="space-y-4 sm:space-y-6">
+                      <h3 className="text-lg sm:text-xl font-semibold flex items-center gap-2 sm:gap-3 pb-2 border-b border-gray-200">
+                        <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Address Information
+                      </h3>
+                      
+                      <div className="space-y-4 sm:space-y-6">
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="street_address" className="text-sm font-medium text-gray-700">Street and number *</Label>
+                          <Input 
+                            id="street_address" 
+                            name="street_address" 
+                            value={form.street_address} 
+                            onChange={handleChange} 
+                            placeholder="Enter street and number" 
+                            required 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
                         </div>
-                        <div>
-                          <Label htmlFor="city" className="text-sm text-muted-foreground">City</Label>
-                          <Input id="city" name="city" value={form.city} onChange={handleChange} required placeholder="City" className="rounded-lg" />
+                        
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="address_extra" className="text-sm font-medium text-gray-700">Apartment, suite, building code</Label>
+                          <Input 
+                            id="address_extra" 
+                            name="address_extra" 
+                            value={form.address_extra} 
+                            onChange={handleChange} 
+                            placeholder="Apartment, suite, building code (optional)" 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
                         </div>
-                        <div>
-                          <Label htmlFor="country" className="text-sm text-muted-foreground">Country</Label>
-                          <Input id="country" name="country" value={form.country} onChange={handleChange} required placeholder="Country" className="rounded-lg" />
+                        
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="address_info" className="text-sm font-medium text-gray-700">Other address info</Label>
+                          <Input 
+                            id="address_info" 
+                            name="address_info" 
+                            value={form.address_info} 
+                            onChange={handleChange} 
+                            placeholder="Other address info" 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                          <div className="space-y-2 sm:space-y-3">
+                            <Label htmlFor="zip_code" className="text-sm font-medium text-gray-700">ZIP code *</Label>
+                            <Input 
+                              id="zip_code" 
+                              name="zip_code" 
+                              value={form.zip_code} 
+                              onChange={handleChange} 
+                              required 
+                              placeholder="Enter ZIP code" 
+                              className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                            />
+                          </div>
+                          <div className="space-y-2 sm:space-y-3">
+                            <Label htmlFor="city" className="text-sm font-medium text-gray-700">City *</Label>
+                            <Input 
+                              id="city" 
+                              name="city" 
+                              value={form.city} 
+                              onChange={handleChange} 
+                              required 
+                              placeholder="Enter city" 
+                              className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                            />
+                          </div>
+                          <div className="space-y-2 sm:space-y-3">
+                            <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country *</Label>
+                            <Input 
+                              id="country" 
+                              name="country" 
+                              value={form.country} 
+                              onChange={handleChange} 
+                              required 
+                              placeholder="Enter country" 
+                              className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                    {/* Company Section */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          id="is_company"
-                          name="is_company"
-                          checked={form.is_company}
-                          onChange={handleChange}
-                          className="accent-primary w-5 h-5 rounded"
-                        />
-                        <Label htmlFor="is_company" className="text-base">This is a company address</Label>
-                      </div>
-                      {form.is_company && (
-                        <div className="pt-1">
-                          <Label htmlFor="company_name" className="text-sm text-muted-foreground">Company name</Label>
-                          <Input id="company_name" name="company_name" value={form.company_name} onChange={handleChange} required={form.is_company} placeholder="Company name" className="rounded-lg" />
+
+                    {/* Company Information */}
+                    <div className="space-y-4 sm:space-y-6">
+                      <h3 className="text-lg sm:text-xl font-semibold flex items-center gap-2 sm:gap-3 pb-2 border-b border-gray-200">
+                        <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Company Information
+                      </h3>
+                      
+                      <div className="space-y-4 sm:space-y-6">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="is_company"
+                            name="is_company"
+                            checked={form.is_company}
+                            onChange={handleChange}
+                            className="accent-blue-500 w-5 h-5 rounded"
+                          />
+                          <Label htmlFor="is_company" className="text-base font-medium text-gray-700">This is a company address</Label>
                         </div>
+                        
+                        {form.is_company && (
+                          <div className="space-y-2 sm:space-y-3">
+                            <Label htmlFor="company_name" className="text-sm font-medium text-gray-700">Company name *</Label>
+                            <Input 
+                              id="company_name" 
+                              name="company_name" 
+                              value={form.company_name} 
+                              onChange={handleChange} 
+                              required={form.is_company} 
+                              placeholder="Enter company name" 
+                              className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div className="space-y-4 sm:space-y-6">
+                      <h3 className="text-lg sm:text-xl font-semibold flex items-center gap-2 sm:gap-3 pb-2 border-b border-gray-200">
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Contact Information
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email *</Label>
+                          <Input 
+                            id="email" 
+                            name="email" 
+                            type="email" 
+                            value={form.email} 
+                            onChange={handleChange} 
+                            placeholder="Enter your email address" 
+                            required 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
+                        </div>
+                        <div className="space-y-2 sm:space-y-3">
+                          <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone number *</Label>
+                          <Input 
+                            id="phone" 
+                            name="phone" 
+                            type="tel" 
+                            value={form.phone} 
+                            onChange={handleChange} 
+                            placeholder="Enter your phone number" 
+                            required 
+                            className="h-11 sm:h-12 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 sm:h-14 bg-[#1A1A1A] hover:bg-[#FF3131] text-white rounded-lg transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 group text-base sm:text-lg font-medium"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <div className="h-5 w-5 sm:h-6 sm:w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span>Complete Subscription</span>
+                          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1 rotate-180" />
+                        </>
                       )}
-                    </div>
-                    {/* Contact Section */}
-                    <div className="space-y-2 pt-1">
-                      <Label className="font-semibold text-base">Contact information</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
-                          <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required className="rounded-lg" />
-                        </div>
-                        <div>
-                          <Label htmlFor="phone" className="text-sm text-muted-foreground">Phone number</Label>
-                          <Input id="phone" name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Phone number" required className="rounded-lg" />
-                        </div>
-                      </div>
-                    </div>
-                    {/* Submit Button */}
-                    <CardFooter className="px-0 pt-3">
-                      <Button
-                        type="submit"
-                        className="w-full h-14 text-lg sm:text-xl px-8 bg-[#1A1A1A] hover:bg-[#1A1A1A]/90 text-white rounded-lg transition-colors mt-2"
-                        style={{boxShadow: 'none'}}
-                        disabled={loading}
-                      >
-                        {loading ? "Processing..." : "Continue"}
-                      </Button>
-                    </CardFooter>
+                    </Button>
                   </form>
                 </CardContent>
               </Card>

@@ -236,29 +236,36 @@ export default function MerchantSignupPage() {
 
       if (merchantError) throw merchantError;
 
-      // 3. Create Stripe checkout session
-      const response = await fetch('/api/merchant-signup/checkout', {
+      // 3. Create Stripe checkout session for monthly subscription
+      const response = await fetch('/api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email,
-          firstName: firstName,
-          lastName: lastName,
-          companyName: companyName,
+          plan: 'BASIC',
+          billingDetails: {
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            company: companyName,
+            supabase_id: userId
+          },
+          isAnnual: false, // Monthly subscription
           successUrl: `${window.location.origin}/dashboard?success=true`,
-          cancelUrl: `${window.location.origin}/merchant-signup?error=payment_cancelled`,
+          cancelUrl: `${window.location.origin}/merchant-signup?error=payment_cancelled`
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create checkout session');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', errorData);
+        throw new Error(`Failed to create checkout session: ${errorData.error || response.statusText}`);
       }
 
       const { url } = await response.json();
       
-      // Redirect to Stripe checkout
+      // Redirect to Stripe checkout for monthly subscription
       window.location.href = url;
 
     } catch (err) {
@@ -482,8 +489,7 @@ export default function MerchantSignupPage() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-5">
                 <p className="text-sm text-blue-700">
-                  <strong>Special Offer:</strong> €1.00 one-time activation fee<br />
-                  No recurring charges - pay only when you want to continue
+                  <strong>Subscription Required:</strong> After registration, you'll be redirected to complete your monthly subscription (€49/month + €99 activation fee).
                 </p>
               </div>
 
@@ -497,7 +503,7 @@ export default function MerchantSignupPage() {
                 ) : (
                   <>
                     <span className="hidden sm:inline">Complete Registration & Proceed to Payment</span>
-                    <span className="sm:hidden">Register & Pay €1</span>
+                    <span className="sm:hidden">Register & Pay</span>
                     <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
                   </>
                 )}

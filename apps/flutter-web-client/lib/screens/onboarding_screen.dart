@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -14,7 +13,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = [
+  final List<OnboardingPage> _pages = const [
     OnboardingPage(
       title: 'Welcome to ReTap',
       description: 'Your universal loyalty card for every store',
@@ -156,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: 280,
             height: 280,
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
+              color: page.color.withAlpha((0.1 * 255).toInt()),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -200,7 +199,7 @@ class OnboardingPage {
   final String image;
   final Color color;
 
-  OnboardingPage({
+  const OnboardingPage({
     required this.title,
     required this.description,
     required this.image,
