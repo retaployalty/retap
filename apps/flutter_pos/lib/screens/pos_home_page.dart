@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'package:ndef/ndef.dart' as ndef;
 import 'card_details_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'lost_card_replacement_screen.dart';
 import '../services/api_service.dart';
 import '../models/card.dart';
 
@@ -670,7 +671,7 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 1.0,
+                childAspectRatio: 0.85, // Ridotto per dare più spazio ai 5 pulsanti
                 children: [
                   // Pulsante 1: Lettura automatica carte
                   _buildActionButton(
@@ -716,7 +717,25 @@ class _POSHomePageState extends State<POSHomePage> with WidgetsBindingObserver {
                     disabled: !_nfcAvailable,
                   ),
                   
-                  // Pulsante 4: Programma carta merchant
+                  // Pulsante 4: Carta persa
+                  _buildActionButton(
+                    icon: Icons.find_replace,
+                    title: 'Carta Persa',
+                    subtitle: 'Sostituzione',
+                    color: Colors.red,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => LostCardReplacementScreen(
+                            merchantId: widget.merchantId,
+                            merchantName: widget.merchantName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  // Pulsante 5: Programma carta merchant
                   _buildActionButton(
                     icon: Icons.store,
                     title: 'Carta Negozio',

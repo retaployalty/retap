@@ -194,7 +194,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              widget.isOpen ? 'Aperto' : 'Chiuso',
+                              widget.isOpen ? 'Open' : 'Closed',
                               style: const TextStyle(
                                 color: Color(0xFF1A1A1A),
                                 fontSize: 16,

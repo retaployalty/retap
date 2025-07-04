@@ -94,7 +94,7 @@ class MerchantInfo extends StatelessWidget {
           ],
           const Divider(height: 18, thickness: 1, color: Color(0xFFE6E6E6)),
           const Text(
-            'Orari',
+            'Opening Hours',
             style: TextStyle(
               color: Color(0xFF1A1A1A),
               fontSize: 17,
@@ -115,7 +115,7 @@ class MerchantInfo extends StatelessWidget {
             )
           else
             const Text(
-              'Orari non disponibili',
+              'Opening hours not available',
               style: TextStyle(
                 color: Color(0xFF666666),
                 fontSize: 13,
@@ -129,7 +129,7 @@ class MerchantInfo extends StatelessWidget {
 
   List<Widget> _buildHoursList(dynamic hours) {
     final days = [
-      'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'
+      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
     ];
     final List<Widget> widgets = [];
     final now = DateTime.now();
@@ -169,7 +169,7 @@ class MerchantInfo extends StatelessWidget {
               Text(
                 isOpen
                     ? '${dayHours['open']}\n${dayHours['close']}'
-                    : 'Chiuso',
+                    : 'Closed',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isOpen 
