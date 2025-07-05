@@ -205,6 +205,7 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLink = onTap != null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -225,16 +226,32 @@ class _InfoRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 15,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        color: isLink ? Color(0xFF2563EB) : Color(0xFF1A1A1A),
+                        fontSize: 15,
+                        fontFamily: 'Fredoka',
+                        fontWeight: isLink ? FontWeight.w600 : FontWeight.w500,
+                        decoration: TextDecoration.none,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isLink)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Icon(
+                        Icons.open_in_new,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

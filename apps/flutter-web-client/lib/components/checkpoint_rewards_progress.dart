@@ -396,6 +396,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                   final bool isRewardAvailable = step <= widget.currentStep;
                                   final bool isNextReward = step == _getNextRewardStep();
                                   final String rewardLabel = widget.rewardLabels[step] ?? 'Free Reward';
+                                  final bool isRedeemed = widget.redeemedSteps.contains(step);
                                   return Positioned(
                                     left: left + dotSize / 2 - 53.5,
                                     top: barHeight + 10,
@@ -416,84 +417,141 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                             builder: (context, child) {
                                               return Transform.scale(
                                                 scale: _pulseAnimation.value,
-                                                child: child,
+                                                child: Stack(
+                                                  clipBehavior: Clip.none,
+                                                  children: [
+                                                    Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        onTap: () {
+                                                          showDialog(
+                                                            context: context,
+                                                            builder: (context) {
+                                                              return Dialog(
+                                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                                                backgroundColor: Colors.white,
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                                                                  child: Column(
+                                                                    mainAxisSize: MainAxisSize.min,
+                                                                    children: [
+                                                                      Container(
+                                                                        decoration: BoxDecoration(
+                                                                          color: isRedeemed ? const Color(0xFFFFE0E0) : const Color(0xFFE0FFF2),
+                                                                          shape: BoxShape.circle,
+                                                                        ),
+                                                                        padding: const EdgeInsets.all(18),
+                                                                        child: isRedeemed
+                                                                          ? Icon(Icons.check_circle, color: Color(0xFFFF6565), size: 48)
+                                                                          : SvgPicture.asset('assets/icons/mingcute_gift-fill.svg', width: 48, height: 48, colorFilter: const ColorFilter.mode(Color(0xFF00A699), BlendMode.srcIn)),
+                                                                      ),
+                                                                      const SizedBox(height: 24),
+                                                                      Text(
+                                                                        isRedeemed ? 'Reward already redeemed' : 'Reward available!',
+                                                                        style: TextStyle(
+                                                                          fontSize: 20,
+                                                                          fontWeight: FontWeight.bold,
+                                                                          color: isRedeemed ? Color(0xFFFF6565) : Color(0xFF00A699),
+                                                                        ),
+                                                                        textAlign: TextAlign.center,
+                                                                      ),
+                                                                      const SizedBox(height: 16),
+                                                                      Text(
+                                                                        isRedeemed
+                                                                          ? 'You have already redeemed this reward. Complete the cycle to earn it again!'
+                                                                          : 'Tell the business you want to redeem this reward!',
+                                                                        style: const TextStyle(fontSize: 16, color: Color(0xFF222222)),
+                                                                        textAlign: TextAlign.center,
+                                                                      ),
+                                                                      const SizedBox(height: 28),
+                                                                      SizedBox(
+                                                                        width: double.infinity,
+                                                                        child: ElevatedButton(
+                                                                          onPressed: () => Navigator.of(context).pop(),
+                                                                          style: ElevatedButton.styleFrom(
+                                                                            backgroundColor: isRedeemed ? Color(0xFFFF6565) : Color(0xFF00A699),
+                                                                            foregroundColor: Colors.white,
+                                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                          ),
+                                                                          child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                          );
+                                                        },
+                                                        borderRadius: BorderRadius.circular(32),
+                                                        child: Ink(
+                                                          width: 107,
+                                                          height: 48,
+                                                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                          decoration: ShapeDecoration(
+                                                            color: const Color(0xFFFF6565),
+                                                            shape: RoundedRectangleBorder(
+                                                              side: const BorderSide(
+                                                                width: 1,
+                                                                color: Color(0xFFFF6565),
+                                                              ),
+                                                              borderRadius: BorderRadius.circular(32),
+                                                            ),
+                                                          ),
+                                                          child: Center(
+                                                            child: Text(
+                                                              rewardLabel,
+                                                              textAlign: TextAlign.center,
+                                                              style: const TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 15,
+                                                                fontFamily: 'Fredoka',
+                                                                fontWeight: FontWeight.w600,
+                                                                height: 1.1,
+                                                                letterSpacing: 0.48,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      right: -8,
+                                                      top: -8,
+                                                      child: Container(
+                                                        width: 24,
+                                                        height: 24,
+                                                        decoration: const BoxDecoration(
+                                                          color: Colors.white,
+                                                          shape: BoxShape.circle,
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Color(0xFFFF6565),
+                                                              blurRadius: 4,
+                                                              offset: Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: isRedeemed
+                                                          ? Icon(
+                                                              Icons.check_circle,
+                                                              color: Color(0xFFFF6565),
+                                                              size: 20,
+                                                            )
+                                                          : SvgPicture.asset(
+                                                              'assets/icons/mingcute_gift-fill.svg',
+                                                              width: 16,
+                                                              height: 16,
+                                                              colorFilter: const ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               );
                                             },
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                Material(
-                                                  color: Colors.transparent,
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      if (!widget.redeemedSteps.contains(step)) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text('Premio disponibile per il riscatto!'),
-                                                            backgroundColor: Color(0xFFFF6565),
-                                                          ),
-                                                        );
-                                                      }
-                                                    },
-                                                    borderRadius: BorderRadius.circular(32),
-                                                    child: Ink(
-                                                      width: 107,
-                                                      height: 48,
-                                                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                                                      decoration: ShapeDecoration(
-                                                        color: const Color(0xFFFF6565),
-                                                        shape: RoundedRectangleBorder(
-                                                          side: const BorderSide(
-                                                            width: 1,
-                                                            color: Color(0xFFFF6565),
-                                                          ),
-                                                          borderRadius: BorderRadius.circular(32),
-                                                        ),
-                                                      ),
-                                                      child: Center(
-                                                        child: Text(
-                                                          rewardLabel,
-                                                          textAlign: TextAlign.center,
-                                                          style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 15,
-                                                            fontFamily: 'Fredoka',
-                                                            fontWeight: FontWeight.w600,
-                                                            height: 1.1,
-                                                            letterSpacing: 0.48,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                Positioned(
-                                                  right: -8,
-                                                  top: -8,
-                                                  child: Container(
-                                                    width: 24,
-                                                    height: 24,
-                                                    decoration: const BoxDecoration(
-                                                      color: Colors.white,
-                                                      shape: BoxShape.circle,
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Color(0xFFFF6565),
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: SvgPicture.asset(
-                                                      'assets/icons/mingcute_gift-fill.svg',
-                                                      width: 16,
-                                                      height: 16,
-                                                      colorFilter: const ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                            child: const SizedBox.shrink(),
                                           )
                                         else
                                           Stack(
@@ -669,11 +727,18 @@ class _CheckpointDot extends StatelessWidget {
           ),
         ),
         if (showIceCream)
-          Icon(
-            isRedeemed ? Icons.check_circle : Icons.icecream,
-            color: Colors.white,
-            size: size * 0.85
-          ),
+          isRedeemed
+            ? Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: size * 0.85,
+              )
+            : SvgPicture.asset(
+                'assets/icons/mingcute_gift-fill.svg',
+                width: size * 0.85,
+                height: size * 0.85,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
       ],
     );
   }
