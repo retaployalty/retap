@@ -24,6 +24,7 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
   Map<String, dynamic>? _merchantData;
   int _userPoints = 0;
   int _currentCheckpointStep = 0;
+  bool _showCheck = false;
 
   @override
   void initState() {
@@ -107,7 +108,7 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
             children: [
               // Header con logo e messaggio di benvenuto
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -185,7 +186,7 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
               // Checkpoint Progress
               if (checkpointOfferItems.isNotEmpty) ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
                   child: Builder(
                     builder: (context) {
                       final steps = checkpointOfferItems.first.steps;
@@ -223,7 +224,7 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
               // Rewards List
               if (rewardItems.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 24.0),
+                  padding: const EdgeInsets.only(bottom: 6.0),
                   child: RewardList(
                     userPoints: _userPoints,
                     rewards: rewardItems,
@@ -233,37 +234,134 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
                 ),
 
               // Grande tasto in fondo
-              const SizedBox(height: 32),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {}, // Non fa nulla per ora ma resta visibile
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    backgroundColor: Color(0xFFFF6B6B),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: AppTextStyles.headlineMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  child: const Text(
-                    'Riscatta premi!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
-                  ),
-                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                  child: _showCheck
+                      ? SizedBox(
+                          key: const ValueKey('check'),
+                          height: 64,
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showLoyaltyCardPopup(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFFFF6B6B),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.check_circle, color: Colors.white, size: 38),
+                            ),
+                          ),
+                        )
+                      : SizedBox(
+                          key: const ValueKey('redeem'),
+                          height: 64,
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showLoyaltyCardPopup(context);
+                              setState(() {
+                                _showCheck = true;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFFFF6B6B),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              textStyle: AppTextStyles.headlineMedium.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'Redeem rewards!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
               ),
-              const SizedBox(height: 32),
-            ],
+          )],
           ),
         ),
       ),
+    );
+  }
+
+  // Funzione helper per mostrare il popup persuasivo
+  void showLoyaltyCardPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFE0E0),
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(18),
+                  child: Icon(Icons.card_giftcard, color: Color(0xFFFF6565), size: 48),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Get your FREE loyalty card!',
+                  style: AppTextStyles.headlineMedium.copyWith(
+                    color: Color(0xFFFF6565),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ask the business for your free loyalty card and start collecting points and exclusive rewards!',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: Color(0xFF222222),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6565),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 } 

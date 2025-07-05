@@ -40,7 +40,7 @@ class CustomBottomNavBar extends StatelessWidget {
             width: 24,
             height: 24,
           ),
-          label: 'Mappa',
+          label: 'Map',
         ),
         BottomNavigationBarItem(
           icon: SvgPicture.asset(
@@ -49,7 +49,7 @@ class CustomBottomNavBar extends StatelessWidget {
             width: 24,
             height: 24,
           ),
-          label: 'Impostazioni',
+          label: 'Settings',
         ),
       ],
     );

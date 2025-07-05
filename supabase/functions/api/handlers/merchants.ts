@@ -15,6 +15,8 @@ export async function handleGetMerchants() {
       logo_url,
       cover_image_url,
       hours,
+      latitude,
+      longitude,
       rewards (*),
       checkpoint_offers (
         *,

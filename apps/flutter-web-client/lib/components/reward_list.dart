@@ -406,12 +406,65 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              // TODO: Implementare il riscatto
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Premio disponibile per il riscatto!'),
-                  backgroundColor: Color(0xFFFF6565),
-                ),
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    backgroundColor: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFE0E0),
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(18),
+                            child: SvgPicture.asset(
+                              'assets/icons/mingcute_gift-fill.svg',
+                              width: 48,
+                              height: 48,
+                              colorFilter: ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Reward available!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFF6565),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Tell the business you want to redeem this reward!',
+                            style: TextStyle(fontSize: 16, color: Color(0xFF222222)),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 28),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF6565),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
             borderRadius: BorderRadius.circular(28),
