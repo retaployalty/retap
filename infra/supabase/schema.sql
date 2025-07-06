@@ -672,7 +672,25 @@ ALTER FUNCTION "public"."has_active_subscription"("profile_id" "uuid") OWNER TO 
 CREATE OR REPLACE FUNCTION "public"."redeem_checkpoint_reward"("p_customer_id" "uuid", "p_merchant_id" "uuid", "p_checkpoint_reward_id" "uuid", "p_checkpoint_step_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
+DECLARE
+    v_already_redeemed boolean;
 BEGIN
+  -- Simple check: see if this exact reward has already been redeemed for this customer/merchant/step
+  SELECT EXISTS(
+    SELECT 1 
+    FROM redeemed_checkpoint_rewards rcr
+    WHERE rcr.customer_id = p_customer_id
+    AND rcr.merchant_id = p_merchant_id
+    AND rcr.checkpoint_reward_id = p_checkpoint_reward_id
+    AND rcr.checkpoint_step_id = p_checkpoint_step_id
+    AND rcr.status = 'completed'
+  ) INTO v_already_redeemed;
+
+  -- If already redeemed, raise exception
+  IF v_already_redeemed THEN
+    RAISE EXCEPTION 'Reward already redeemed for this step';
+  END IF;
+
   -- Insert into redeemed_checkpoint_rewards
   INSERT INTO public.redeemed_checkpoint_rewards (
     customer_id,
@@ -918,7 +936,9 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "image_path" "text",
     "opening_hours" "jsonb",
     "latitude" numeric(10,8),
-    "longitude" numeric(11,8)
+    "longitude" numeric(11,8),
+    "stripe_customer_id" "text",
+    "stripe_subscription_id" "text"
 );
 
 
@@ -962,6 +982,14 @@ COMMENT ON COLUMN "public"."merchants"."latitude" IS 'Latitude coordinate of the
 
 
 COMMENT ON COLUMN "public"."merchants"."longitude" IS 'Longitude coordinate of the merchant location';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."stripe_customer_id" IS 'Stripe customer ID';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."stripe_subscription_id" IS 'Stripe subscription ID';
 
 
 
@@ -1044,12 +1072,22 @@ CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
     "trial_end_date" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "stripe_subscription_id" "text",
+    "stripe_customer_id" "text",
     CONSTRAINT "subscriptions_billing_type_check" CHECK (("billing_type" = ANY (ARRAY['monthly'::"text", 'annual'::"text"]))),
     CONSTRAINT "subscriptions_status_check" CHECK (("status" = ANY (ARRAY['active'::"text", 'cancelled'::"text", 'expired'::"text", 'pending'::"text"])))
 );
 
 
 ALTER TABLE "public"."subscriptions" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."subscriptions"."stripe_subscription_id" IS 'Stripe subscription ID for tracking';
+
+
+
+COMMENT ON COLUMN "public"."subscriptions"."stripe_customer_id" IS 'Stripe customer ID for tracking';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."transactions" (
@@ -1163,12 +1201,29 @@ ALTER TABLE ONLY "public"."subscriptions"
 
 
 
+ALTER TABLE ONLY "public"."subscriptions"
+    ADD CONSTRAINT "subscriptions_profile_id_unique" UNIQUE ("profile_id");
+
+
+
 ALTER TABLE ONLY "public"."transactions"
     ADD CONSTRAINT "transactions_pkey" PRIMARY KEY ("id");
 
 
 
 CREATE INDEX "idx_merchants_coordinates" ON "public"."merchants" USING "btree" ("latitude", "longitude");
+
+
+
+CREATE INDEX "idx_merchants_stripe_customer_id" ON "public"."merchants" USING "btree" ("stripe_customer_id");
+
+
+
+CREATE INDEX "idx_subscriptions_stripe_customer_id" ON "public"."subscriptions" USING "btree" ("stripe_customer_id");
+
+
+
+CREATE INDEX "idx_subscriptions_stripe_subscription_id" ON "public"."subscriptions" USING "btree" ("stripe_subscription_id");
 
 
 

@@ -26,6 +26,7 @@ import {
   Loader2,
   CheckCircle
 } from "lucide-react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
@@ -71,7 +72,7 @@ function SettingsContent() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isCreatingTest, setIsCreatingTest] = useState(false);
+
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -202,30 +203,7 @@ function SettingsContent() {
     }
   }
 
-  const handleCreateTestSubscription = async () => {
-    setIsCreatingTest(true);
-    try {
-      const response = await fetch('/api/test-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
 
-      const result = await response.json();
-
-      if (result.success) {
-        // Reload data
-        await fetchUserData();
-        toast.success('Test subscription created successfully!');
-      } else {
-        toast.error('Error creating subscription: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Error creating test subscription');
-    } finally {
-      setIsCreatingTest(false);
-    }
-  };
 
   const handleCancelSubscription = async () => {
     setIsCancelling(true);
@@ -678,6 +656,8 @@ function SettingsContent() {
                 </div>
               </CardContent>
             </Card>
+
+
 
             {/* Usage Statistics */}
             {subscription && (
