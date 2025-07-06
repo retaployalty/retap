@@ -13,6 +13,7 @@ import {
   Store,
   Lock,
   Crown,
+  X,
 } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useSubscriptionStatus } from "@/lib/hooks/useSubscriptionStatus";
@@ -58,7 +59,7 @@ const navigation = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClientComponentClient();
@@ -76,13 +77,25 @@ export function Sidebar() {
   // TODO: Rimuovere questa logica quando l'abbonamento funziona correttamente
   const shouldShowAllSections = true; // hasActiveSubscription || !isLoading;
 
+  const handleLinkClick = () => {
+    // Chiudi la sidebar su mobile quando si clicca su un link
+    onClose?.();
+  };
+
   return (
     <TooltipProvider>
       <div className="flex h-full w-64 flex-col border-r bg-white">
-        <div className="flex h-18 items-center border-b px-4">
+        <div className="flex h-18 items-center border-b px-4 justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <img src="/retapLogo.png" alt="ReTap Logo" className="h-20 w-auto" />
           </Link>
+          {/* Mobile close button */}
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <nav className="flex-1 space-y-1 px-2 py-4">
           {navigation.map((item) => {
@@ -130,7 +143,7 @@ export function Sidebar() {
             }
 
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} onClick={handleLinkClick}>
                 {linkContent}
               </Link>
             );

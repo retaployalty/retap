@@ -102,6 +102,28 @@ export function RewardsList() {
     loadRewards()
   }, [supabase])
 
+  // Add realtime subscription for rewards
+  useEffect(() => {
+    const channel = supabase
+      .channel('rewards_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rewards'
+        },
+        () => {
+          loadRewards()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">

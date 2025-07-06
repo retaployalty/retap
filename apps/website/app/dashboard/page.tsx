@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Users, 
   CreditCard, 
-  Gift, 
+  Gift,
   TrendingUp, 
   Clock, 
   Repeat, 
@@ -45,6 +45,15 @@ const tooltipStyles = {
 export default function DashboardPage() {
   const [merchant, setMerchant] = useState<any>(null);
   const [timeRange, setTimeRange] = useState("today");
+  const [cardInfo, setCardInfo] = useState<{
+    totalAllocated: number;
+    distributed: number;
+    available: number;
+  }>({
+    totalAllocated: 0,
+    distributed: 0,
+    available: 0
+  });
   const supabase = createClientComponentClient();
   
   // Utilizzo il hook personalizzato per le statistiche
@@ -62,6 +71,40 @@ export default function DashboardPage() {
         .single();
 
       setMerchant(merchant);
+
+      // Carica informazioni sulle carte allocate
+      if (merchant) {
+        try {
+          const { data: cardAllocation } = await supabase
+            .from('merchant_card_allocation')
+            .select('*')
+            .eq('merchant_id', merchant.id)
+            .single();
+
+          if (cardAllocation) {
+            setCardInfo({
+              totalAllocated: cardAllocation.total_cards_allocated || 0,
+              distributed: cardAllocation.cards_distributed || 0,
+              available: cardAllocation.cards_available || 0
+            });
+          } else {
+            // Se non esiste allocazione, usa valori di default
+            setCardInfo({
+              totalAllocated: 100,
+              distributed: 0,
+              available: 100
+            });
+          }
+        } catch (error) {
+          console.log("Error loading card allocation:", error);
+          // Usa valori di default in caso di errore
+          setCardInfo({
+            totalAllocated: 100,
+            distributed: 0,
+            available: 100
+          });
+        }
+      }
     };
 
     fetchMerchant();
@@ -100,6 +143,41 @@ export default function DashboardPage() {
           <p className="text-muted-foreground text-sm mt-1">Monitor your customers, cards and points in real time</p>
         </div>
         <div className="flex flex-col md:flex-row gap-4">
+          {/* Card Indicator */}
+          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-red-600" />
+              <span className="text-sm font-medium text-red-800">Cards</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-bold text-red-600">{cardInfo.distributed}</span>
+                <span className="text-sm text-red-600">/</span>
+                <span className="text-lg font-bold text-red-600">{cardInfo.totalAllocated}</span>
+              </div>
+              <div className="w-full bg-red-200 rounded-full h-1.5">
+                <div 
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    (cardInfo.distributed / cardInfo.totalAllocated) > 0.8 
+                      ? 'bg-red-500' 
+                      : (cardInfo.distributed / cardInfo.totalAllocated) > 0.6 
+                        ? 'bg-yellow-500' 
+                        : 'bg-red-600'
+                  }`}
+                  style={{ 
+                    width: `${Math.min(100, (cardInfo.distributed / cardInfo.totalAllocated) * 100)}%` 
+                  }}
+                />
+              </div>
+              <span className="text-xs text-red-600">
+                {cardInfo.available} available
+                {cardInfo.available < 10 && (
+                  <span className="text-red-600 font-medium ml-1">⚠️</span>
+                )}
+              </span>
+            </div>
+          </div>
+          
           <Button variant="outline" className="font-medium h-10 px-4 shadow-none flex items-center gap-2 hover:bg-[#f8494c] hover:text-white transition-colors">
             <Download className="h-4 w-4 mr-1" /> Download Report
           </Button>
