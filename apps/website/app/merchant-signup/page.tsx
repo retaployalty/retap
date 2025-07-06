@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AddressInput } from "@/components/ui/address-input";
+
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GB, US, IT, CH, AT, FR, DE, ES, CA, AU, JP, CN, IN, BR, RU, PT, BE, NL, IE, DK, SE, NO, FI, PL, CZ, SK, HU, SI, HR, RO, BG, GR, EE, LV, LT, LU, MT, CY } from 'country-flag-icons/react/3x2';
-import { AlertCircle, ArrowRight, Building2, User } from "lucide-react";
+import { AlertCircle, ArrowRight, Building2, User, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 const BUSINESS_CATEGORIES = [
@@ -89,6 +90,8 @@ export default function MerchantSignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const router = useRouter();
   const supabase = createClientComponentClient();
 
@@ -96,6 +99,12 @@ export default function MerchantSignupPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!termsAccepted) {
+      setError('You must accept the terms and conditions to proceed.');
+      setLoading(false);
+      return;
+    }
 
     const formData = new FormData(e.currentTarget);
     
@@ -486,6 +495,90 @@ export default function MerchantSignupPage() {
                   </div>
                 </div>
               )}
+
+              {/* Terms and Conditions */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
+                      I agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowTerms(!showTerms)}
+                        className="text-blue-600 hover:text-blue-800 underline font-medium"
+                      >
+                        terms and conditions
+                      </button>
+                      , which are the following:
+                    </label>
+                  </div>
+                </div>
+
+                {showTerms && (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+                    <div className="space-y-4 text-sm text-gray-700">
+                      <h4 className="font-semibold text-base flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        📄 Terms and Conditions (User Agreement)
+                      </h4>
+                      
+                      <div>
+                        <h5 className="font-medium">1. Purpose of the Agreement</h5>
+                        <p>By signing up, the Business Owner agrees to join the Retap loyalty program and receives:</p>
+                        <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                          <li>1 POS device on free loan</li>
+                          <li>100 custom loyalty cards</li>
+                          <li>Access to the CarteFedeltà management platform</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium">2. Pricing and Payments</h5>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>At activation, a symbolic charge of €1 is applied for the first month.</li>
+                          <li>After 30 days, the subscription automatically renews at €49/month, unless canceled beforehand.</li>
+                          <li>The monthly payment is charged automatically using the same payment method provided at activation.</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium">3. Duration and Cancellation</h5>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>The agreement is open-ended with monthly renewal.</li>
+                          <li>The business may cancel at any time before the end of the current billing cycle via email to [info@retapcard.com] or through their account dashboard.</li>
+                          <li>In case of cancellation, the provided POS device must be returned within 10 business days.</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium">4. Device and Card Responsibility</h5>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>The POS is provided as a free loan (not sold) and remains property of Retap.</li>
+                          <li>In the event of non-return or damage not caused by manufacturing defects, a €60 fee will be charged.</li>
+                          <li>Loyalty cards already distributed to customers do not need to be returned and no extra cost will be charged for used cards.</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium">5. Acceptance Clause</h5>
+                        <p>By checking the box and proceeding with the €1 payment, the Business Owner:</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>fully accepts all terms listed above</li>
+                          <li>confirms all submitted business data is accurate and truthful</li>
+                          <li>authorizes the automatic €49/month subscription charge unless canceled</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-5">
                 <p className="text-sm text-blue-700">
