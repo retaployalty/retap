@@ -13,6 +13,15 @@ export const metadata: Metadata = {
   title: "ReTap - Loyalty made simple for business",
   description: "One NFC card for all your favorite shops. Earn points everywhere you go with ReTap.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({

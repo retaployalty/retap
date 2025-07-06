@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Plus, Gift, Flag } from "lucide-react"
 import { CheckpointsList } from "./checkpoints/checkpoints-list"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateOfferDialog } from "./checkpoints/create-offer-dialog"
@@ -15,9 +15,10 @@ import { CreateOfferDialog } from "./checkpoints/create-offer-dialog"
 export default function PromotionsPage() {
   const [totalSteps, setTotalSteps] = useState(8) // Default to 8 steps
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
   const supabase = createClientComponentClient()
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -48,11 +49,15 @@ export default function PromotionsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1)
+  }, [])
 
   useEffect(() => {
     refreshData()
-  }, [])
+  }, [refreshData])
 
   if (loading) {
     return (
@@ -87,7 +92,11 @@ export default function PromotionsPage() {
                 Reward loyal customers with gifts and discounts when they reach specific point thresholds
               </p>
             </div>
-            <CreateRewardDialog totalSteps={totalSteps} defaultStep={1}>
+            <CreateRewardDialog 
+              totalSteps={totalSteps} 
+              defaultStep={1}
+              onSuccess={triggerRefresh}
+            >
               <Button className="bg-[#f8494c] hover:bg-[#f8494c]/90">
                 <Plus className="mr-2 h-4 w-4" />
                 New Reward
@@ -95,7 +104,7 @@ export default function PromotionsPage() {
             </CreateRewardDialog>
           </CardHeader>
           <CardContent>
-            <RewardsList />
+            <RewardsList key={`rewards-${refreshKey}`} />
           </CardContent>
         </Card>
 
@@ -109,7 +118,7 @@ export default function PromotionsPage() {
                 Create milestone-based journeys with intermediate rewards to boost customer loyalty
               </p>
             </div>
-            <CreateOfferDialog onSuccess={refreshData}>
+            <CreateOfferDialog onSuccess={triggerRefresh}>
               <Button className="bg-[#4c8ff8] hover:bg-[#4c8ff8]/90">
                 <Plus className="mr-2 h-4 w-4" />
                 New Offer
@@ -117,7 +126,7 @@ export default function PromotionsPage() {
             </CreateOfferDialog>
           </CardHeader>
           <CardContent>
-            <CheckpointsList />
+            <CheckpointsList key={`checkpoints-${refreshKey}`} />
           </CardContent>
         </Card>
       </div>

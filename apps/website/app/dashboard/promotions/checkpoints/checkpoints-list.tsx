@@ -100,6 +100,43 @@ export function CheckpointsList() {
     }
   }, [])
 
+  // Add realtime subscription for checkpoint rewards and steps
+  useEffect(() => {
+    const channel = supabase
+      .channel('checkpoint_rewards_steps_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checkpoint_rewards'
+        },
+        () => {
+          if (selectedOffer) {
+            loadSteps(selectedOffer.id)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checkpoint_steps'
+        },
+        () => {
+          if (selectedOffer) {
+            loadSteps(selectedOffer.id)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [selectedOffer])
+
   async function loadOffers() {
     console.log("Loading offers...")
     setLoading(true)

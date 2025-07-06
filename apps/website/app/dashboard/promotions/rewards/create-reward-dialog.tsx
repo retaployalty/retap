@@ -52,12 +52,14 @@ interface CreateRewardDialogProps {
   children: React.ReactNode
   totalSteps?: number
   defaultStep?: number
+  onSuccess?: () => void
 }
 
 export function CreateRewardDialog({ 
   children,
   totalSteps = 8,
-  defaultStep = 1
+  defaultStep = 1,
+  onSuccess
 }: CreateRewardDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -198,6 +200,7 @@ export function CreateRewardDialog({
       toast.success("Reward created successfully")
       setOpen(false)
       router.refresh()
+      onSuccess?.()
     } catch (error) {
       console.error("Error details:", error)
       toast.error(error instanceof Error ? error.message : "Error creating reward")
