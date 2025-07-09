@@ -525,49 +525,43 @@ export default function MerchantSignupPage() {
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
                     <div className="space-y-4 text-sm text-gray-700">
                       <h4 className="font-semibold text-base flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        📄 Terms and Conditions (User Agreement)
+                        Terms and Conditions (User Agreement)
                       </h4>
-                      
                       <div>
-                        <h5 className="font-medium">1. Purpose of the Agreement</h5>
+                        <h5 className="font-semibold mt-4 mb-2">1. Purpose of the Agreement</h5>
                         <p>By signing up, the Business Owner agrees to join the Retap loyalty program and receives:</p>
                         <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                           <li>1 POS device on free loan</li>
-                          <li>100 custom loyalty cards</li>
-                          <li>Access to the CarteFedeltà management platform</li>
+                          <li>Up to 100 Retap loyalty cards</li>
+                          <li>Access to the Retap management platform</li>
                         </ul>
                       </div>
-
                       <div>
-                        <h5 className="font-medium">2. Pricing and Payments</h5>
+                        <h5 className="font-semibold mt-4 mb-2">2. Pricing and Payments</h5>
                         <ul className="list-disc list-inside ml-4 space-y-1">
                           <li>At activation, a symbolic charge of €1 is applied for the first month.</li>
                           <li>After 30 days, the subscription automatically renews at €49/month, unless canceled beforehand.</li>
                           <li>The monthly payment is charged automatically using the same payment method provided at activation.</li>
                         </ul>
                       </div>
-
                       <div>
-                        <h5 className="font-medium">3. Duration and Cancellation</h5>
+                        <h5 className="font-semibold mt-4 mb-2">3. Duration and Cancellation</h5>
                         <ul className="list-disc list-inside ml-4 space-y-1">
                           <li>The agreement is open-ended with monthly renewal.</li>
                           <li>The business may cancel at any time before the end of the current billing cycle via email to [info@retapcard.com] or through their account dashboard.</li>
-                          <li>In case of cancellation, the provided POS device must be returned within 10 business days.</li>
+                          <li>In case of cancellation, the provided POS device and cards must be returned within 10 business days.</li>
                         </ul>
                       </div>
-
                       <div>
-                        <h5 className="font-medium">4. Device and Card Responsibility</h5>
+                        <h5 className="font-semibold mt-4 mb-2">4. Device and Card Responsibility</h5>
                         <ul className="list-disc list-inside ml-4 space-y-1">
                           <li>The POS is provided as a free loan (not sold) and remains property of Retap.</li>
-                          <li>In the event of non-return or damage not caused by manufacturing defects, a €60 fee will be charged.</li>
+                          <li>In the event of non-return or damage not caused by manufacturing defects, a €100 fee will be charged.</li>
                           <li>Loyalty cards already distributed to customers do not need to be returned and no extra cost will be charged for used cards.</li>
                         </ul>
                       </div>
-
                       <div>
-                        <h5 className="font-medium">5. Acceptance Clause</h5>
+                        <h5 className="font-semibold mt-4 mb-2">5. Acceptance Clause</h5>
                         <p>By checking the box and proceeding with the €1 payment, the Business Owner:</p>
                         <ul className="list-disc list-inside ml-4 space-y-1">
                           <li>fully accepts all terms listed above</li>
@@ -578,12 +572,6 @@ export default function MerchantSignupPage() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-5">
-                <p className="text-sm text-blue-700">
-                  <strong>Subscription Required:</strong> After registration, you'll be redirected to complete your monthly subscription (€49/month + €99 activation fee).
-                </p>
               </div>
 
               <Button
