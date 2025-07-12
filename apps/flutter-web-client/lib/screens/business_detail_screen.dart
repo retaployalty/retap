@@ -6,6 +6,8 @@ import '../components/reward_list.dart';
 import '../components/checkpoint_rewards_progress.dart';
 import '../components/merchant_history.dart';
 import '../components/merchant_info.dart';
+import '../theme/text_styles.dart';
+import '../theme/app_theme.dart';
 
 class BusinessDetailScreen extends StatefulWidget {
   final String businessName;
@@ -16,6 +18,7 @@ class BusinessDetailScreen extends StatefulWidget {
   final dynamic hours;
   final String merchantId;
   final String cardId;
+  final String? distance;
 
   const BusinessDetailScreen({
     super.key,
@@ -27,6 +30,7 @@ class BusinessDetailScreen extends StatefulWidget {
     required this.coverImageUrls,
     required this.merchantId,
     required this.cardId,
+    this.distance,
   });
 
   @override
@@ -175,49 +179,74 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFFF5F5F5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.textSecondary.withOpacity(0.3),
+                            width: 1,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 12,
-                              height: 12,
+                              width: 8,
+                              height: 8,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: widget.isOpen ? Colors.green : Colors.red,
+                                color: widget.isOpen ? AppColors.success : AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               widget.isOpen ? 'Open' : 'Closed',
-                              style: const TextStyle(
-                                color: Color(0xFF1A1A1A),
-                                fontSize: 16,
-                                fontFamily: 'Fredoka',
-                                fontWeight: FontWeight.w500,
-                                height: 1.40,
-                                letterSpacing: 0.48,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
                               const SizedBox(width: 8),
+                              Container(
+                                width: 1,
+                                height: 16,
+                                color: AppColors.textSecondary.withOpacity(0.3),
+                              ),
+                              const SizedBox(width: 8),
                               Text(
                                 getTodayOpeningHours(widget.hours),
-                                style: const TextStyle(
-                                  color: Color(0xFF1A1A1A),
-                                  fontSize: 14,
-                                  fontFamily: 'Fredoka',
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.40,
-                                  letterSpacing: 0.40,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
-                            ]
+                            ],
+                            if (widget.distance != null) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 1,
+                                height: 16,
+                                color: AppColors.textSecondary.withOpacity(0.3),
+                              ),
+                              const SizedBox(width: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: AppColors.textSecondary,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.distance!,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -483,11 +512,9 @@ class _BusinessHeaderState extends State<BusinessHeader> {
                   maxLines: 1,
                   textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: AppTextStyles.headlineSmall.copyWith(
                     color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 8, color: Colors.black26)],
+                    shadows: const [Shadow(blurRadius: 8, color: Colors.black26)],
                   ),
                 ),
               ),

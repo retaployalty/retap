@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 
 class MerchantInfo extends StatelessWidget {
   final String name;
@@ -41,16 +42,9 @@ class MerchantInfo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Contacts',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 22,
-              fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w600,
-              height: 1.10,
-              letterSpacing: 0.66,
-            ),
+            style: AppTextStyles.headlineSmall.copyWith(color: Color(0xFF1A1A1A)),
           ),
           const SizedBox(height: 18),
           _InfoRow(
@@ -93,16 +87,9 @@ class MerchantInfo extends StatelessWidget {
             ),
           ],
           const Divider(height: 18, thickness: 1, color: Color(0xFFE6E6E6)),
-          const Text(
+          Text(
             'Opening Hours',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 17,
-              fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w600,
-              height: 1.10,
-              letterSpacing: 0.4,
-            ),
+            style: AppTextStyles.titleMedium.copyWith(color: Color(0xFF1A1A1A)),
           ),
           const SizedBox(height: 12),
           if (hours != null)
@@ -114,13 +101,9 @@ class MerchantInfo extends StatelessWidget {
               ),
             )
           else
-            const Text(
+            Text(
               'Opening hours not available',
-              style: TextStyle(
-                color: Color(0xFF666666),
-                fontSize: 13,
-                fontFamily: 'Fredoka',
-              ),
+              style: AppTextStyles.bodySmall.copyWith(color: Color(0xFF666666)),
             ),
         ],
       ),
@@ -158,10 +141,8 @@ class MerchantInfo extends StatelessWidget {
             children: [
               Text(
                 day,
-                style: TextStyle(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: isToday ? AppColors.primary : const Color(0xFF1A1A1A),
-                  fontSize: 14,
-                  fontFamily: 'Fredoka',
                   fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -171,12 +152,10 @@ class MerchantInfo extends StatelessWidget {
                     ? '${dayHours['open']}\n${dayHours['close']}'
                     : 'Closed',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: isOpen 
                       ? (isToday ? AppColors.primary : const Color(0xFF1A1A1A))
                       : const Color(0xFF666666),
-                  fontSize: 12,
-                  fontFamily: 'Fredoka',
                   fontWeight: isOpen ? FontWeight.w500 : FontWeight.normal,
                   height: 1.2,
                 ),
@@ -231,10 +210,8 @@ class _InfoRow extends StatelessWidget {
                   Expanded(
                     child: Text(
                       text,
-                      style: TextStyle(
+                      style: AppTextStyles.bodyMedium.copyWith(
                         color: isLink ? Color(0xFF2563EB) : Color(0xFF1A1A1A),
-                        fontSize: 15,
-                        fontFamily: 'Fredoka',
                         fontWeight: isLink ? FontWeight.w600 : FontWeight.w500,
                         decoration: TextDecoration.none,
                       ),

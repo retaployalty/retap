@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 
 class TransactionHistory {
   final DateTime date;
@@ -50,41 +51,23 @@ class MerchantHistory extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Activity History',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 22,
-              fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w600,
-              height: 1.10,
-              letterSpacing: 0.66,
-            ),
+            style: AppTextStyles.headlineSmall.copyWith(color: Color(0xFF1A1A1A)),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'All your activities with this business',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w500,
-              height: 1.40,
-              letterSpacing: 0.48,
-            ),
+            style: AppTextStyles.bodyMedium.copyWith(color: Color(0xFF1A1A1A)),
           ),
           const SizedBox(height: 16),
           if (history.isEmpty)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
                   'No activity to show',
-                  style: TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 15,
-                    fontFamily: 'Fredoka',
-                  ),
+                  style: AppTextStyles.bodyMedium.copyWith(color: Color(0xFF666666)),
                 ),
               ),
             )
@@ -149,12 +132,7 @@ class _HistoryItem extends StatelessWidget {
           Text(
             '${_formatDate(item.date)} ${_formatTime(item.date)}',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 13,
-              fontFamily: 'Fredoka',
-              fontWeight: FontWeight.w500,
-            ),
+            style: AppTextStyles.bodySmall.copyWith(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           // Value
@@ -166,10 +144,8 @@ class _HistoryItem extends StatelessWidget {
             ),
             child: Text(
               _getValue(item),
-              style: TextStyle(
+              style: AppTextStyles.bodyMedium.copyWith(
                 color: _getPillTextColor(item.type),
-                fontSize: 14,
-                fontFamily: 'Fredoka',
                 fontWeight: FontWeight.w600,
               ),
             ),
