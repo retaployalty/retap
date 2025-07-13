@@ -402,6 +402,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             hours: hours,
                                             merchantId: business['merchant_id'],
                                             cardId: cardId!,
+                                            distance: distance,
                                           ),
                                         ),
                                       );

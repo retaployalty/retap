@@ -296,6 +296,13 @@ BEGIN
     WHERE c.id = $1
     GROUP BY cm.merchant_id, m.name, c.issuing_merchant_id, m.industry, m.logo_url, m.hours, m.latitude, m.longitude
   ),
+  active_subscriptions AS (
+    SELECT DISTINCT m.id as merchant_id
+    FROM public.merchants m
+    JOIN public.subscriptions s ON s.profile_id = m.profile_id
+    WHERE s.status = 'active'
+    AND (s.end_date IS NULL OR s.end_date > now())
+  ),
   checkpoints AS (
     SELECT
       cp.merchant_id as cp_merchant_id,
@@ -338,6 +345,7 @@ BEGIN
     COALESCE(bc.total_steps, 0) as checkpoints_total,
     COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps
   FROM merchant_balances mb
+  JOIN active_subscriptions asub ON asub.merchant_id = mb.mb_merchant_id
   LEFT JOIN best_checkpoint bc ON bc.cp_merchant_id = mb.mb_merchant_id
   LEFT JOIN reward_steps rs ON rs.cp_merchant_id = mb.mb_merchant_id
   ORDER BY mb.balance DESC;

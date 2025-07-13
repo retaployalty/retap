@@ -374,6 +374,7 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                                           hours: business['hours'],
                                           merchantId: business['id'],
                                           cardId: cardId!,
+                                          distance: business['distanceFormatted'],
                                         ),
                                       ),
                                     );
@@ -391,6 +392,7 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                                           hours: business['hours'],
                                           merchantId: business['id'],
                                           cardId: cardId!,
+                                          distance: business['distanceFormatted'],
                                         ),
                                       ),
                                     );

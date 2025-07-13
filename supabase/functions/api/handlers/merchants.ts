@@ -5,6 +5,7 @@ import { MerchantDetails, MerchantHistory } from "../types.ts";
 export async function handleGetMerchants() {
   const supabaseClient = createSupabaseClient();
 
+  // Get merchants with active subscriptions
   const { data: merchants, error } = await supabaseClient
     .from('merchants')
     .select(`
@@ -17,6 +18,7 @@ export async function handleGetMerchants() {
       hours,
       latitude,
       longitude,
+      profile_id,
       rewards (*),
       checkpoint_offers (
         *,
@@ -32,7 +34,33 @@ export async function handleGetMerchants() {
     return createErrorResponse(error.message, 400);
   }
 
-  return createSuccessResponse({ merchants });
+  // Filter merchants with active subscriptions
+  const merchantsWithActiveSubscriptions: any[] = [];
+  
+  for (const merchant of merchants || []) {
+    if (merchant.profile_id) {
+      // Check if merchant has active subscription
+      const { data: subscription, error: subError } = await supabaseClient
+        .from('subscriptions')
+        .select('status, end_date')
+        .eq('profile_id', merchant.profile_id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Include merchant only if they have an active subscription
+      if (!subError && subscription) {
+        // Check if subscription is not expired
+        const isNotExpired = !subscription.end_date || new Date(subscription.end_date) > new Date();
+        if (isNotExpired) {
+          merchantsWithActiveSubscriptions.push(merchant);
+        }
+      }
+    }
+  }
+
+  return createSuccessResponse({ merchants: merchantsWithActiveSubscriptions });
 }
 
 export async function handleGetMerchantDetails(merchantId: string, cardId?: string): Promise<Response> {
@@ -62,6 +90,8 @@ export async function handleGetMerchantDetails(merchantId: string, cardId?: stri
   if (merchantError) {
     return createErrorResponse(merchantError.message, 400);
   }
+
+
 
   // If cardId is provided, get balance and checkpoint progress
   let balance = 0;

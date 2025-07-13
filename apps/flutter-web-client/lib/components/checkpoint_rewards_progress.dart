@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../theme/text_styles.dart';
 
 class CheckpointRewardsProgress extends StatefulWidget {
   final int currentStep;
@@ -223,68 +224,16 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                 top: 20,
                 child: Text(
                   widget.offerName,
-                  style: const TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 22,
-                    fontFamily: 'Fredoka',
-                    fontWeight: FontWeight.w600,
-                    height: 1.10,
-                    letterSpacing: 0.66,
-                  ),
+                  style: AppTextStyles.headlineSmall.copyWith(color: const Color(0xFF1A1A1A)),
                 ),
               ),
               // Sottotitolo
               Positioned(
                 left: 22,
                 top: 50,
-                child: Row(
-                  children: [
-                    Text(
-                      widget.offerDescription,
-                      style: const TextStyle(
-                        color: Color(0xFF1A1A1A),
-                        fontSize: 16,
-                        fontFamily: 'Fredoka',
-                        fontWeight: FontWeight.w500,
-                        height: 1.40,
-                        letterSpacing: 0.48,
-                      ),
-                    ),
-                    if (widget.currentStep < widget.totalSteps) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFFFF6565),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.trending_up,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${_getNextRewardStep() - widget.currentStep} to go',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontFamily: 'Fredoka',
-                                fontWeight: FontWeight.w500,
-                                height: 1.40,
-                                letterSpacing: 0.40,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  widget.offerDescription,
+                  style: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF1A1A1A)),
                 ),
               ),
               // Progresso numerico e icona in alto a destra
@@ -294,15 +243,18 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${widget.currentStep}/${widget.totalSteps}',
-                      style: const TextStyle(
-                        color: Color(0xFFFF6565),
-                        fontSize: 22,
-                        fontFamily: 'Fredoka',
-                        fontWeight: FontWeight.w600,
-                        height: 1.10,
-                        letterSpacing: 0.66,
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${widget.currentStep}',
+                            style: AppTextStyles.headlineSmall.copyWith(color: const Color(0xFFFF6565)),
+                          ),
+                          TextSpan(
+                            text: '/${widget.totalSteps}',
+                            style: AppTextStyles.headlineSmall.copyWith(color: const Color(0xFFFF6565)),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -448,11 +400,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                                       const SizedBox(height: 24),
                                                                       Text(
                                                                         isRedeemed ? 'Reward already redeemed' : 'Reward available!',
-                                                                        style: TextStyle(
-                                                                          fontSize: 20,
-                                                                          fontWeight: FontWeight.bold,
-                                                                          color: isRedeemed ? Color(0xFFFF6565) : Color(0xFF00A699),
-                                                                        ),
+                                                                        style: AppTextStyles.headlineSmall,
                                                                         textAlign: TextAlign.center,
                                                                       ),
                                                                       const SizedBox(height: 16),
@@ -460,7 +408,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                                         isRedeemed
                                                                           ? 'You have already redeemed this reward. Complete the cycle to earn it again!'
                                                                           : 'Tell the business you want to redeem this reward!',
-                                                                        style: const TextStyle(fontSize: 16, color: Color(0xFF222222)),
+                                                                        style: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF222222)),
                                                                         textAlign: TextAlign.center,
                                                                       ),
                                                                       const SizedBox(height: 28),
@@ -503,14 +451,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                             child: Text(
                                                               rewardLabel,
                                                               textAlign: TextAlign.center,
-                                                              style: const TextStyle(
-                                                                color: Colors.white,
-                                                                fontSize: 15,
-                                                                fontFamily: 'Fredoka',
-                                                                fontWeight: FontWeight.w600,
-                                                                height: 1.1,
-                                                                letterSpacing: 0.48,
-                                                              ),
+                                                              style: AppTextStyles.titleSmall.copyWith(color: Colors.white),
                                                             ),
                                                           ),
                                                         ),
@@ -575,14 +516,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                   child: Text(
                                                     rewardLabel,
                                                     textAlign: TextAlign.center,
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF1A1A1A),
-                                                      fontSize: 15,
-                                                      fontFamily: 'Fredoka',
-                                                      fontWeight: FontWeight.w600,
-                                                      height: 1.1,
-                                                      letterSpacing: 0.48,
-                                                    ),
+                                                    style: AppTextStyles.titleSmall.copyWith(color: const Color(0xFF1A1A1A)),
                                                   ),
                                                 ),
                                               ),
@@ -599,13 +533,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                     ),
                                                     child: Text(
                                                       '${step - widget.currentStep} steps',
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 11,
-                                                        fontFamily: 'Fredoka',
-                                                        fontWeight: FontWeight.w600,
-                                                        height: 1.0,
-                                                      ),
+                                                      style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
                                                     ),
                                                   ),
                                                 ),

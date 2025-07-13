@@ -50,14 +50,7 @@ class RewardList extends StatelessWidget {
               top: 22,
               child: Text(
                 'Reward',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w600,
-                  height: 1.10,
-                  letterSpacing: 0.66,
-                ),
+                style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
               ),
             ),
             // Saldo punti
@@ -68,14 +61,7 @@ class RewardList extends StatelessWidget {
                 children: [
                   Text(
                     userPoints.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontFamily: 'Fredoka',
-                      fontWeight: FontWeight.w600,
-                      height: 1.10,
-                      letterSpacing: 0.66,
-                    ),
+                    style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
                   ),
                   const SizedBox(width: 4),
                   SvgPicture.asset(
@@ -192,14 +178,7 @@ class _CheckpointOfferCard extends StatelessWidget {
               width: width-36,
               child: Text(
                 offer.name,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 18,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w600,
-                  height: 1.10,
-                  letterSpacing: 0.48,
-                ),
+                style: AppTextStyles.titleMedium.copyWith(color: const Color(0xFF1A1A1A)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -213,14 +192,7 @@ class _CheckpointOfferCard extends StatelessWidget {
               children: [
                 Text(
                   '$currentStep/${offer.totalSteps}',
-                  style: const TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 14,
-                    fontFamily: 'Roboto',
-                    fontWeight: FontWeight.w400,
-                    height: 1.33,
-                    letterSpacing: 0.40,
-                  ),
+                  style: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF1A1A1A)),
                 ),
                 const SizedBox(width: 4),
                 const Icon(Icons.card_giftcard, size: 20, color: Color(0xFF1A1A1A)),
@@ -349,14 +321,7 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
               width: widget.width-36,
               child: Text(
                 widget.reward.title,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 18,
-                  fontFamily: 'Fredoka',
-                  fontWeight: FontWeight.w600,
-                  height: 1.10,
-                  letterSpacing: 0.48,
-                ),
+                style: AppTextStyles.titleMedium.copyWith(color: const Color(0xFF1A1A1A)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -370,14 +335,7 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
               children: [
                 Text(
                   widget.reward.price.toString(),
-                  style: const TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 14,
-                    fontFamily: 'Roboto',
-                    fontWeight: FontWeight.w400,
-                    height: 1.33,
-                    letterSpacing: 0.40,
-                  ),
+                  style: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF1A1A1A)),
                 ),
                 const SizedBox(width: 4),
                 SvgPicture.asset(
@@ -431,19 +389,15 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'Reward available!',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF6565),
-                            ),
+                            style: AppTextStyles.headlineSmall.copyWith(color: Color(0xFFFF6565)),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'Tell the business you want to redeem this reward!',
-                            style: TextStyle(fontSize: 16, color: Color(0xFF222222)),
+                            style: AppTextStyles.bodyMedium.copyWith(color: Color(0xFF222222)),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 28),
@@ -457,7 +411,7 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                              child: Text('OK', style: AppTextStyles.titleSmall.copyWith(color: Colors.white)),
                             ),
                           ),
                         ],
