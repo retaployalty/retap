@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 import '../shared_utils/business_hours.dart';
 
 class BusinessListCard extends StatelessWidget {
@@ -27,7 +29,6 @@ class BusinessListCard extends StatelessWidget {
   }) : super(key: key);
 
   bool get isOpen => isBusinessOpen(openingHours);
-  String get formattedHours => getTodayOpeningHours(openingHours);
 
   int get totalPointsRewards => rewards?.where((r) => r['is_active'] == true).length ?? 0;
 
@@ -45,6 +46,54 @@ class BusinessListCard extends StatelessWidget {
   int get totalCheckpointRewards {
     if (checkpointOffers == null || checkpointOffers!.isEmpty) return 0;
     return checkpointOffers!.where((offer) => offer['is_active'] == true).length;
+  }
+
+  // Trova il primo step con reward e il suo nome
+  Map<String, dynamic> get firstCheckpointReward {
+    if (checkpointOffers == null || checkpointOffers!.isEmpty) {
+      return {'step': 0, 'name': 'No Rewards'};
+    }
+    
+    // Trova il primo step che ha un reward (il primo in ordine di step_number)
+    for (final offer in checkpointOffers!) {
+      if (offer['steps'] != null) {
+        final steps = offer['steps'] as List;
+        // Ordina gli steps per step_number per prendere il primo
+        steps.sort((a, b) => (a['step_number'] ?? 0).compareTo(b['step_number'] ?? 0));
+        
+        for (final step in steps) {
+          if (step['reward_id'] != null && step['reward'] != null) {
+            // Il reward è nella struttura step.reward
+            final reward = step['reward'] as Map<String, dynamic>;
+            final rewardName = reward['name'] ?? 'Reward';
+            return {
+              'step': step['step_number'] ?? 1,
+              'name': rewardName
+            };
+          }
+        }
+      }
+    }
+    
+    return {'step': 1, 'name': 'Reward'};
+  }
+
+  IconData get industryIcon {
+    switch (industry?.toLowerCase()) {
+      case 'gelateria':
+        return Icons.icecream;
+      case 'caffè':
+      case 'caffe':
+        return Icons.coffee;
+      case 'ristorante':
+        return Icons.restaurant;
+      case 'pizzeria':
+        return Icons.local_pizza;
+      case 'bar':
+        return Icons.local_bar;
+      default:
+        return Icons.store;
+    }
   }
 
   @override
@@ -66,12 +115,12 @@ class BusinessListCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Cover Image with Gradient Overlay
-            Stack(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Cover Image
                 ClipRRect(
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
@@ -79,331 +128,181 @@ class BusinessListCard extends StatelessWidget {
                   ),
                   child: Image.network(
                     imageUrl,
-                    height: 180,
+                    height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: 180,
+                      height: 200,
                       color: AppColors.primary.withOpacity(0.08),
                       child: const Center(child: Icon(Icons.store, color: AppColors.primary, size: 48)),
                     ),
                   ),
                 ),
-                // Status Badge
-                Positioned(
-                  top: 16,
-                  right: 16,
+                // Business Info Section
+                Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Distance Badge
-                      if (distance != null)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.location_on, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                distance!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                      // Business Name
+                      Text(
+                        name,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
                         ),
-                      // Open/Closed Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isOpen ? const Color(0xFF58CC02) : const Color(0xFFFF4B4B)).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isOpen ? 'Open' : 'Closed',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                ),
-                // Business Name Overlay
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.8),
-                        ],
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(0, 1),
-                                blurRadius: 3,
-                                color: Colors.black45,
-                              ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (industry != null) ...[
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              industry!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Business Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hours
-                  if (formattedHours.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE5E5E5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 8),
+                      // Industry and Status Row
+                      Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.access_time, color: Colors.grey[700], size: 14),
+                          Icon(
+                            industryIcon,
+                            color: AppColors.textSecondary,
+                            size: 16,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Text(
-                            formattedHours,
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                            industry ?? 'Business',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.textSecondary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Text(
+                            isOpen ? 'Open' : 'Closed',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: isOpen ? AppColors.success : AppColors.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  const SizedBox(height: 16),
-                  // Rewards Section
-                  Row(
-                    children: [
-                      // Checkpoint Reward
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF6565).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFFF6565).withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF6565).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 16),
+                      // Rewards Section
+                      Row(
+                        children: [
+                          // Checkpoint Rewards Pill
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppColors.textSecondary.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                                child: const Icon(Icons.card_giftcard, color: Color(0xFFFF6565), size: 18),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Checkpoint Reward',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${firstCheckpointReward['step']}/8',
+                                    style: AppTextStyles.bodyLarge.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      checkpointRewardTitle,
-                                      style: const TextStyle(
-                                        color: Color(0xFFFF6565),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      '${firstCheckpointReward['name']}',
+                                      style: AppTextStyles.bodyLarge.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Points Rewards
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primary.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.stars, color: AppColors.primary, size: 18),
                             ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          const SizedBox(width: 12),
+                          // Points Rewards Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppColors.textSecondary.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'Points Rewards',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                                SvgPicture.asset(
+                                  'assets/icons/mingcute_gift-fill.svg',
+                                  width: 18,
+                                  height: 18,
+                                  colorFilter: ColorFilter.mode(
+                                    AppColors.primary,
+                                    BlendMode.srcIn,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(width: 4),
                                 Text(
-                                  '$totalPointsRewards available',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                  '$totalPointsRewards',
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (address != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              address!,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            // Distance Badge - positioned above everything
+            if (distance != null)
+              Positioned(
+                top: 185,
+                right: 16,
+                child: Material(
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_on, color: AppColors.textSecondary, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          distance!,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
