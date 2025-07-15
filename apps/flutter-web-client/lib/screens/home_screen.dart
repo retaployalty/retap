@@ -245,6 +245,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'checkpoints_current': business['checkpoints_current'],
         'checkpoints_total': business['checkpoints_total'],
         'reward_steps': business['reward_steps'],
+        'current_reward_name': business['current_reward_name'],
+        'is_redeemable': business['is_redeemable'],
         'cover_image_url': business['cover_image_url'],
         'latitude': business['latitude'],
         'longitude': business['longitude'],
@@ -375,6 +377,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   final checkpointsTotal = business['checkpoints_total'] ?? 0;
                                   final points = business['balance'] ?? 0;
                                   final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+                                  final currentRewardName = business['current_reward_name'] as String?;
+                                  final isRedeemable = business['is_redeemable'] as bool?;
+                                  print('DEBUG: Business ${business['merchant_name']} - current_reward_name: $currentRewardName, is_redeemable: $isRedeemable');
                                   final distance = _getDistanceText(business);
                                   return BusinessCard(
                                     category: category,
@@ -386,6 +391,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     checkpointsTotal: checkpointsTotal,
                                     points: points,
                                     rewardSteps: rewardSteps,
+                                    currentRewardName: currentRewardName,
+                                    isRedeemable: isRedeemable,
                                     distance: distance,
                                     hours: hours,
                                     onTap: () {

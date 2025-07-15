@@ -296,7 +296,7 @@ $$;
 ALTER FUNCTION "public"."create_merchant_card_allocation"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "latitude" numeric, "longitude" numeric, "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[])
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "latitude" numeric, "longitude" numeric, "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[], "current_reward_name" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
 BEGIN
@@ -353,6 +353,15 @@ BEGIN
     JOIN public.checkpoint_steps cs ON cs.offer_id = bc.offer_id
     WHERE cs.reward_id IS NOT NULL
     GROUP BY bc.cp_merchant_id
+  ),
+  current_reward AS (
+    SELECT 
+      bc.cp_merchant_id,
+      cr.name as reward_name
+    FROM best_checkpoint bc
+    JOIN public.checkpoint_steps cs ON cs.offer_id = bc.offer_id AND cs.step_number = bc.current_step
+    JOIN public.checkpoint_rewards cr ON cr.id = cs.reward_id
+    WHERE cs.reward_id IS NOT NULL
   )
   SELECT 
     mb.mb_merchant_id as merchant_id,
@@ -366,11 +375,13 @@ BEGIN
     mb.longitude,
     COALESCE(bc.current_step, 0) as checkpoints_current,
     COALESCE(bc.total_steps, 0) as checkpoints_total,
-    COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps
+    COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps,
+    cr.reward_name as current_reward_name
   FROM merchant_balances mb
   JOIN active_subscriptions asub ON asub.merchant_id = mb.mb_merchant_id
   LEFT JOIN best_checkpoint bc ON bc.cp_merchant_id = mb.mb_merchant_id
   LEFT JOIN reward_steps rs ON rs.cp_merchant_id = mb.mb_merchant_id
+  LEFT JOIN current_reward cr ON cr.cp_merchant_id = mb.mb_merchant_id
   ORDER BY mb.balance DESC;
 END;
 $_$;
