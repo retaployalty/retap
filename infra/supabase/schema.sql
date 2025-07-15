@@ -273,7 +273,30 @@ $$;
 ALTER FUNCTION "public"."create_customer_checkpoint"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "latitude" numeric, "longitude" numeric, "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[])
+CREATE OR REPLACE FUNCTION "public"."create_merchant_card_allocation"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    INSERT INTO public.merchant_card_allocation (
+        merchant_id,
+        total_cards_allocated,
+        cards_distributed,
+        cards_available
+    ) VALUES (
+        NEW.id,
+        100, -- Default allocation
+        0,   -- No cards distributed yet
+        100  -- All cards available
+    );
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_merchant_card_allocation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_card_balance"("card_id" "uuid") RETURNS TABLE("merchant_id" "uuid", "merchant_name" "text", "balance" bigint, "is_issuer" boolean, "industry" "text", "logo_url" "text", "hours" "jsonb", "latitude" numeric, "longitude" numeric, "checkpoints_current" integer, "checkpoints_total" integer, "reward_steps" integer[], "current_reward_name" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $_$
 BEGIN
@@ -330,6 +353,15 @@ BEGIN
     JOIN public.checkpoint_steps cs ON cs.offer_id = bc.offer_id
     WHERE cs.reward_id IS NOT NULL
     GROUP BY bc.cp_merchant_id
+  ),
+  current_reward AS (
+    SELECT 
+      bc.cp_merchant_id,
+      cr.name as reward_name
+    FROM best_checkpoint bc
+    JOIN public.checkpoint_steps cs ON cs.offer_id = bc.offer_id AND cs.step_number = bc.current_step
+    JOIN public.checkpoint_rewards cr ON cr.id = cs.reward_id
+    WHERE cs.reward_id IS NOT NULL
   )
   SELECT 
     mb.mb_merchant_id as merchant_id,
@@ -343,11 +375,13 @@ BEGIN
     mb.longitude,
     COALESCE(bc.current_step, 0) as checkpoints_current,
     COALESCE(bc.total_steps, 0) as checkpoints_total,
-    COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps
+    COALESCE(rs.steps, ARRAY[]::integer[]) as reward_steps,
+    cr.reward_name as current_reward_name
   FROM merchant_balances mb
   JOIN active_subscriptions asub ON asub.merchant_id = mb.mb_merchant_id
   LEFT JOIN best_checkpoint bc ON bc.cp_merchant_id = mb.mb_merchant_id
   LEFT JOIN reward_steps rs ON rs.cp_merchant_id = mb.mb_merchant_id
+  LEFT JOIN current_reward cr ON cr.cp_merchant_id = mb.mb_merchant_id
   ORDER BY mb.balance DESC;
 END;
 $_$;
@@ -760,6 +794,26 @@ $$;
 
 ALTER FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward_id" "uuid") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."update_merchant_cards_distributed"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    -- Update the cards_distributed count for the merchant
+    UPDATE public.merchant_card_allocation 
+    SET 
+        cards_distributed = cards_distributed + 1,
+        cards_available = cards_available - 1,
+        updated_at = now()
+    WHERE merchant_id = NEW.issuing_merchant_id;
+    
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_merchant_cards_distributed"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -926,6 +980,38 @@ COMMENT ON COLUMN "public"."customers"."phone_number" IS 'Numero di telefono del
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."merchant_card_allocation" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "merchant_id" "uuid" NOT NULL,
+    "total_cards_allocated" integer DEFAULT 100 NOT NULL,
+    "cards_distributed" integer DEFAULT 0 NOT NULL,
+    "cards_available" integer DEFAULT 100 NOT NULL,
+    "last_allocation_date" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "merchant_card_allocation_cards_check" CHECK ((("total_cards_allocated" >= 0) AND ("cards_distributed" >= 0) AND ("cards_available" >= 0)))
+);
+
+
+ALTER TABLE "public"."merchant_card_allocation" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."merchant_card_allocation" IS 'Tracks card allocation and distribution for each merchant';
+
+
+
+COMMENT ON COLUMN "public"."merchant_card_allocation"."total_cards_allocated" IS 'Total cards allocated to merchant (default 100)';
+
+
+
+COMMENT ON COLUMN "public"."merchant_card_allocation"."cards_distributed" IS 'Number of cards actually distributed to customers';
+
+
+
+COMMENT ON COLUMN "public"."merchant_card_allocation"."cards_available" IS 'Cards still available for distribution';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
@@ -946,7 +1032,12 @@ CREATE TABLE IF NOT EXISTS "public"."merchants" (
     "latitude" numeric(10,8),
     "longitude" numeric(11,8),
     "stripe_customer_id" "text",
-    "stripe_subscription_id" "text"
+    "stripe_subscription_id" "text",
+    "subscription_status" "text",
+    "subscription_start_date" timestamp with time zone,
+    "subscription_end_date" timestamp with time zone,
+    "payment_status" "text",
+    "last_payment_date" timestamp with time zone
 );
 
 
@@ -998,6 +1089,26 @@ COMMENT ON COLUMN "public"."merchants"."stripe_customer_id" IS 'Stripe customer 
 
 
 COMMENT ON COLUMN "public"."merchants"."stripe_subscription_id" IS 'Stripe subscription ID';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."subscription_status" IS 'Status of the subscription (active, cancelled, expired, pending)';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."subscription_start_date" IS 'Start date of the subscription';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."subscription_end_date" IS 'End date of the subscription';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."payment_status" IS 'Status of the last payment (active, failed, pending)';
+
+
+
+COMMENT ON COLUMN "public"."merchants"."last_payment_date" IS 'Date of the last payment';
 
 
 
@@ -1179,6 +1290,16 @@ ALTER TABLE ONLY "public"."customers"
 
 
 
+ALTER TABLE ONLY "public"."merchant_card_allocation"
+    ADD CONSTRAINT "merchant_card_allocation_merchant_id_key" UNIQUE ("merchant_id");
+
+
+
+ALTER TABLE ONLY "public"."merchant_card_allocation"
+    ADD CONSTRAINT "merchant_card_allocation_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."merchants"
     ADD CONSTRAINT "merchants_pkey" PRIMARY KEY ("id");
 
@@ -1235,6 +1356,10 @@ CREATE INDEX "idx_subscriptions_stripe_subscription_id" ON "public"."subscriptio
 
 
 
+CREATE OR REPLACE TRIGGER "on_card_created" AFTER INSERT ON "public"."cards" FOR EACH ROW EXECUTE FUNCTION "public"."update_merchant_cards_distributed"();
+
+
+
 CREATE OR REPLACE TRIGGER "on_card_merchant_created" AFTER INSERT ON "public"."card_merchants" FOR EACH ROW EXECUTE FUNCTION "public"."create_customer_checkpoint"();
 
 
@@ -1248,6 +1373,14 @@ CREATE OR REPLACE TRIGGER "on_checkpoint_rewards_updated" BEFORE UPDATE ON "publ
 
 
 CREATE OR REPLACE TRIGGER "on_checkpoint_steps_updated" BEFORE UPDATE ON "public"."checkpoint_steps" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_merchant_card_allocation_updated" BEFORE UPDATE ON "public"."merchant_card_allocation" FOR EACH ROW EXECUTE FUNCTION "public"."handle_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "on_merchant_created" AFTER INSERT ON "public"."merchants" FOR EACH ROW EXECUTE FUNCTION "public"."create_merchant_card_allocation"();
 
 
 
@@ -1343,6 +1476,11 @@ ALTER TABLE ONLY "public"."customer_checkpoints"
 
 ALTER TABLE ONLY "public"."customer_checkpoints"
     ADD CONSTRAINT "customer_checkpoints_offer_id_fkey" FOREIGN KEY ("offer_id") REFERENCES "public"."checkpoint_offers"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."merchant_card_allocation"
+    ADD CONSTRAINT "merchant_card_allocation_merchant_id_fkey" FOREIGN KEY ("merchant_id") REFERENCES "public"."merchants"("id") ON DELETE CASCADE;
 
 
 
@@ -1607,6 +1745,12 @@ CREATE POLICY "Merchants can update their customers' redeemed checkpoint rewar" 
 
 
 
+CREATE POLICY "Merchants can update their own card allocation" ON "public"."merchant_card_allocation" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
 CREATE POLICY "Merchants can update their own checkpoint offers" ON "public"."checkpoint_offers" FOR UPDATE USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
@@ -1658,6 +1802,12 @@ CREATE POLICY "Merchants can view their customers' checkpoints" ON "public"."cus
 
 
 CREATE POLICY "Merchants can view their customers' redeemed checkpoint rewards" ON "public"."redeemed_checkpoint_rewards" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
+   FROM "public"."merchants"
+  WHERE ("merchants"."profile_id" = "auth"."uid"()))));
+
+
+
+CREATE POLICY "Merchants can view their own card allocation" ON "public"."merchant_card_allocation" FOR SELECT USING (("merchant_id" IN ( SELECT "merchants"."id"
    FROM "public"."merchants"
   WHERE ("merchants"."profile_id" = "auth"."uid"()))));
 
@@ -1923,6 +2073,12 @@ GRANT ALL ON FUNCTION "public"."create_customer_checkpoint"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."create_merchant_card_allocation"() TO "anon";
+GRANT ALL ON FUNCTION "public"."create_merchant_card_allocation"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_merchant_card_allocation"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_card_balance"("card_id" "uuid") TO "service_role";
@@ -2013,6 +2169,12 @@ GRANT ALL ON FUNCTION "public"."redeem_reward"("p_merchant_id" "uuid", "p_reward
 
 
 
+GRANT ALL ON FUNCTION "public"."update_merchant_cards_distributed"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_merchant_cards_distributed"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_merchant_cards_distributed"() TO "service_role";
+
+
+
 
 
 
@@ -2079,6 +2241,12 @@ GRANT ALL ON TABLE "public"."customer_checkpoints" TO "service_role";
 GRANT ALL ON TABLE "public"."customers" TO "anon";
 GRANT ALL ON TABLE "public"."customers" TO "authenticated";
 GRANT ALL ON TABLE "public"."customers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."merchant_card_allocation" TO "anon";
+GRANT ALL ON TABLE "public"."merchant_card_allocation" TO "authenticated";
+GRANT ALL ON TABLE "public"."merchant_card_allocation" TO "service_role";
 
 
 
