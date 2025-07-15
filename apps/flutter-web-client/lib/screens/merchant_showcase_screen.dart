@@ -101,204 +101,227 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
         .cast<CheckpointOffer>();
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            children: [
-              // Header con logo e messaggio di benvenuto
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+      body: Column(
+        children: [
+          // Contenuto scrollabile
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
                   children: [
-                    if (logoUrl != null)
-                      Stack(
-                        alignment: Alignment.center,
+                    // Header con logo e messaggio di benvenuto
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 136,
-                            height: 136,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.black, width: 3),
-                            ),
-                          ),
-                          Container(
-                            width: 130,
-                            height: 130,
-                            color: Colors.transparent,
-                          ),
-                          CircleAvatar(
-                            radius: 66,
-                            backgroundColor: Colors.transparent,
-                            child: ClipOval(
-                              child: Image.network(
-                                logoUrl,
-                                fit: BoxFit.cover,
-                                width: 124,
-                                height: 124,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Riga "Hi, welcome"
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Hi, ',
-                                style: AppTextStyles.headlineLarge.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                          if (logoUrl != null)
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 136,
+                                  height: 136,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.black, width: 3),
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'welcome',
-                                style: AppTextStyles.headlineLarge.copyWith(
-                                  color: const Color(0xFFFF6B6B),
-                                  fontWeight: FontWeight.w700,
+                                Container(
+                                  width: 130,
+                                  height: 130,
+                                  color: Colors.transparent,
                                 ),
-                              ),
-                            ],
-                          ),
-                          // Riga "da Nome!"
-                          Text(
-                            'da $name!',
-                            style: AppTextStyles.headlineLarge.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                                CircleAvatar(
+                                  radius: 66,
+                                  backgroundColor: Colors.transparent,
+                                  child: ClipOval(
+                                    child: Image.network(
+                                      logoUrl,
+                                      fit: BoxFit.cover,
+                                      width: 124,
+                                      height: 124,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Riga "Hi, welcome"
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Hi, ',
+                                      style: AppTextStyles.headlineLarge.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      'welcome',
+                                      style: AppTextStyles.headlineLarge.copyWith(
+                                        color: const Color(0xFFFF6B6B),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Riga "da Nome!"
+                                Text(
+                                  'da $name!',
+                                  style: AppTextStyles.headlineLarge.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
+
+                    // Checkpoint Progress
+                    if (checkpointOfferItems.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
+                        child: Builder(
+                          builder: (context) {
+                            final steps = checkpointOfferItems.first.steps;
+                            final rewardSteps = steps
+                                .where((step) => step.reward != null)
+                                .map((step) => step.stepNumber)
+                                .toList()
+                                .cast<int>();
+
+                            // Converti esplicitamente i reward labels in Map<int, String>
+                            final rewardLabels = Map<int, String>.fromEntries(
+                              steps
+                                  .where((step) => step.reward != null)
+                                  .map((step) => MapEntry<int, String>(
+                                        step.stepNumber,
+                                        step.reward?.name ?? 'Free Reward',
+                                      ))
+                                  .toList()
+                                  .cast<MapEntry<int, String>>(),
+                            );
+
+                            return CheckpointRewardsProgress(
+                              currentStep: _currentCheckpointStep,
+                              totalSteps: checkpointOfferItems.first.totalSteps,
+                              rewardSteps: rewardSteps,
+                              rewardLabels: rewardLabels,
+                              offerName: checkpointOfferItems.first.name,
+                              offerDescription: checkpointOfferItems.first.description,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+
+                    // Rewards List
+                    if (rewardItems.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6.0),
+                        child: RewardList(
+                          userPoints: _userPoints,
+                          rewards: rewardItems,
+                          checkpointOffers: checkpointOfferItems,
+                          currentCheckpointStep: _currentCheckpointStep,
+                        ),
+                      ),
+
+                    // Spazio extra per evitare che il contenuto sia nascosto dal tasto fisso
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
-
-              // Checkpoint Progress
-              if (checkpointOfferItems.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
-                  child: Builder(
-                    builder: (context) {
-                      final steps = checkpointOfferItems.first.steps;
-                      final rewardSteps = steps
-                          .where((step) => step.reward != null)
-                          .map((step) => step.stepNumber)
-                          .toList()
-                          .cast<int>();
-
-                      // Converti esplicitamente i reward labels in Map<int, String>
-                      final rewardLabels = Map<int, String>.fromEntries(
-                        steps
-                            .where((step) => step.reward != null)
-                            .map((step) => MapEntry<int, String>(
-                                  step.stepNumber,
-                                  step.reward?.name ?? 'Free Reward',
-                                ))
-                            .toList()
-                            .cast<MapEntry<int, String>>(),
-                      );
-
-                      return CheckpointRewardsProgress(
-                        currentStep: _currentCheckpointStep,
-                        totalSteps: checkpointOfferItems.first.totalSteps,
-                        rewardSteps: rewardSteps,
-                        rewardLabels: rewardLabels,
-                        offerName: checkpointOfferItems.first.name,
-                        offerDescription: checkpointOfferItems.first.description,
-                      );
-                    },
-                  ),
+            ),
+          ),
+          
+          // Tasto fisso in basso
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
                 ),
               ],
-
-              // Rewards List
-              if (rewardItems.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6.0),
-                  child: RewardList(
-                    userPoints: _userPoints,
-                    rewards: rewardItems,
-                    checkpointOffers: checkpointOfferItems,
-                    currentCheckpointStep: _currentCheckpointStep,
-                  ),
-                ),
-
-              // Grande tasto in fondo
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                  child: _showCheck
-                      ? SizedBox(
-                          key: const ValueKey('check'),
-                          height: 64,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showLoyaltyCardPopup(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFF6B6B),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: EdgeInsets.zero,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                child: _showCheck
+                    ? SizedBox(
+                        key: const ValueKey('check'),
+                        height: 64,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showLoyaltyCardPopup(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFFF6B6B),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Center(
-                              child: Icon(Icons.check_circle, color: Colors.white, size: 38),
-                            ),
+                            padding: EdgeInsets.zero,
                           ),
-                        )
-                      : SizedBox(
-                          key: const ValueKey('redeem'),
-                          height: 64,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showLoyaltyCardPopup(context);
-                              setState(() {
-                                _showCheck = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFF6B6B),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              textStyle: AppTextStyles.headlineMedium.copyWith(
+                          child: const Center(
+                            child: Icon(Icons.check_circle, color: Colors.white, size: 38),
+                          ),
+                        ),
+                      )
+                    : SizedBox(
+                        key: const ValueKey('redeem'),
+                        height: 64,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showLoyaltyCardPopup(context);
+                            setState(() {
+                              _showCheck = true;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFFF6B6B),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: AppTextStyles.headlineMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Redeem rewards!',
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Redeem rewards!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                ),
+                                fontSize: 24,
                               ),
                             ),
                           ),
                         ),
+                      ),
               ),
-          )],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
