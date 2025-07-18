@@ -65,24 +65,65 @@ class BusinessCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Immagine a sinistra
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                bottomLeft: Radius.circular(24),
-              ),
-              child: Image.network(
-                logoUrl,
-                height: 160,
-                width: 160,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 160,
-                  width: 160,
-                  color: AppColors.primary.withOpacity(0.08),
-                  child: const Center(child: Icon(Icons.store, color: AppColors.primary, size: 48)),
+            // Immagine a sinistra con stato Open/Closed
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    bottomLeft: Radius.circular(24),
+                  ),
+                  child: Image.network(
+                    logoUrl,
+                    height: 160,
+                    width: 160,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 160,
+                      width: 160,
+                      color: AppColors.primary.withOpacity(0.08),
+                      child: const Center(child: Icon(Icons.store, color: AppColors.primary, size: 48)),
+                    ),
+                  ),
                 ),
-              ),
+                // Stato Open/Closed in alto a sinistra
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isOpen ? AppColors.success : AppColors.primary,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isOpen ? AppColors.success : AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isOpen ? 'Open' : 'Closed',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: isOpen ? AppColors.success : AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             // Contenuto a destra
             Expanded(
@@ -95,7 +136,7 @@ class BusinessCard extends StatelessWidget {
                     // Nome business
                     Text(
                       name,
-                      style: AppTextStyles.titleLarge.copyWith(
+                      style: AppTextStyles.titleMedium.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                       ),
@@ -103,7 +144,7 @@ class BusinessCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 12),
-                    // Tipo business, stato e distanza
+                    // Tipo business e distanza
                     Row(
                       children: [
                         Icon(
@@ -116,22 +157,6 @@ class BusinessCard extends StatelessWidget {
                           category,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.textSecondary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        Text(
-                          isOpen ? 'Open' : 'Closed',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: isOpen ? AppColors.success : AppColors.primary,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (distance != null) ...[
@@ -151,8 +176,8 @@ class BusinessCard extends StatelessWidget {
                             ),
                           ),
                         ],
-                                              ],
-                      ),
+                      ],
+                    ),
                       const SizedBox(height: 20),
                       // Pillole rewards
                     Row(
@@ -160,10 +185,10 @@ class BusinessCard extends StatelessWidget {
                         // Checkpoint Rewards Pill
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                             decoration: BoxDecoration(
                               color: isRedeemable == true ? const Color(0xFFFF6565) : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isRedeemable == true ? const Color(0xFFFF6565) : AppColors.textSecondary.withOpacity(0.3),
                                 width: 1,
@@ -174,7 +199,7 @@ class BusinessCard extends StatelessWidget {
                               children: [
                                 Text(
                                   '$checkpointsCurrent/$checkpointsTotal',
-                                  style: AppTextStyles.bodyLarge.copyWith(
+                                  style: AppTextStyles.bodyMedium.copyWith(
                                     color: isRedeemable == true ? Colors.white : const Color(0xFFFF6565),
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -183,7 +208,7 @@ class BusinessCard extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     currentRewardName ?? 'Checkpoint',
-                                    style: AppTextStyles.bodyLarge.copyWith(
+                                    style: AppTextStyles.bodyMedium.copyWith(
                                       color: isRedeemable == true ? Colors.white : AppColors.textPrimary,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -198,10 +223,10 @@ class BusinessCard extends StatelessWidget {
                         const SizedBox(width: 12),
                         // Points Rewards Pill
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: AppColors.textSecondary.withOpacity(0.3),
                               width: 1,
@@ -212,8 +237,8 @@ class BusinessCard extends StatelessWidget {
                             children: [
                               SvgPicture.asset(
                                 'assets/icons/tabler_coin-filled.svg',
-                                width: 18,
-                                height: 18,
+                                width: 16,
+                                height: 16,
                                 colorFilter: ColorFilter.mode(
                                   AppColors.primary,
                                   BlendMode.srcIn,
@@ -222,7 +247,7 @@ class BusinessCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               Text(
                                 '$points',
-                                style: AppTextStyles.bodyLarge.copyWith(
+                                style: AppTextStyles.bodyMedium.copyWith(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
