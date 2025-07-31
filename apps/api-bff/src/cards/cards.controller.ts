@@ -70,15 +70,31 @@ import {
         console.log('All cards with this UID:', allCards);
         console.log('All cards error:', allCardsError);
 
-        // Poi proviamo con il filtro merchant
+        // Poi proviamo con il filtro merchant e includiamo i dati del customer
+        console.log('🔍 Fetching card with UID:', uid);
+        console.log('🔍 Merchant ID:', merchantId);
+        
         const { data: card, error: cardError } = await this.supabase.client
           .from('cards')
-          .select('*')
+          .select(`
+            *,
+            customer:customers(
+              id,
+              first_name,
+              last_name,
+              email,
+              phone_number
+            )
+          `)
           .eq('uid', uid)
           .eq('issuing_merchant_id', merchantId);
 
-        console.log('Filtered cards:', card);
-        console.log('Filtered cards error:', cardError);
+        console.log('🔍 Filtered cards:', card);
+        console.log('🔍 Filtered cards error:', cardError);
+        
+        if (card && card.length > 0) {
+          console.log('✅ Card found with customer data:', card[0]);
+        }
 
         if (cardError) throw new BadRequestException('Card not found');
         if (!card || card.length === 0) throw new BadRequestException('Card not found');

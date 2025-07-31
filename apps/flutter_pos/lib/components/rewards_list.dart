@@ -107,9 +107,14 @@ class _RewardsListState extends State<RewardsList> {
     if (widget.card == null || widget.card!.customerId == null || _isRedeeming) {
       if (!_isRedeeming) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Carta o cliente non trovato'),
+          SnackBar(
+            content: const Text('❌ Card or customer not found'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -144,8 +149,13 @@ class _RewardsListState extends State<RewardsList> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Premio ${reward.name} riscattato con successo!'),
+          content: Text('🎁 ${reward.name} redeemed successfully!'),
           backgroundColor: const Color(0xFFFF6565),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } catch (e) {
@@ -153,8 +163,13 @@ class _RewardsListState extends State<RewardsList> {
       setState(() => _isRedeeming = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore nel riscatto del premio: $e'),
+          content: Text('❌ Error redeeming reward: $e'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }

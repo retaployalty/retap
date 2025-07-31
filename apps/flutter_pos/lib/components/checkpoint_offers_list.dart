@@ -181,9 +181,14 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(rewardName != null 
-              ? '🎉 $rewardName sbloccato!' 
-              : 'Checkpoint avanzato con successo!'),
+              ? '🎉 $rewardName unlocked!' 
+              : '🎯 Checkpoint advanced successfully!'),
             backgroundColor: const Color(0xFFFF6565),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -230,9 +235,14 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       // Mostra feedback
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('⏪ Checkpoint tornato indietro con successo!'),
+          SnackBar(
+            content: const Text('⏪ Checkpoint rewinded successfully!'),
             backgroundColor: const Color(0xFFFF6565),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -287,8 +297,13 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎁 $rewardName riscattato con successo!'),
+            content: Text('🎁 $rewardName redeemed successfully!'),
             backgroundColor: const Color(0xFFFF6565),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -301,8 +316,13 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Errore nel riscatto: $e'),
+          content: Text('❌ Error redeeming reward: $e'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }
