@@ -65,8 +65,41 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.store,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Loading...',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -108,72 +141,99 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
             children: [
               // Header con logo e messaggio di benvenuto
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (logoUrl != null)
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 136,
-                            height: 136,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.black, width: 3),
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            logoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.primary.withOpacity(0.1),
+                                child: const Icon(
+                                  Icons.store,
+                                  color: AppColors.primary,
+                                  size: 40,
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: AppColors.primary.withOpacity(0.1),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          Container(
-                            width: 130,
-                            height: 130,
-                            color: Colors.transparent,
-                          ),
-                          CircleAvatar(
-                            radius: 66,
-                            backgroundColor: Colors.transparent,
-                            child: ClipOval(
-                              child: Image.network(
-                                logoUrl,
-                                fit: BoxFit.cover,
-                                width: 124,
-                                height: 124,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 20),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Riga "Hi, welcome"
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Hi, ',
-                                style: AppTextStyles.headlineLarge.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Hi, ',
+                                  style: AppTextStyles.headlineMedium.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'welcome',
-                                style: AppTextStyles.headlineLarge.copyWith(
-                                  color: const Color(0xFFFF6B6B),
-                                  fontWeight: FontWeight.w700,
+                                TextSpan(
+                                  text: 'Welcome',
+                                  style: AppTextStyles.headlineMedium.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          // Riga "da Nome!"
+                          const SizedBox(height: 4),
                           Text(
-                            'da $name!',
-                            style: AppTextStyles.headlineLarge.copyWith(
+                            'at $name!',
+                            style: AppTextStyles.headlineMedium.copyWith(
                               color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -233,73 +293,76 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
                   ),
                 ),
 
-              // Grande tasto in fondo
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                  child: _showCheck
-                      ? SizedBox(
-                          key: const ValueKey('check'),
-                          height: 64,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showLoyaltyCardPopup(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFF6B6B),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.check_circle, color: Colors.white, size: 38),
-                            ),
-                          ),
-                        )
-                      : SizedBox(
-                          key: const ValueKey('redeem'),
-                          height: 64,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showLoyaltyCardPopup(context);
-                              setState(() {
-                                _showCheck = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFF6B6B),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              textStyle: AppTextStyles.headlineMedium.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Redeem rewards!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-              ),
-          )],
+              // Spazio extra per il FAB
+              const SizedBox(height: 100),
+            ],
           ),
         ),
       ),
+      floatingActionButton: Container(
+        width: MediaQuery.of(context).size.width - 32,
+        height: 64,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+          child: _showCheck
+              ? Container(
+                  key: const ValueKey('check'),
+                  width: double.infinity,
+                  height: 64,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showLoyaltyCardPopup(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFFF6B6B),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.check_circle, color: Colors.white, size: 38),
+                    ),
+                  ),
+                )
+              : Container(
+                  key: const ValueKey('redeem'),
+                  width: double.infinity,
+                  height: 64,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showLoyaltyCardPopup(context);
+                      setState(() {
+                        _showCheck = true;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFFF6B6B),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: AppTextStyles.headlineMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Redeem rewards!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 

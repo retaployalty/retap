@@ -282,42 +282,92 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_customerName != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedTextKit(
-                          animatedTexts: [
-                            TypewriterAnimatedText(
-                              'Hi $_customerName',
-                              textStyle: AppTextStyles.displaySmall,
-                              speed: const Duration(milliseconds: 50),
-                              cursor: '',
-                            ),
-                          ],
-                          totalRepeatCount: 1,
-                          displayFullTextOnTap: true,
-                          onFinished: () {
-                            setState(() {
-                              _showGreeting = true;
-                            });
-                          },
-                        ),
-                        if (_showGreeting)
-                          AnimatedTextKit(
-                            animatedTexts: [
-                              TypewriterAnimatedText(
-                                'good morning!',
-                                textStyle: AppTextStyles.displaySmall.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                                speed: const Duration(milliseconds: 50),
-                                cursor: '',
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWideScreen = constraints.maxWidth > 400;
+                        
+                        if (isWideScreen) {
+                          // Layout orizzontale per schermi larghi
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AnimatedTextKit(
+                                animatedTexts: [
+                                  TypewriterAnimatedText(
+                                    'Hi $_customerName',
+                                    textStyle: AppTextStyles.displaySmall,
+                                    speed: const Duration(milliseconds: 50),
+                                    cursor: '',
+                                  ),
+                                ],
+                                totalRepeatCount: 1,
+                                displayFullTextOnTap: true,
+                                onFinished: () {
+                                  setState(() {
+                                    _showGreeting = true;
+                                  });
+                                },
                               ),
+                              if (_showGreeting) ...[
+                                const SizedBox(width: 8),
+                                AnimatedTextKit(
+                                  animatedTexts: [
+                                    TypewriterAnimatedText(
+                                      'good morning!',
+                                      textStyle: AppTextStyles.displaySmall.copyWith(
+                                        color: AppColors.primary,
+                                      ),
+                                      speed: const Duration(milliseconds: 50),
+                                      cursor: '',
+                                    ),
+                                  ],
+                                  totalRepeatCount: 1,
+                                  displayFullTextOnTap: true,
+                                ),
+                              ],
                             ],
-                            totalRepeatCount: 1,
-                            displayFullTextOnTap: true,
-                          ),
-                      ],
+                          );
+                        } else {
+                          // Layout verticale per schermi stretti
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AnimatedTextKit(
+                                animatedTexts: [
+                                  TypewriterAnimatedText(
+                                    'Hi $_customerName',
+                                    textStyle: AppTextStyles.displaySmall,
+                                    speed: const Duration(milliseconds: 50),
+                                    cursor: '',
+                                  ),
+                                ],
+                                totalRepeatCount: 1,
+                                displayFullTextOnTap: true,
+                                onFinished: () {
+                                  setState(() {
+                                    _showGreeting = true;
+                                  });
+                                },
+                              ),
+                              if (_showGreeting)
+                                AnimatedTextKit(
+                                  animatedTexts: [
+                                    TypewriterAnimatedText(
+                                      'good morning!',
+                                      textStyle: AppTextStyles.displaySmall.copyWith(
+                                        color: AppColors.primary,
+                                      ),
+                                      speed: const Duration(milliseconds: 50),
+                                      cursor: '',
+                                    ),
+                                  ],
+                                  totalRepeatCount: 1,
+                                  displayFullTextOnTap: true,
+                                ),
+                            ],
+                          );
+                        }
+                      },
                     ),
                 ],
               ),

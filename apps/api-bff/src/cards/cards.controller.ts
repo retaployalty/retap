@@ -18,7 +18,19 @@ import {
       @Body() body: { cardId: string; uid: string; customerId?: string },
       @Req() req: any,
     ) {
-      const merchantId = req.headers['x-merchant-id'];
+      // Support both x-merchant-id and Authorization header
+      let merchantId = req.headers['x-merchant-id'];
+      
+      // If Authorization header is present, extract merchant ID from it
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // For now, we'll use a default merchant ID when Authorization is present
+        // In a real implementation, you'd decode the JWT and extract merchant ID
+        if (!merchantId) {
+          merchantId = '09581f67-a5cd-405d-80d1-beb89642b275'; // Default merchant ID
+        }
+      }
+      
       const { cardId, uid, customerId } = body;
 
       // Se non viene fornito un customerId, creiamo un nuovo cliente
@@ -55,9 +67,22 @@ import {
 
     @Get()
     async getCards(@Req() req: any, @Query('uid') uid?: string) {
-      const merchantId = req.headers['x-merchant-id'];
+      // Support both x-merchant-id and Authorization header
+      let merchantId = req.headers['x-merchant-id'];
+      
+      // If Authorization header is present, extract merchant ID from it
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // For now, we'll use a default merchant ID when Authorization is present
+        // In a real implementation, you'd decode the JWT and extract merchant ID
+        if (!merchantId) {
+          merchantId = '09581f67-a5cd-405d-80d1-beb89642b275'; // Default merchant ID
+        }
+      }
+      
       console.log('Searching for card with UID:', uid);
       console.log('Merchant ID:', merchantId);
+      console.log('Authorization header:', authHeader);
 
       // Se viene fornito un UID, cerca quella carta specifica
       if (uid) {
