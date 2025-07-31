@@ -19,13 +19,13 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _locationEnabled = true;
-  bool _biometricEnabled = false;
   bool _isLoading = false;
   String? _error;
   String? _cardId;
   String? _customerId;
+  String? _customerFirstName;
+  String? _customerLastName;
+  String? _customerPhone;
   
   // Supabase client
   final _supabase = Supabase.instance.client;
@@ -40,24 +40,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     _cardId = prefs.getString('retap_card_id');
     
+    print('🆔 Loaded card ID: $_cardId');
+    
     if (_cardId != null) {
       await _loadCustomerData();
+    } else {
+      print('❌ No card ID found in SharedPreferences');
+      setState(() {
+        _error = 'No card ID found. Please scan your card first.';
+      });
     }
   }
 
   Future<void> _loadCustomerData() async {
     try {
+      print('🔍 Loading customer data for card ID: $_cardId');
+      
       final cardResponse = await _supabase
           .from('cards')
           .select('customer_id')
           .eq('id', _cardId!)
           .maybeSingle();
 
+      print('📋 Card response: $cardResponse');
+
       if (cardResponse != null) {
         _customerId = cardResponse['customer_id'] as String;
+        print('👤 Customer ID: $_customerId');
+        
+        // Carica i dati del cliente
+        final customerResponse = await _supabase
+            .from('customers')
+            .select('first_name, last_name, phone_number')
+            .eq('id', _customerId!)
+            .maybeSingle();
+
+        print('👤 Customer response: $customerResponse');
+
+        setState(() {
+          if (customerResponse != null) {
+            _customerFirstName = customerResponse['first_name'] as String?;
+            _customerLastName = customerResponse['last_name'] as String?;
+            _customerPhone = customerResponse['phone_number'] as String?;
+          } else {
+            _customerFirstName = null;
+            _customerLastName = null;
+            _customerPhone = null;
+          }
+        });
+        
+        print('✅ Updated state - First: $_customerFirstName, Last: $_customerLastName, Phone: $_customerPhone');
+      } else {
+        print('❌ No card found for ID: $_cardId');
+        setState(() {
+          _customerFirstName = null;
+          _customerLastName = null;
+          _customerPhone = null;
+        });
       }
     } catch (e) {
-      print('Error loading customer data: $e');
+      print('❌ Error loading customer data: $e');
+      setState(() {
+        _customerFirstName = null;
+        _customerLastName = null;
+        _customerPhone = null;
+      });
     }
   }
 
@@ -106,10 +153,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             
             // Profile Section
-            _buildSectionHeader('Account'),
-            const SizedBox(height: 16),
-            _buildProfileCard(),
-            const SizedBox(height: 32),
+            if (_customerFirstName != null && _customerLastName != null) ...[
+              _buildSectionHeader('Account'),
+              const SizedBox(height: 16),
+              _buildProfileCard(),
+              const SizedBox(height: 32),
+            ],
 
             // Wallet Section
             _buildSectionHeader('Wallet'),
@@ -117,17 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildWalletSection(),
             const SizedBox(height: 32),
 
-            // Security Section
-            _buildSectionHeader('Security & Privacy'),
-            const SizedBox(height: 16),
-            _buildSecuritySection(),
-            const SizedBox(height: 32),
 
-            // Preferences Section
-            _buildSectionHeader('Preferences'),
-            const SizedBox(height: 16),
-            _buildPreferencesSection(),
-            const SizedBox(height: 32),
 
             // Support Section
             _buildSectionHeader('Support'),
@@ -157,6 +196,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildProfileCard() {
+    print('🎨 Building profile card - First: $_customerFirstName, Last: $_customerLastName, Phone: $_customerPhone');
+    
+    final fullName = _customerFirstName != null && _customerLastName != null
+        ? '$_customerFirstName $_customerLastName'
+        : '';
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -191,14 +236,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'John Doe',
+                  fullName,
                   style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'john.doe@example.com',
+                  _customerPhone ?? 'Phone number not available',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -206,10 +251,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          Icon(
-            Icons.edit,
-            color: AppColors.textSecondary,
-            size: 20,
+          GestureDetector(
+            onTap: () => _showEditProfileDialog(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.edit,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
           ),
         ],
       ),
@@ -258,92 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSecuritySection() {
-    return Column(
-      children: [
-        _buildSettingsTile(
-          icon: Icons.lock,
-          title: 'Change Password',
-          subtitle: 'Update your account password',
-          onTap: () {
-            // Navigate to change password
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildSettingsTile(
-          icon: Icons.fingerprint,
-          title: 'Biometric Login',
-          subtitle: 'Use fingerprint or face ID',
-          onTap: null,
-          trailing: Switch(
-            value: _biometricEnabled,
-            onChanged: (value) {
-              setState(() {
-                _biometricEnabled = value;
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildSettingsTile(
-          icon: Icons.security,
-          title: 'Two-Factor Authentication',
-          subtitle: 'Add an extra layer of security',
-          onTap: () {
-            // Navigate to 2FA settings
-          },
-        ),
-      ],
-    );
-  }
 
-  Widget _buildPreferencesSection() {
-    return Column(
-      children: [
-        _buildSettingsTile(
-          icon: Icons.notifications,
-          title: 'Push Notifications',
-          subtitle: 'Receive updates about your rewards',
-          onTap: null,
-          trailing: Switch(
-            value: _notificationsEnabled,
-            onChanged: (value) {
-              setState(() {
-                _notificationsEnabled = value;
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildSettingsTile(
-          icon: Icons.location_on,
-          title: 'Location Services',
-          subtitle: 'Find nearby businesses',
-          onTap: null,
-          trailing: Switch(
-            value: _locationEnabled,
-            onChanged: (value) {
-              setState(() {
-                _locationEnabled = value;
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildSettingsTile(
-          icon: Icons.language,
-          title: 'Language',
-          subtitle: 'English',
-          onTap: () {
-            // Navigate to language settings
-          },
-        ),
-      ],
-    );
-  }
 
   Widget _buildSupportSection() {
     return Column(
@@ -406,15 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         ),
         const SizedBox(height: 12),
-        _buildSettingsTile(
-          icon: Icons.logout,
-          title: 'Sign Out',
-          subtitle: 'Sign out of your account',
-          onTap: () {
-            _showSignOutDialog();
-          },
-          isDestructive: true,
-        ),
+
       ],
     );
   }
@@ -480,76 +442,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
 
-  void _showSignOutDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.logout,
-                  color: Colors.red,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Sign Out',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Are you sure you want to sign out? You\'ll need to sign in again to access your account.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Perform sign out
-                _performSignOut();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                'Sign Out',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _navigateToLostCardReplacement() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -558,14 +450,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _performSignOut() {
-    // TODO: Implement sign out logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sign out successful'),
-        backgroundColor: AppColors.success,
-      ),
+  void _showEditProfileDialog() {
+    final firstNameController = TextEditingController(text: _customerFirstName ?? '');
+    final lastNameController = TextEditingController(text: _customerLastName ?? '');
+    final phoneController = TextEditingController(text: _customerPhone ?? '');
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: Colors.white,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Edit Profile',
+                          style: AppTextStyles.headlineSmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // First Name
+                    TextField(
+                      controller: firstNameController,
+                      decoration: InputDecoration(
+                        labelText: 'First Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Last Name
+                    TextField(
+                      controller: lastNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Last Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Phone Number
+                    TextField(
+                      controller: phoneController,
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : () async {
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+                          
+                          try {
+                            await _updateCustomerProfile(
+                              firstNameController.text,
+                              lastNameController.text,
+                              phoneController.text,
+                            );
+                            
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Profile updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isLoading = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating profile: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<void> _updateCustomerProfile(String firstName, String lastName, String phone) async {
+    if (_customerId == null) {
+      throw Exception('Customer ID not found');
+    }
+
+    await _supabase
+        .from('customers')
+        .update({
+          'first_name': firstName,
+          'last_name': lastName,
+          'phone_number': phone,
+        })
+        .eq('id', _customerId!);
+
+    // Aggiorna i dati locali
+    setState(() {
+      _customerFirstName = firstName;
+      _customerLastName = lastName;
+      _customerPhone = phone;
+    });
   }
 
   Future<void> _addToWallet() async {

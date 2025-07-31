@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:universal_html/html.dart' as universal_html;
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
 import '../theme/text_styles.dart';
 import '../shared_utils/google_wallet_service.dart';
@@ -28,6 +29,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   bool _isLoading = false;
+  bool _isAddingToWallet = false;
+  bool _isRequestingLocation = false;
   String? _error;
   String? _cardId;
   String? _customerId;
@@ -204,7 +207,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
   }
 
   void _nextStep() {
-    if (_currentStep < 2) {
+    if (_currentStep < 3) {
       _animationController.reverse().then((_) {
         setState(() {
           _currentStep += 1;
@@ -242,7 +245,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
-                  value: (_currentStep + 1) / 3,
+                  value: (_currentStep + 1) / 4,
                   backgroundColor: const Color(0xFFF5F5F5),
                   valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF6565)),
                 ),
@@ -295,6 +298,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
       case 1:
         return _buildWalletStep();
       case 2:
+        return _buildLocationStep();
+      case 3:
         return _buildPwaStep();
       default:
         return const SizedBox.shrink();
@@ -367,19 +372,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                             controller: _phoneController,
                             label: 'Phone Number',
                             icon: Icons.phone_outlined,
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.phone,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
+                              FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-\+\(\)]')),
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your phone number';
                               }
-                              if (value.length < 10 || value.length > 11) {
-                                return 'The number must be 10 or 11 digits';
-                              }
-                              if (!value.startsWith('3')) {
-                                return 'The number must start with 3';
+                              // Remove all non-digit characters for validation
+                              final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+                              if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+                                return 'Please enter a valid phone number (7-15 digits)';
                               }
                               return null;
                             },
@@ -510,9 +514,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6565).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFFF6565).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Text(
+                        'REQUIRED',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Fredoka',
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFFF6565),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Add your ReTap card to your device digital wallet',
+                      'You must add your ReTap card to your device digital wallet to use the app',
                       style: TextStyle(
                         fontSize: 16,
                         fontFamily: 'Fredoka',
@@ -530,30 +555,55 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: _addToWallet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6565),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
+                                Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6565), Color(0xFFFF5252)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
                       borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF6565).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    elevation: 0,
-                  ),
-                  icon: const Icon(Icons.add_to_home_screen, size: 24),
-                  label: const Text(
-                    'Add to Wallet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Fredoka',
-                      fontWeight: FontWeight.w600,
+                    child: ElevatedButton.icon(
+                      onPressed: _isAddingToWallet ? null : _addToWallet,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: _isAddingToWallet 
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.add_to_home_screen, size: 24),
+                      label: Text(
+                        _isAddingToWallet ? 'Adding to Wallet...' : 'Add to Wallet Now',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Fredoka',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: _previousStep,
@@ -671,21 +721,108 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 200,
+                          width: 280,
                           height: 200,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF6565).withOpacity(0.1),
-                            shape: BoxShape.circle,
+                            color: const Color(0xFFFF6565).withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFFF6565).withOpacity(0.2),
+                              width: 1,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.add_to_home_screen,
-                            size: 100,
-                            color: Color(0xFFFF6565),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF6565).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.home,
+                                      size: 24,
+                                      color: Color(0xFFFF6565),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    '1. Go to Home',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontFamily: 'Fredoka',
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1A1A1A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF6565).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.share,
+                                      size: 24,
+                                      color: Color(0xFFFF6565),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    '2. Tap Share',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontFamily: 'Fredoka',
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1A1A1A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF6565).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.add_to_home_screen,
+                                      size: 24,
+                                      color: Color(0xFFFF6565),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    '3. Add to Home',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontFamily: 'Fredoka',
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1A1A1A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 48),
                         const Text(
-                          'Install App',
+                          'Add to Home Screen',
                           style: TextStyle(
                             fontSize: 28,
                             fontFamily: 'Fredoka',
@@ -694,9 +831,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF6565).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFF6565).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Text(
+                            'OPTIONAL',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'Fredoka',
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFFF6565),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Add ReTap to your Home screen for quick access',
+                          'Follow these steps to add ReTap to your home screen for quick access',
                           style: TextStyle(
                             fontSize: 16,
                             fontFamily: 'Fredoka',
@@ -717,70 +875,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          // Verifica se l'app è già installata
-                          if (html.window.matchMedia('(display-mode: standalone)').matches) {
-                            _nextStep();
-                            return;
-                          }
-
-                          // Verifica se il browser supporta l'API di installazione
-                          final beforeInstallPrompt = html.window.localStorage['beforeinstallprompt'];
-                          if (beforeInstallPrompt != null) {
-                            // Mostra il prompt di installazione
-                            html.window.dispatchEvent(html.Event('beforeinstallprompt'));
-                            
-                            // Aspetta un momento per dare tempo al prompt di apparire
-                            await Future.delayed(const Duration(milliseconds: 500));
-                            
-                            // Procedi al prossimo step
-                            _nextStep();
-                          } else {
-                            // Se non possiamo installare automaticamente, mostra la guida
-                            setState(() {
-                              _showInstallGuide = true;
-                            });
-                          }
-                        } catch (e) {
-                          // In caso di errore, mostra la guida
-                          setState(() {
-                            _showInstallGuide = true;
-                          });
-                        }
-                      },
+                    child: ElevatedButton(
+                      onPressed: _nextStep,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6565),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
-                        ),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.add_to_home_screen, size: 24),
-                      label: const Text(
-                        'Add to Home',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontFamily: 'Fredoka',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _nextStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF666666),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                          side: const BorderSide(color: Color(0xFFDDDDDD)),
                         ),
                         elevation: 0,
                       ),
@@ -819,6 +920,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
   }
 
   Future<void> _addToWallet() async {
+    setState(() {
+      _isAddingToWallet = true;
+      _error = null;
+    });
+
     try {
       print('🚀 Inizio _addToWallet');
       
@@ -910,6 +1016,259 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
             duration: const Duration(seconds: 5),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingToWallet = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildLocationStep() {
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6565).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 100,
+                        color: Color(0xFFFF6565),
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    const Text(
+                      'Enable Location',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontFamily: 'Fredoka',
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6565).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFFF6565).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Text(
+                        'RECOMMENDED',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Fredoka',
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFFF6565),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Allow location access to find businesses near you and get personalized recommendations',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Fredoka',
+                        color: Color(0xFF666666),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6565), Color(0xFFFF5252)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6565).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: _isRequestingLocation ? null : _requestLocationPermission,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: _isRequestingLocation 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.location_on, size: 24),
+                  label: Text(
+                    _isRequestingLocation ? 'Requesting Permission...' : 'Enable Location',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF666666),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                      side: const BorderSide(color: Color(0xFFDDDDDD)),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Skip for now',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'Fredoka',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _previousStep,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF666666),
+                ),
+                child: const Text(
+                  'Back',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontFamily: 'Fredoka',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _requestLocationPermission() async {
+    setState(() {
+      _isRequestingLocation = true;
+      _error = null;
+    });
+
+    try {
+      // Verifica se i servizi di localizzazione sono abilitati
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled. Please enable them in your device settings.');
+      }
+
+      // Richiedi i permessi
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permission denied');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permissions are permanently denied. Please enable them in your device settings.');
+      }
+
+      // Ottieni la posizione corrente
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Salva la posizione nelle SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('saved_latitude', position.latitude);
+      await prefs.setDouble('saved_longitude', position.longitude);
+
+      print('📍 Location saved: ${position.latitude}, ${position.longitude}');
+
+      // Mostra messaggio di successo
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location access granted! You can now find businesses near you.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // Procedi al prossimo step
+      _nextStep();
+    } catch (e) {
+      print('❌ Error requesting location: $e');
+      setState(() {
+        _error = e.toString();
+      });
+      
+      // Mostra messaggio di errore
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRequestingLocation = false;
+        });
       }
     }
   }
