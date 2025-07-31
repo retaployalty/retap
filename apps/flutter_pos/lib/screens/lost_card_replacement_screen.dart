@@ -49,7 +49,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
         _nfcAvailable = availability == NFCAvailability.available;
       });
     } catch (e) {
-      debugPrint('Errore nel controllo disponibilità NFC: $e');
+      debugPrint('Error checking NFC availability: $e');
       setState(() {
         _nfcAvailable = false;
       });
@@ -65,7 +65,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
         formats: [BarcodeFormat.qrCode],
       );
     } catch (e) {
-      debugPrint('Errore nell\'inizializzazione dello scanner: $e');
+      debugPrint('Error initializing scanner: $e');
     }
   }
 
@@ -80,12 +80,12 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
       final String? code = barcodes.first.rawValue;
       if (code != null) {
         try {
-          debugPrint('QR Code rilevato: $code');
+          debugPrint('QR Code detected: $code');
           final decoded = jsonDecode(code);
           
           if (decoded is Map<String, dynamic> && decoded['type'] == 'retap_card' && decoded.containsKey('uid')) {
             final String cardUid = decoded['uid'];
-            debugPrint('UID della carta estratto: $cardUid');
+            debugPrint('Card UID extracted: $cardUid');
             
             // Estrai il cardId dall'URL
             final cardId = _extractCardIdFromUrl(code);
@@ -97,14 +97,14 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                 _isProcessing = false;
               });
             } else {
-              _showError('QR Code non valido: impossibile estrarre l\'ID della carta.');
+              _showError('Invalid QR Code: unable to extract card ID.');
             }
           } else {
-            _showError('QR Code non valido per ReTap.');
+            _showError('Invalid QR Code for ReTap.');
           }
         } catch (e) {
-          debugPrint('Errore durante la decodifica del QR Code: $e');
-          _showError('Formato QR Code non riconosciuto.');
+          debugPrint('Error decoding QR Code: $e');
+          _showError('Unrecognized QR Code format.');
         }
       }
     }
@@ -133,7 +133,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
       
       return null;
     } catch (e) {
-      debugPrint('Errore nell\'estrazione del cardId: $e');
+      debugPrint('Error extracting cardId: $e');
       return null;
     }
   }
@@ -145,6 +145,11 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
         content: Text(message),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        margin: const EdgeInsets.all(16),
       ),
     );
     setState(() => _isProcessing = false);
@@ -154,9 +159,14 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
   Future<void> _writeNewCard() async {
     if (!_nfcAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('NFC non disponibile su questo dispositivo'),
+        SnackBar(
+          content: const Text('❌ NFC not available on this device'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
       return;
@@ -164,9 +174,14 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
 
     if (_scannedCardId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Errore: carta originale non identificata'),
+        SnackBar(
+          content: const Text('❌ Error: original card not identified'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
       return;
@@ -175,38 +190,38 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      debugPrint('In attesa di una carta NFC vuota...');
+      debugPrint('Waiting for an empty NFC card...');
       
       // 1. Leggi il chip NFC
       final tag = await FlutterNfcKit.poll();
-      debugPrint('Carta rilevata! UID: ${tag.id}');
+      debugPrint('Card detected! UID: ${tag.id}');
 
       // Verifica se il tag supporta NDEF
       if (tag.ndefAvailable == false) {
-        throw Exception('Questa carta non supporta NDEF. Usa una carta NTAG.');
+        throw Exception('This card does not support NDEF. Use an NTAG card.');
       }
 
       // Verifica se il tag è scrivibile
       if (tag.ndefWritable == false) {
-        throw Exception('Questa carta è in sola lettura o già programmata.');
+        throw Exception('This card is read-only or already programmed.');
       }
 
       // Verifica se la carta è già programmata
       try {
         final existingRecords = await FlutterNfcKit.readNDEFRecords();
         if (existingRecords.isNotEmpty) {
-          throw Exception('Questa carta è già programmata. Usa una carta NTAG vuota.');
+          throw Exception('This card is already programmed. Use an empty NTAG card.');
         }
       } catch (readError) {
-        if (readError.toString().contains('già programmata')) {
+        if (readError.toString().contains('already programmed')) {
           rethrow;
         }
-        debugPrint('Errore nella lettura NDEF (normale per carte vuote): $readError');
+        debugPrint('Error reading NDEF (normal for empty cards): $readError');
       }
 
       // 2. Crea il link per la carta sostituita
       final cardUrl = 'https://app.retapcard.com/c/$_scannedCardId';
-      debugPrint('Link generato: $cardUrl');
+      debugPrint('Generated link: $cardUrl');
 
       // 3. Scrivi il link sul chip in formato NDEF
       try {
@@ -220,20 +235,20 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
         while (!writeSuccess && retryCount < maxRetries) {
           try {
             retryCount++;
-            debugPrint('Tentativo di scrittura $retryCount/$maxRetries...');
+            debugPrint('Write attempt $retryCount/$maxRetries...');
             
             await FlutterNfcKit.writeNDEFRecords([uriRecord]);
             writeSuccess = true;
-            debugPrint('✅ Link scritto sul chip con successo!');
+            debugPrint('✅ Link written to chip successfully!');
           } catch (writeError) {
-            debugPrint('❌ Tentativo $retryCount fallito: $writeError');
+            debugPrint('❌ Attempt $retryCount failed: $writeError');
             
             if (retryCount < maxRetries) {
               await Future.delayed(const Duration(seconds: 1));
               try {
                 await FlutterNfcKit.poll();
               } catch (pollError) {
-                throw Exception('La carta è stata allontanata durante la scrittura');
+                throw Exception('The card was moved during writing');
               }
             } else {
               throw writeError;
@@ -255,19 +270,24 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
         );
 
         if (res.statusCode != 200 && res.statusCode != 201) {
-          throw Exception('Errore nell\'aggiornamento del database: ${res.body}');
+          throw Exception('Error updating database: ${res.body}');
         }
 
         final responseData = jsonDecode(res.body);
-        debugPrint('✅ Carta sostituita nel database: ${responseData['message']}');
+        debugPrint('✅ Card replaced in database: ${responseData['message']}');
 
         // 5. Mostra messaggio di successo
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Carta sostituita con successo!'),
+            SnackBar(
+              content: const Text('✅ Card replaced successfully!'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
 
@@ -283,21 +303,21 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           );
         }
 
-        await FlutterNfcKit.finish(iosAlertMessage: '✅ Carta sostituita!');
-        debugPrint('🎉 Operazione completata con successo!');
+        await FlutterNfcKit.finish(iosAlertMessage: '✅ Card replaced!');
+        debugPrint('🎉 Operation completed successfully!');
       } catch (e) {
-        debugPrint('❌ ERRORE durante la scrittura NFC: $e');
+        debugPrint('❌ ERROR during NFC writing: $e');
         
-        String errorMessage = 'Errore nella scrittura NFC';
+        String errorMessage = 'NFC writing error';
         
         if (e.toString().contains('Communication error')) {
-          errorMessage = 'Errore di comunicazione con la carta.\n\nSuggerimenti:\n• Mantieni la carta ferma e ben posizionata\n• Assicurati che sia una carta NTAG vuota\n• Riprova più volte se necessario';
-        } else if (e.toString().contains('Tag was lost') || e.toString().contains('carta è stata allontanata')) {
-          errorMessage = 'La carta è stata allontanata durante la scrittura.\n\nMantieni la carta ferma sul dispositivo fino al completamento.';
+          errorMessage = 'Communication error with the card.\n\nTips:\n• Keep the card steady and well positioned\n• Make sure it\'s an empty NTAG card\n• Try again multiple times if needed';
+        } else if (e.toString().contains('Tag was lost') || e.toString().contains('card was moved')) {
+          errorMessage = 'The card was moved during writing.\n\nKeep the card steady on the device until completion.';
         } else if (e.toString().contains('Not enough space')) {
-          errorMessage = 'Carta piena o non supportata.\n\nUsa una carta NTAG vuota (NTAG213/215/216).';
+          errorMessage = 'Card full or not supported.\n\nUse an empty NTAG card (NTAG213/215/216).';
         } else if (e.toString().contains('NDEF')) {
-          errorMessage = 'Carta non supportata.\n\nUsa una carta NTAG standard (NTAG213/215/216).';
+          errorMessage = 'Card not supported.\n\nUse a standard NTAG card (NTAG213/215/216).';
         }
         
         if (mounted) {
@@ -307,7 +327,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 8),
               action: SnackBarAction(
-                label: 'Riprova',
+                label: 'Retry',
                 textColor: Colors.white,
                 onPressed: () => _writeNewCard(),
               ),
@@ -315,21 +335,21 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           );
         }
         
-        await FlutterNfcKit.finish(iosAlertMessage: '❌ Errore nella scrittura NFC');
+        await FlutterNfcKit.finish(iosAlertMessage: '❌ NFC writing error');
       }
     } catch (e) {
-      debugPrint('❌ ERRORE durante l\'operazione: $e');
+      debugPrint('❌ ERROR during operation: $e');
       
-      String errorMessage = 'Errore sconosciuto';
+      String errorMessage = 'Unknown error';
       
       if (e.toString().contains('NFC not available')) {
-        errorMessage = 'NFC non disponibile su questo dispositivo';
+        errorMessage = 'NFC not available on this device';
       } else if (e.toString().contains('User cancelled')) {
-        errorMessage = 'Operazione annullata dall\'utente';
+        errorMessage = 'Operation cancelled by user';
       } else if (e.toString().contains('Timeout')) {
-        errorMessage = 'Timeout: nessuna carta rilevata';
+        errorMessage = 'Timeout: no card detected';
       } else {
-        errorMessage = 'Errore: $e';
+        errorMessage = 'Error: $e';
       }
       
       if (mounted) {
@@ -363,7 +383,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sostituzione Carta Persa'),
+        title: const Text('Lost Card Replacement'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -387,7 +407,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Scansione QR',
+                  'QR Scan',
                   style: TextStyle(
                     fontWeight: _currentStep >= 1 ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -399,7 +419,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Scrittura Carta',
+                  'Card Writing',
                   style: TextStyle(
                     fontWeight: _currentStep >= 2 ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -425,7 +445,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Inizializzazione scanner...'),
+            Text('Initializing scanner...'),
           ],
         ),
       );
@@ -470,7 +490,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                   CircularProgressIndicator(color: Colors.white),
                   SizedBox(height: 16),
                   Text(
-                    'Elaborazione...',
+                    'Processing...',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ],
@@ -489,7 +509,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
-              'Inquadra il QR Code della carta digitale del cliente',
+              'Point camera at the customer\'s digital card QR Code',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -517,7 +537,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Scrittura Nuova Carta',
+            'Write New Card',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.primary,
@@ -526,7 +546,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Carta originale identificata:\n${_scannedCardUid ?? 'N/A'}',
+            'Original card identified:\n${_scannedCardUid ?? 'N/A'}',
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -549,7 +569,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Avvicina una carta NTAG vuota per sostituire quella persa',
+                  'Bring an empty NTAG card close to replace the lost one',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.blue.shade700,
                     fontWeight: FontWeight.w500,
@@ -587,13 +607,13 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
                         ),
                       ),
                       SizedBox(width: 12),
-                      Text('Elaborazione...'),
+                      Text('Processing...'),
                     ],
                   )
-                : const Text(
-                    'Inizia Scrittura',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                                  : const Text(
+                      'Start Writing',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
             ),
           ),
           const SizedBox(height: 16),
@@ -601,7 +621,7 @@ class _LostCardReplacementScreenState extends State<LostCardReplacementScreen> {
           // Pulsante per tornare indietro
           TextButton(
             onPressed: _isProcessing ? null : _resetProcess,
-            child: const Text('Torna alla Scansione QR'),
+            child: const Text('Back to QR Scan'),
           ),
         ],
       ),
