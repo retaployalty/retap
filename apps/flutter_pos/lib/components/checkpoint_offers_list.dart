@@ -129,12 +129,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       
       final redeemedRewards = response['redeemed_rewards'] as List? ?? [];
       final redeemedIds = redeemedRewards
-          .map((reward) => reward['checkpoint_reward_id'] as String)
+          .map((reward) {
+            final rewardData = reward['reward'] as Map<String, dynamic>?;
+            return rewardData?['id'] as String?;
+          })
+          .where((id) => id != null)
+          .map((id) => id!)
           .toList();
       
       if (mounted) {
         setState(() {
           _redeemedRewardIds = redeemedIds;
+          debugPrint('✅ Rewards riscattati caricati: $_redeemedRewardIds');
         });
       }
     } catch (e) {
@@ -177,7 +183,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
             content: Text(rewardName != null 
               ? '🎉 $rewardName sbloccato!' 
               : 'Checkpoint avanzato con successo!'),
-            backgroundColor: Colors.green,
+            backgroundColor: const Color(0xFFFF6565),
           ),
         );
       }
@@ -226,7 +232,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('⏪ Checkpoint tornato indietro con successo!'),
-            backgroundColor: Colors.orange,
+            backgroundColor: const Color(0xFFFF6565),
           ),
         );
       }
@@ -266,27 +272,29 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
 
       setState(() => _isAdvancing = false);
 
-      // Aggiungi il reward alla lista dei riscattati
+      // Aggiungi il reward alla lista dei riscattati e aggiorna immediatamente l'UI
       setState(() {
         _redeemedRewardIds.add(rewardId);
+        debugPrint('✅ Reward $rewardId aggiunto alla lista riscattati. Lista attuale: $_redeemedRewardIds');
       });
+      
+      // Forza un rebuild completo per assicurarsi che l'UI si aggiorni
+      if (mounted) {
+        setState(() {});
+      }
 
       // Mostra feedback
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('🎁 $rewardName riscattato con successo!'),
-            backgroundColor: Colors.green,
-
+            backgroundColor: const Color(0xFFFF6565),
           ),
         );
       }
 
       // Notifica che un reward è stato riscattato per aggiornare la history
       widget.onCheckpointAdvanced?.call();
-      
-      // Ricarica i dati per aggiornare l'UI
-      _fetchRedeemedRewards();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAdvancing = false);
@@ -319,18 +327,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: const Color(0xFFFF6565).withOpacity(0.05),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.card_giftcard, color: Colors.orange[700], size: 24),
+                  Icon(Icons.card_giftcard, color: const Color(0xFFFF6565), size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'All Checkpoint Offers',
-                      style: TextStyle(
-                        color: Colors.orange[700],
+                      style: const TextStyle(
+                        color: Color(0xFFFF6565),
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
@@ -362,10 +370,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                      border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: const Color(0xFFFF6565).withOpacity(0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -378,7 +386,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.orange[50],
+                            color: const Color(0xFFFF6565).withOpacity(0.05),
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                           ),
                           child: Row(
@@ -410,7 +418,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange[700],
+                                  color: const Color(0xFFFF6565),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -436,8 +444,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                 borderRadius: BorderRadius.circular(8),
                                 child: LinearProgressIndicator(
                                   value: (currentStep / checkpoint.totalSteps).clamp(0.0, 1.0),
-                                  backgroundColor: Colors.orange[100],
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[700]!),
+                                  backgroundColor: const Color(0xFFFF6565).withOpacity(0.3),
+                                  valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFFFF6565)),
                                   minHeight: 8,
                                 ),
                               ),
@@ -463,10 +471,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: isCompleted ? Colors.green[50] : Colors.grey[50],
+                                      color: isCompleted ? const Color(0xFFFF6565).withOpacity(0.05) : Colors.grey[50],
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: isCompleted ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                                        color: isCompleted ? const Color(0xFFFF6565).withOpacity(0.3) : Colors.grey.withOpacity(0.3),
                                       ),
                                     ),
                                     child: Row(
@@ -475,7 +483,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                           width: 24,
                                           height: 24,
                                           decoration: BoxDecoration(
-                                            color: isCompleted ? Colors.green : Colors.grey,
+                                            color: isCompleted ? const Color(0xFFFF6565) : Colors.grey,
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(
@@ -494,7 +502,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 14,
-                                                  color: isCompleted ? Colors.green[700] : Colors.grey[700],
+                                                  color: isCompleted ? const Color(0xFFFF6565) : Colors.grey[700],
                                                 ),
                                               ),
                                               if (step.rewardName != null) ...[
@@ -503,7 +511,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                                   step.rewardName!,
                                                   style: TextStyle(
                                                     fontSize: 12,
-                                                    color: isCompleted ? Colors.green[600] : Colors.grey[600],
+                                                    color: isCompleted ? const Color(0xFFFF6565).withOpacity(0.8) : Colors.grey[600],
                                                   ),
                                                 ),
                                                 if (step.rewardDescription?.isNotEmpty ?? false) ...[
@@ -526,13 +534,13 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: Colors.green[100],
+                                              color: const Color(0xFFFF6565).withOpacity(0.3),
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: Text(
                                               'Redeemed',
-                                              style: TextStyle(
-                                                color: Colors.green[700],
+                                              style: const TextStyle(
+                                                color: Color(0xFFFF6565),
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 10,
                                               ),
@@ -570,18 +578,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.orange[50],
+          color: const Color(0xFFFF6565).withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+          border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error, size: 48, color: Colors.orange[700]),
+            Icon(Icons.error, size: 48, color: const Color(0xFFFF6565)),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.orange, fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Color(0xFFFF6565), fontSize: 16, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -590,7 +598,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[700],
+                backgroundColor: const Color(0xFFFF6565),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -607,19 +615,19 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.orange[50],
+          color: const Color(0xFFFF6565).withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+          border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.card_giftcard_outlined, size: 48, color: Colors.orange[400]),
+            Icon(Icons.card_giftcard_outlined, size: 48, color: const Color(0xFFFF6565).withOpacity(0.6)),
             const SizedBox(height: 16),
             Text(
               'No offers available',
-              style: TextStyle(
-                color: Colors.orange[700],
+              style: const TextStyle(
+                color: Color(0xFFFF6565),
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -634,9 +642,9 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.orange[50],
+        color: const Color(0xFFFF6565).withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.withOpacity(0.2), width: 1),
+        border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,13 +653,13 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
           // Header con progresso generale
           Row(
             children: [
-              Icon(Icons.flag, color: Colors.orange[700], size: 24),
+              Icon(Icons.flag, color: const Color(0xFFFF6565), size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Checkpoint Progress',
-                  style: TextStyle(
-                    color: Colors.orange[700],
+                  style: const TextStyle(
+                    color: Color(0xFFFF6565),
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -664,10 +672,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                     final totalSteps = _checkpoints.first.totalSteps;
                     return Text(
                       '$currentStep/$totalSteps',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange[700],
+                        color: Color(0xFFFF6565),
                       ),
                     );
                   },
@@ -675,10 +683,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                 const SizedBox(width: 12),
                 IconButton(
                   onPressed: () => _showAllOffersPreview(),
-                  icon: Icon(Icons.visibility, color: Colors.orange[700], size: 20),
+                  icon: Icon(Icons.visibility, color: const Color(0xFFFF6565), size: 20),
                   tooltip: 'View All Offers',
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.orange[100],
+                    backgroundColor: const Color(0xFFFF6565).withOpacity(0.3),
                     padding: const EdgeInsets.all(8),
                   ),
                 ),
@@ -700,8 +708,8 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: Colors.orange[100],
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[700]!),
+                        backgroundColor: const Color(0xFFFF6565).withOpacity(0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFFFF6565)),
                         minHeight: 12,
                       ),
                     ),
@@ -717,8 +725,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               builder: (context) {
                 final availableRewards = _checkpoints.first.steps!.where((step) => 
                   step.rewardId != null && 
-                  step.stepNumber <= (_currentSteps[_checkpoints.first.id] ?? 1) &&
-                  !_redeemedRewardIds.contains(step.rewardId)
+                  step.stepNumber <= (_currentSteps[_checkpoints.first.id] ?? 1)
                 ).toList();
                 
                 if (availableRewards.isEmpty) {
@@ -729,9 +736,9 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Available Rewards',
-                      style: TextStyle(
-                        color: Colors.orange[700],
+                      'Checkpoint Rewards',
+                      style: const TextStyle(
+                        color: Color(0xFFFF6565),
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -743,10 +750,10 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.orange.withOpacity(0.1),
+                            color: const Color(0xFFFF6565).withOpacity(0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -758,13 +765,18 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.orange[100],
+                              color: const Color(0xFFFF6565).withOpacity(0.3),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Icon(
-                              Icons.card_giftcard,
-                              color: Colors.orange[700],
-                              size: 20,
+                            child: Center(
+                              child: Text(
+                                '${step.stepNumber}',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF6565),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -792,9 +804,9 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                                 const SizedBox(height: 4),
                                 Text(
                                   'Step ${step.stepNumber}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
-                                    color: Colors.orange[700],
+                                    color: Color(0xFFFF6565),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -802,25 +814,41 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          SizedBox(
-                            height: 44,
-                            child: ElevatedButton.icon(
-                              onPressed: _isAdvancing ? null : () => _redeemCheckpointReward(
-                                step.id,
-                                step.rewardId!,
-                                step.rewardName ?? 'Reward',
+                          // Controlla se il reward è già stato riscattato
+                          if (step.rewardId != null && _redeemedRewardIds.contains(step.rewardId))
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6565).withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              icon: const Icon(Icons.card_giftcard, size: 18),
-                              label: const Text('Redeem'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                              child: const Icon(
+                                Icons.check,
+                                color: Color(0xFFFF6565),
+                                size: 24,
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _isAdvancing ? null : () => _redeemCheckpointReward(
+                                  step.id,
+                                  step.rewardId!,
+                                  step.rewardName ?? 'Reward',
+                                ),
+                                icon: const Icon(Icons.card_giftcard, size: 18),
+                                label: const Text('Redeem'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6565),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     )),
@@ -830,113 +858,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
               },
             ),
 
-          // Sezione rewards già riscattati
-          if (_checkpoints.isNotEmpty && _checkpoints.first.steps != null)
-            Builder(
-              builder: (context) {
-                final redeemedRewards = _checkpoints.first.steps!.where((step) => 
-                  step.rewardId != null && 
-                  _redeemedRewardIds.contains(step.rewardId)
-                ).toList();
-                
-                if (redeemedRewards.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Redeemed Rewards',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...redeemedRewards.map((step) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.green[100],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.green,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  step.rewardName ?? 'Reward',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                if (step.rewardDescription?.isNotEmpty ?? false) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    step.rewardDescription!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[500],
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Step ${step.stepNumber}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.green[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Redeemed',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-                    const SizedBox(height: 20),
-                  ],
-                );
-              },
-            ),
+
 
           // Pulsanti di controllo
           if (widget.cardId != null && _checkpoints.isNotEmpty)
@@ -969,7 +891,7 @@ class _CheckpointOffersListState extends State<CheckpointOffersList> {
                       icon: const Icon(Icons.arrow_forward, size: 22),
                       label: const Text('Next Step', style: TextStyle(fontSize: 15)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[700],
+                        backgroundColor: const Color(0xFFFF6565),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

@@ -145,7 +145,7 @@ class _RewardsListState extends State<RewardsList> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Premio ${reward.name} riscattato con successo!'),
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFFFF6565),
         ),
       );
     } catch (e) {
@@ -172,18 +172,18 @@ class _RewardsListState extends State<RewardsList> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.green[50],
+          color: const Color(0xFFFF6565).withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.green.withOpacity(0.2), width: 1),
+          border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error, size: 48, color: Colors.green[700]),
+            Icon(Icons.error, size: 48, color: const Color(0xFFFF6565)),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Color(0xFFFF6565), fontSize: 16, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -192,7 +192,7 @@ class _RewardsListState extends State<RewardsList> {
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
+                backgroundColor: const Color(0xFFFF6565),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -209,19 +209,19 @@ class _RewardsListState extends State<RewardsList> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.green[50],
+          color: const Color(0xFFFF6565).withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.green.withOpacity(0.2), width: 1),
+          border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.card_giftcard_outlined, size: 48, color: Colors.green[400]),
+            Icon(Icons.card_giftcard_outlined, size: 48, color: const Color(0xFFFF6565).withOpacity(0.6)),
             const SizedBox(height: 16),
             Text(
               'No rewards available',
-              style: TextStyle(
-                color: Colors.green[700],
+              style: const TextStyle(
+                color: Color(0xFFFF6565),
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -230,7 +230,7 @@ class _RewardsListState extends State<RewardsList> {
             Text(
               'Rewards will appear here when configured.',
               style: TextStyle(
-                color: Colors.green[900]?.withOpacity(0.6),
+                color: const Color(0xFFFF6565).withOpacity(0.6),
                 fontSize: 13,
               ),
               textAlign: TextAlign.center,
@@ -245,21 +245,32 @@ class _RewardsListState extends State<RewardsList> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.green[50],
+        color: const Color(0xFFFF6565).withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.green.withOpacity(0.2), width: 1),
+        border: Border.all(color: const Color(0xFFFF6565).withOpacity(0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header con pulsante preview
+          // Header con titolo
           Row(
             children: [
-              Expanded(child: Container()),
+              Icon(Icons.card_giftcard, color: const Color(0xFFFF6565), size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Rewards',
+                  style: const TextStyle(
+                    color: Color(0xFFFF6565),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SizedBox(
             height: 180,
             child: ListView.builder(
@@ -275,12 +286,12 @@ class _RewardsListState extends State<RewardsList> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: canRedeem ? Colors.green[700]! : Colors.green[100]!,
+                      color: canRedeem ? const Color(0xFFFF6565) : const Color(0xFFFF6565).withOpacity(0.3),
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.green.withOpacity(0.08),
+                        color: const Color(0xFFFF6565).withOpacity(0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -307,7 +318,7 @@ class _RewardsListState extends State<RewardsList> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: canRedeem ? Colors.green[700] : Colors.green[100],
+                                color: canRedeem ? const Color(0xFFFF6565) : const Color(0xFFFF6565).withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -316,7 +327,7 @@ class _RewardsListState extends State<RewardsList> {
                                   Icon(
                                     Icons.star,
                                     size: 15,
-                                    color: canRedeem ? Colors.white : Colors.green[700],
+                                    color: canRedeem ? Colors.white : const Color(0xFFFF6565),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -324,7 +335,7 @@ class _RewardsListState extends State<RewardsList> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: canRedeem ? Colors.white : Colors.green[700],
+                                      color: canRedeem ? Colors.white : const Color(0xFFFF6565),
                                     ),
                                   ),
                                 ],
@@ -337,7 +348,7 @@ class _RewardsListState extends State<RewardsList> {
                           reward.description,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.green[900]?.withOpacity(0.7),
+                            color: const Color(0xFFFF6565).withOpacity(0.7),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -346,18 +357,18 @@ class _RewardsListState extends State<RewardsList> {
                         if (canRedeem)
                           SizedBox(
                             width: double.infinity,
+                            height: 48,
                             child: ElevatedButton.icon(
                               onPressed: _isRedeeming ? null : () => _redeemReward(reward),
-                              icon: const Icon(Icons.card_giftcard, size: 18),
-                              label: const Text('Redeem'),
+                              icon: const Icon(Icons.card_giftcard, size: 20),
+                              label: const Text('Redeem', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[700],
+                                backgroundColor: const Color(0xFFFF6565),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                           )
@@ -367,13 +378,13 @@ class _RewardsListState extends State<RewardsList> {
                             alignment: Alignment.center,
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: _userPoints < reward.priceCoins ? Colors.grey[200] : Colors.green[100],
+                              color: _userPoints < reward.priceCoins ? Colors.grey[200] : const Color(0xFFFF6565).withOpacity(0.3),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               _userPoints < reward.priceCoins ? 'Not enough points' : 'Already redeemed',
                               style: TextStyle(
-                                color: _userPoints < reward.priceCoins ? Colors.grey[600] : Colors.green[700],
+                                color: _userPoints < reward.priceCoins ? Colors.grey[600] : const Color(0xFFFF6565),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),

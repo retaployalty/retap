@@ -675,100 +675,28 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
 
                       // Checkpoint offers section
                       if (_card != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.orange.withOpacity(0.1),
-                              width: 1,
+                        _isLoadingCheckpoints 
+                          ? SkeletonComponents.buildCheckpointOffersSkeleton()
+                          : CheckpointOffersList(
+                              merchantId: widget.merchantId,
+                              cardId: _card!.id,
+                              customerId: _card!.customerId,
+                              onCheckpointAdvanced: _refreshTransactionHistory,
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.flag,
-                                    color: Colors.orange,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Checkpoint Offers',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _isLoadingCheckpoints 
-                                ? SkeletonComponents.buildCheckpointOffersSkeleton()
-                                : CheckpointOffersList(
-                                    merchantId: widget.merchantId,
-                                    cardId: _card!.id,
-                                    customerId: _card!.customerId,
-                                    onCheckpointAdvanced: _refreshTransactionHistory,
-                                  ),
-                            ],
-                          ),
-                        ),
                       ],
 
                       // Rewards section
                       if (_card != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.green.withOpacity(0.1),
-                              width: 1,
+                        _isLoadingRewards 
+                          ? SkeletonComponents.buildRewardsSkeleton()
+                          : RewardsList(
+                              merchantId: widget.merchantId,
+                              userPoints: _currentPoints,
+                              cardId: _card!.id,
+                              card: _card,
+                              onPointsUpdated: _updatePoints,
+                              onRewardRedeemed: _refreshTransactionHistory,
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.card_giftcard,
-                                    color: Colors.green,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Rewards',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _isLoadingRewards 
-                                ? SkeletonComponents.buildRewardsSkeleton()
-                                : RewardsList(
-                                    merchantId: widget.merchantId,
-                                    userPoints: _currentPoints,
-                                    cardId: _card!.id,
-                                    card: _card,
-                                    onPointsUpdated: _updatePoints,
-                                    onRewardRedeemed: _refreshTransactionHistory,
-                                  ),
-                            ],
-                          ),
-                        ),
                       ],
 
                       // Transaction History section
