@@ -125,6 +125,7 @@ class _MerchantShowcaseScreenState extends State<MerchantShowcaseScreen> {
       imageUrl: r['image_path'] ?? '',
       title: r['name'] ?? '',
       price: r['price_coins'] ?? 0,
+      description: r['description'] ?? '',
     )).toList().cast<RewardItem>();
 
     // Converti i checkpoint offers nel formato richiesto

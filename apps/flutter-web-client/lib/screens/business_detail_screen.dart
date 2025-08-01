@@ -134,6 +134,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
           imageUrl: r['image_path'] ?? '',
           title: r['name'] ?? '',
           price: r['price_coins'] ?? 0,
+          description: r['description'] ?? '',
         )).toList();
         
         checkpointOffers = (offersData ?? []).map((o) => CheckpointOffer.fromJson(o)).toList();
@@ -157,6 +158,10 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360 || screenHeight < 700;
+    
     return Scaffold(
       body: Stack(
         children: [
@@ -206,7 +211,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (getTodayOpeningHours(widget.hours).isNotEmpty) ...[
+                            if (getTodayOpeningHours(widget.hours).isNotEmpty && !isSmallScreen) ...[
                               const SizedBox(width: 8),
                               Container(
                                 width: 1,

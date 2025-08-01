@@ -217,13 +217,18 @@ class _RewardCard extends StatefulWidget {
   State<_RewardCard> createState() => _RewardCardState();
 }
 
-class _RewardCardState extends State<_RewardCard> with SingleTickerProviderStateMixin {
+class _RewardCardState extends State<_RewardCard> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _flipController;
+  late Animation<double> _flipAnimation;
+  bool _isFlipped = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Controller per l'animazione di pulse (solo per reward sbloccati)
     if (widget.unlocked) {
       _pulseController = AnimationController(
         duration: const Duration(milliseconds: 1000),
@@ -240,6 +245,20 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
 
       _pulseController.repeat(reverse: true);
     }
+    
+    // Controller per l'animazione di flip
+    _flipController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _flipAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _flipController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   @override
@@ -247,11 +266,41 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
     if (widget.unlocked) {
       _pulseController.dispose();
     }
+    _flipController.dispose();
     super.dispose();
+  }
+
+  void _flipCard() {
+    if (_isFlipped) {
+      _flipController.reverse();
+    } else {
+      _flipController.forward();
+    }
+    setState(() {
+      _isFlipped = !_isFlipped;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _flipAnimation,
+      builder: (context, child) {
+        final flipValue = _flipAnimation.value;
+        final isFrontVisible = flipValue < 0.5;
+        
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.001)
+            ..rotateY(flipValue * 3.14159),
+          child: isFrontVisible ? _buildFrontCard() : _buildBackCard(),
+        );
+      },
+    );
+  }
+
+  Widget _buildFrontCard() {
     Widget card = Container(
       width: widget.width,
       height: widget.height,
@@ -300,13 +349,13 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
                         width: 60,
                         height: 60,
                         decoration: ShapeDecoration(
-                          color: Colors.white,
+                          color: Colors.white.withOpacity(0.8),
                           shape: RoundedRectangleBorder(
-                            side: const BorderSide(width: 2),
+                            side: const BorderSide(width: 2, color: Colors.black),
                             borderRadius: BorderRadius.circular(35),
                           ),
                         ),
-                        child: const Icon(Icons.lock, size: 32, color: AppColors.primary),
+                        child: const Icon(Icons.lock, size: 32, color: Colors.black),
                       ),
                     ),
                 ],
@@ -351,6 +400,17 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
       ),
     );
 
+    // Aggiungi il tap per flip
+    card = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _flipCard,
+        borderRadius: BorderRadius.circular(28),
+        child: card,
+      ),
+    );
+
+    // Se è sbloccato, aggiungi l'animazione di pulse
     if (widget.unlocked) {
       return AnimatedBuilder(
         animation: _pulseAnimation,
@@ -360,75 +420,125 @@ class _RewardCardState extends State<_RewardCard> with SingleTickerProviderState
             child: child,
           );
         },
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return Dialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                    backgroundColor: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFFE0E0),
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(18),
-                            child: SvgPicture.asset(
-                              'assets/icons/mingcute_gift-fill.svg',
-                              width: 48,
-                              height: 48,
-                              colorFilter: ColorFilter.mode(Color(0xFFFF6565), BlendMode.srcIn),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Reward available!',
-                            style: AppTextStyles.headlineSmall.copyWith(color: Color(0xFFFF6565)),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Tell the business you want to redeem this reward!',
-                            style: AppTextStyles.bodyMedium.copyWith(color: Color(0xFF222222)),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 28),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6565),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: Text('OK', style: AppTextStyles.titleSmall.copyWith(color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-            borderRadius: BorderRadius.circular(28),
-            child: card,
-          ),
-        ),
+        child: card,
       );
     }
 
     return card;
+  }
+
+  Widget _buildBackCard() {
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.rotationY(3.14159), // Ruota di 180 gradi
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        clipBehavior: Clip.antiAlias,
+        margin: const EdgeInsets.only(bottom: 24),
+        decoration: ShapeDecoration(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Icona del reward
+            Positioned(
+              left: (widget.width-80)/2,
+              top: 40,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.card_giftcard,
+                  size: 40,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            // Titolo del reward
+            Positioned(
+              left: 18,
+              top: 140,
+              child: SizedBox(
+                width: widget.width-36,
+                child: Text(
+                  widget.reward.title,
+                  style: AppTextStyles.titleMedium.copyWith(color: const Color(0xFF1A1A1A)),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // Prezzo
+            Positioned(
+              left: 18,
+              top: 180,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.reward.price.toString(),
+                    style: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF1A1A1A)),
+                  ),
+                  const SizedBox(width: 4),
+                  SvgPicture.asset(
+                    'assets/icons/tabler_coin-filled.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(Color(0xFF1A1A1A), BlendMode.srcIn),
+                  ),
+                ],
+              ),
+            ),
+            // Descrizione
+            Positioned(
+              left: 18,
+              top: 220,
+              child: SizedBox(
+                width: widget.width-36,
+                child: Text(
+                  widget.reward.description,
+                  style: AppTextStyles.bodySmall.copyWith(color: const Color(0xFF666666)),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // Pulsante per tornare
+            Positioned(
+              bottom: 20,
+              left: 18,
+              right: 18,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _flipCard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: Text(
+                    'Back',
+                    style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -436,8 +546,9 @@ class RewardItem {
   final String imageUrl;
   final String title;
   final int price;
+  final String description;
 
-  RewardItem({required this.imageUrl, required this.title, required this.price});
+  RewardItem({required this.imageUrl, required this.title, required this.price, required this.description});
 
   String get fullImageUrl => 'https://egmizgydnmvpfpbzmbnj.supabase.co/storage/v1/object/public/rewards/$imageUrl';
 }
