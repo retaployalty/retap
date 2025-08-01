@@ -170,7 +170,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     const double normalDotSize = 19;
     const double barHeight = 42;
     const double barLeft = 22;
-    const double barTop = 87;
+    const double barTop = 95;
     const double barHPadding = 4;
     const double barVPadding = 4;
     const double dotPadding = 10;
@@ -199,7 +199,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
       children: [
         Container(
           width: double.infinity,
-          height: 240,
+          height: 250,
           margin: const EdgeInsets.symmetric(vertical: 8),
           clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
@@ -222,9 +222,14 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
               Positioned(
                 left: 22,
                 top: 20,
-                child: Text(
-                  widget.offerName,
-                  style: AppTextStyles.headlineSmall.copyWith(color: const Color(0xFF1A1A1A)),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width - 120, // Lascia spazio per il numero a destra
+                  child: Text(
+                    widget.offerName,
+                    style: AppTextStyles.headlineSmall.copyWith(color: const Color(0xFF1A1A1A)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
               ),
               // Sottotitolo
@@ -326,7 +331,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                     - dotSize / 2;
                                   return Positioned(
                                     left: left,
-                                    top: (barHeight - dotSize) / 2 - 1,
+                                    top: (barHeight - dotSize) / 2,
                                     child: _CheckpointDot(
                                       isActive: isCompleted,
                                       isReward: isReward,
@@ -435,8 +440,8 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                         borderRadius: BorderRadius.circular(32),
                                                         child: Ink(
                                                           width: 107,
-                                                          height: 48,
-                                                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                          height: 60,
+                                                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                                                           decoration: ShapeDecoration(
                                                             color: const Color(0xFFFF6565),
                                                             shape: RoundedRectangleBorder(
@@ -500,14 +505,14 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                             children: [
                                               Container(
                                                 width: 107,
-                                                height: 48,
-                                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                                                height: 60,
+                                                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                                                 decoration: ShapeDecoration(
-                                                  color: const Color(0xFFF5F5F5),
+                                                  color: const Color(0xFFFF6565),
                                                   shape: RoundedRectangleBorder(
                                                     side: const BorderSide(
                                                       width: 1,
-                                                      color: Color(0xFFE6E6E6),
+                                                      color: Color(0xFFFF6565),
                                                     ),
                                                     borderRadius: BorderRadius.circular(32),
                                                   ),
@@ -516,7 +521,7 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                                                   child: Text(
                                                     rewardLabel,
                                                     textAlign: TextAlign.center,
-                                                    style: AppTextStyles.titleSmall.copyWith(color: const Color(0xFF1A1A1A)),
+                                                    style: AppTextStyles.titleSmall.copyWith(color: Colors.white),
                                                   ),
                                                 ),
                                               ),
@@ -572,24 +577,27 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
                               ),
                             ),
                             child: Center(
-                              child: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFFFF6565),
-                                  size: 20,
+                              child: GestureDetector(
+                                onTap: _scrollToNext,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFFF6565),
+                                    size: 20,
+                                  ),
                                 ),
                               ),
                             ),
@@ -614,6 +622,24 @@ class _CheckpointRewardsProgressState extends State<CheckpointRewardsProgress> w
     
     // Se non ci sono più reward, usa l'ultimo step
     return nextRewardStep ?? widget.totalSteps;
+  }
+
+  void _scrollToNext() {
+    if (!_scrollController.hasClients) return;
+    
+    final currentOffset = _scrollController.offset;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Scroll di una "pagina" (larghezza dello schermo meno padding)
+    final scrollAmount = screenWidth - 100;
+    final newOffset = (currentOffset + scrollAmount).clamp(0.0, maxScroll);
+    
+    _scrollController.animateTo(
+      newOffset,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+    );
   }
 }
 

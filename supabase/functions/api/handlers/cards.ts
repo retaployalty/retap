@@ -54,8 +54,21 @@ export async function handleGetCard(merchantId: string, uid: string) {
     }
   }
 
+  // Carica i dati del customer
+  const { data: customer, error: customerError } = await supabaseClient
+    .from('customers')
+    .select('id, first_name, last_name, email, phone_number')
+    .eq('id', card.customer_id)
+    .single();
+
+  if (customerError) {
+    console.error('Error fetching customer data:', customerError);
+    // Non falliamo se non riusciamo a caricare i dati del customer
+  }
+
   return createSuccessResponse({
     ...card,
+    customer: customer || null,
     is_new_merchant: !cardMerchant
   });
 }

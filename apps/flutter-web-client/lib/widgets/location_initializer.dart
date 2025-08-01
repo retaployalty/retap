@@ -18,10 +18,8 @@ class _LocationInitializerState extends ConsumerState<LocationInitializer> {
   @override
   void initState() {
     super.initState();
-    // Inizializza il LocationProvider quando il widget viene creato
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(locationProvider.notifier).getCurrentLocation();
-    });
+    // Non richiedere automaticamente la posizione all'avvio
+    // La posizione verrà richiesta esplicitamente durante il flusso di registrazione
   }
 
   @override

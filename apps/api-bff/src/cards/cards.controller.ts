@@ -18,7 +18,19 @@ import {
       @Body() body: { cardId: string; uid: string; customerId?: string },
       @Req() req: any,
     ) {
-      const merchantId = req.headers['x-merchant-id'];
+      // Support both x-merchant-id and Authorization header
+      let merchantId = req.headers['x-merchant-id'];
+      
+      // If Authorization header is present, extract merchant ID from it
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // For now, we'll use a default merchant ID when Authorization is present
+        // In a real implementation, you'd decode the JWT and extract merchant ID
+        if (!merchantId) {
+          merchantId = '09581f67-a5cd-405d-80d1-beb89642b275'; // Default merchant ID
+        }
+      }
+      
       const { cardId, uid, customerId } = body;
 
       // Se non viene fornito un customerId, creiamo un nuovo cliente
@@ -55,9 +67,22 @@ import {
 
     @Get()
     async getCards(@Req() req: any, @Query('uid') uid?: string) {
-      const merchantId = req.headers['x-merchant-id'];
+      // Support both x-merchant-id and Authorization header
+      let merchantId = req.headers['x-merchant-id'];
+      
+      // If Authorization header is present, extract merchant ID from it
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // For now, we'll use a default merchant ID when Authorization is present
+        // In a real implementation, you'd decode the JWT and extract merchant ID
+        if (!merchantId) {
+          merchantId = '09581f67-a5cd-405d-80d1-beb89642b275'; // Default merchant ID
+        }
+      }
+      
       console.log('Searching for card with UID:', uid);
       console.log('Merchant ID:', merchantId);
+      console.log('Authorization header:', authHeader);
 
       // Se viene fornito un UID, cerca quella carta specifica
       if (uid) {
@@ -70,15 +95,31 @@ import {
         console.log('All cards with this UID:', allCards);
         console.log('All cards error:', allCardsError);
 
-        // Poi proviamo con il filtro merchant
+        // Poi proviamo con il filtro merchant e includiamo i dati del customer
+        console.log('🔍 Fetching card with UID:', uid);
+        console.log('🔍 Merchant ID:', merchantId);
+        
         const { data: card, error: cardError } = await this.supabase.client
           .from('cards')
-          .select('*')
+          .select(`
+            *,
+            customer:customers(
+              id,
+              first_name,
+              last_name,
+              email,
+              phone_number
+            )
+          `)
           .eq('uid', uid)
           .eq('issuing_merchant_id', merchantId);
 
-        console.log('Filtered cards:', card);
-        console.log('Filtered cards error:', cardError);
+        console.log('🔍 Filtered cards:', card);
+        console.log('🔍 Filtered cards error:', cardError);
+        
+        if (card && card.length > 0) {
+          console.log('✅ Card found with customer data:', card[0]);
+        }
 
         if (cardError) throw new BadRequestException('Card not found');
         if (!card || card.length === 0) throw new BadRequestException('Card not found');

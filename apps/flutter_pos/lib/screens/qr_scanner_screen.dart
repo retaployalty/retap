@@ -61,12 +61,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
         _isInitialized = true;
       });
     } catch (e) {
-      debugPrint('Errore nell\'inizializzazione dello scanner: $e');
+      debugPrint('Error initializing scanner: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore nell\'accesso alla fotocamera'),
+          SnackBar(
+            content: const Text('❌ Camera access error'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         Navigator.of(context).pop();
@@ -87,12 +92,12 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       final String? code = barcodes.first.rawValue;
       if (code != null) {
         try {
-          debugPrint('QR Code rilevato: $code');
+          debugPrint('QR Code detected: $code');
           final decoded = jsonDecode(code);
           
           if (decoded is Map<String, dynamic> && decoded['type'] == 'retap_card' && decoded.containsKey('uid')) {
             final String cardUid = decoded['uid'];
-            debugPrint('UID della carta estratto: $cardUid');
+            debugPrint('Card UID extracted: $cardUid');
 
             // Naviga direttamente senza pop per evitare doppia navigazione
             Navigator.of(context).pushReplacement(
@@ -104,11 +109,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
               ),
             );
           } else {
-            _showError('QR Code non valido per ReTap.');
+            _showError('Invalid QR Code for ReTap.');
           }
         } catch (e) {
-          debugPrint('Errore durante la decodifica del QR Code: $e');
-          _showError('Formato QR Code non riconosciuto.');
+          debugPrint('Error decoding QR Code: $e');
+          _showError('Unrecognized QR Code format.');
         }
       }
     }
@@ -121,6 +126,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
         content: Text(message),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        margin: const EdgeInsets.all(16),
       ),
     );
     // Riattiva la scansione dopo un breve ritardo
@@ -137,7 +147,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
     if (!_isInitialized) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Inizializzazione Scanner'),
+          title: const Text('Scanner Initialization'),
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
         ),
@@ -147,7 +157,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Avvio scanner...'),
+              Text('Starting scanner...'),
             ],
           ),
         ),
@@ -156,7 +166,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inquadra il QR Code'),
+        title: const Text('Scan QR Code'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -197,17 +207,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
             Container(
               color: Colors.black.withOpacity(0.7),
               child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      'Elaborazione...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
+                                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Colors.white),
+                      SizedBox(height: 16),
+                      Text(
+                        'Processing...',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
               ),
             ),
           // Istruzioni per l'utente
@@ -222,7 +232,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'Inquadra il QR Code della carta ReTap',
+                'Point camera at the ReTap card QR Code',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,

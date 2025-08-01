@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/card.dart';
+import '../models/customer.dart';
 import '../components/rewards_list.dart';
 import '../components/checkpoint_offers_list.dart';
 import '../components/transaction_history.dart';
 import '../components/skeleton_components.dart';
 import '../services/points_service.dart';
+import '../services/customer_service.dart';
 import 'dart:async';
 
 class CardDetailsScreen extends StatefulWidget {
@@ -30,6 +32,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
   bool _isLoadingCheckpoints = false;
   bool _isLoadingHistory = false;
   CardModel? _card;
+  Customer? _customer;
   String? _error;
   final _priceController = TextEditingController();
   final _pointsController = TextEditingController();
@@ -86,35 +89,15 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
   }
 
   void _loadCachedData() {
-    // Carica dati dalla cache se disponibili
-    final cacheKey = '${widget.cardUid}_${widget.merchantId}';
-    if (_cardCache.containsKey(cacheKey)) {
-      setState(() {
-        _card = _cardCache[cacheKey];
-        _isLoadingCard = false;
-      });
-    }
-    
-    if (_pointsCache.containsKey(cacheKey)) {
-      setState(() {
-        _currentPoints = _pointsCache[cacheKey]!;
-        _isLoadingPoints = false;
-      });
-    }
+    // Cache disabilitata - sempre carica dati freschi
+    debugPrint('🔍 Cache disabled - always loading fresh data');
   }
 
   Future<void> _fetchAllDataInParallel() async {
     if (!mounted) return;
     
-    final cacheKey = '${widget.cardUid}_${widget.merchantId}';
+    debugPrint('🔍 Starting _fetchAllDataInParallel - always fresh data');
     
-    // Se abbiamo già i dati in cache, carica solo i punti e attiva le offerte
-    if (_cardCache.containsKey(cacheKey)) {
-      await _fetchPointsOnly();
-      _activateOffersAndRewards();
-      return;
-    }
-
     // Carica tutto in parallelo per massimizzare la velocità
     final futures = <Future>[];
     
@@ -146,19 +129,27 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
     if (!mounted) return;
     
     final cacheKey = '${widget.cardUid}_${widget.merchantId}';
+    debugPrint('🔍 Starting _fetchCardDataOnly');
+    debugPrint('🔍 Card UID: ${widget.cardUid}');
+    debugPrint('🔍 Merchant ID: ${widget.merchantId}');
     
     try {
       final cardUrl = 'https://egmizgydnmvpfpbzmbnj.supabase.co/functions/v1/api/cards?uid=${widget.cardUid}';
+      debugPrint('🌐 Calling Supabase API: $cardUrl');
       
       final cardRes = await http.get(
         Uri.parse(cardUrl),
         headers: {
           'x-merchant-id': widget.merchantId,
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
         },
       ).timeout(const Duration(seconds: 6));
 
       if (!mounted) return;
+
+      debugPrint('🌐 API Response Status: ${cardRes.statusCode}');
+      debugPrint('🌐 API Response Body: ${cardRes.body}');
 
       if (cardRes.statusCode != 200) {
         setState(() {
@@ -170,6 +161,11 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
 
       final cardData = jsonDecode(cardRes.body);
       
+      // Debug: stampa la risposta per vedere la struttura
+      debugPrint('🔍 Card API response: $cardData');
+      debugPrint('🔍 Customer ID from card: ${cardData['customer_id']}');
+      debugPrint('🔍 Card UID: ${cardData['uid']}');
+      
       // Crea il modello carta
       final cardModel = CardModel.fromJson({
         ...cardData,
@@ -179,13 +175,13 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
         }]
       });
       
-      // Salva in cache
-      _cardCache[cacheKey] = cardModel;
-      
       setState(() {
         _card = cardModel;
         _isLoadingCard = false;
       });
+
+      // Carica i dati del customer dalla risposta API
+      _loadCustomerDataFromResponse(cardData);
 
       // Mostra il messaggio di nuovo cliente solo se necessario
       if (cardData['is_new_merchant'] == true && mounted) {
@@ -193,13 +189,14 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
           if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('New customer in your store! You can start assigning points.'),
+            content: const Text('🎉 New customer in your store! You can start assigning points.'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
+            margin: const EdgeInsets.all(16),
           ),
         );
           }
@@ -214,19 +211,79 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
     }
   }
 
+  Future<void> _loadCustomerDataFromResponse(Map<String, dynamic> cardData) async {
+    if (!mounted) return;
+    
+    debugPrint('🔍 Starting _loadCustomerDataFromResponse');
+    debugPrint('🔍 Card data keys: ${cardData.keys.toList()}');
+    
+    try {
+      // Prova a estrarre i dati del customer dalla risposta API
+      if (cardData.containsKey('customer')) {
+        final customerData = cardData['customer'] as Map<String, dynamic>;
+        debugPrint('✅ Customer data from API: $customerData');
+        
+        final customer = Customer.fromJson({
+          ...customerData,
+          'merchant_id': widget.merchantId,
+        });
+        
+        setState(() {
+          _customer = customer;
+        });
+        debugPrint('✅ Customer loaded from API response: ${customer.displayName}');
+      } else {
+        debugPrint('❌ No customer data in API response, trying fallback');
+        // Fallback: carica i dati del customer tramite API separata
+        await _loadCustomerData();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading customer data from response: $e');
+      // Fallback: carica i dati del customer tramite API separata
+      await _loadCustomerData();
+    }
+  }
+
+  Future<void> _loadCustomerData() async {
+    if (!mounted || _card == null) return;
+    
+    debugPrint('🔍 Starting _loadCustomerData fallback');
+    debugPrint('🔍 Customer ID: ${_card!.customerId}');
+    
+    try {
+      final customer = await CustomerService.fetchCustomerById(_card!.customerId);
+      if (!mounted) return;
+      
+      if (customer != null) {
+        setState(() {
+          _customer = customer;
+        });
+        debugPrint('✅ Customer loaded from fallback: ${customer.displayName}');
+      } else {
+        debugPrint('❌ Customer not found in fallback');
+      }
+    } catch (e) {
+      // Ignora errori nel caricamento del customer
+      debugPrint('❌ Error loading customer data from fallback: $e');
+    }
+  }
+
   Future<void> _fetchPointsOnly() async {
     if (!mounted) return;
     
-    final cacheKey = '${widget.cardUid}_${widget.merchantId}';
+    debugPrint('🔍 Starting _fetchPointsOnly');
     
     // Se non abbiamo ancora la carta, aspetta un po' e riprova
     if (_card == null) {
+      debugPrint('⏳ Waiting for card data...');
       await Future.delayed(const Duration(milliseconds: 500));
       if (_card == null) {
-        // Se ancora non abbiamo la carta, esci
+        debugPrint('❌ Card data not available');
         return;
       }
     }
+    
+    debugPrint('✅ Card data available, fetching points');
     
     try {
       final points = await PointsService.getCardBalance(_card!.id, widget.merchantId)
@@ -234,8 +291,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
       
       if (!mounted) return;
       
-      // Salva in cache
-      _pointsCache[cacheKey] = points;
+      debugPrint('✅ Points loaded: $points');
       
       setState(() {
         _currentPoints = points;
@@ -253,9 +309,9 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
             }]
           });
         });
-        _cardCache[cacheKey] = _card!;
       }
     } catch (e) {
+      debugPrint('❌ Error loading points: $e');
       if (!mounted) return;
       setState(() {
         _isLoadingPoints = false;
@@ -265,6 +321,8 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
 
   Future<void> _activateOffersAndRewards() async {
     if (!mounted) return;
+    
+    debugPrint('🔍 Starting offers and rewards loading');
     
     // Attiva il caricamento delle offerte e rewards dopo un breve delay
     // per dare priorità ai dati principali
@@ -281,6 +339,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
     // dopo un breve delay per non sovraccaricare l'API
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
+        debugPrint('✅ Offers and rewards loading completed');
         setState(() {
           _isLoadingCheckpoints = false;
           _isLoadingRewards = false;
@@ -292,6 +351,8 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
   void _activateHistoryLoading() {
     if (!mounted) return;
     
+    debugPrint('🔍 Starting transaction history loading');
+    
     setState(() {
       _isLoadingHistory = true;
     });
@@ -299,6 +360,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
     // Attiva il caricamento della history dopo un breve delay
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
+        debugPrint('✅ Transaction history loading completed');
         setState(() {
           _isLoadingHistory = false;
         });
@@ -332,9 +394,6 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
   Future<void> _updatePoints(int newPoints) async {
     if (!mounted) return;
     
-    final cacheKey = '${widget.cardUid}_${widget.merchantId}';
-    _pointsCache[cacheKey] = newPoints;
-    
     setState(() {
       _currentPoints = newPoints;
     });
@@ -351,7 +410,6 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
       setState(() {
         _card = updatedCard;
       });
-      _cardCache[cacheKey] = updatedCard;
     }
   }
 
@@ -370,6 +428,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
         headers: {
           'Content-Type': 'application/json',
           'x-merchant-id': widget.merchantId,
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbWl6Z3lkbm12cGZwYnptYm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0NjA2NjUsImV4cCI6MjA2MzAzNjY2NX0.eKlGwWbYq6TUv0AJq8Lv9w6Vejwp2v7CyQEMW0hqL6U',
         },
         body: jsonEncode({
           'cardId': _card!.id,
@@ -388,12 +447,13 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$points points credited'),
+            content: Text('✅ $points points credited successfully!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         _priceController.clear();
@@ -405,12 +465,13 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('❌ Error: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } finally {
@@ -434,42 +495,78 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, size: 24),
-                onPressed: () => Navigator.of(context).pop(),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
               ),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Customer Card',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(16),
+                child: Container(),
+              ),
+              leading: Container(
+                margin: const EdgeInsets.only(left: 8),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 24, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  Text(
-                    _card?.uid ?? '',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                ),
+              ),
+              title: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
                   ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _customer?.displayName ?? 'Customer Card',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      _card?.uid ?? '',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 Container(
                   margin: const EdgeInsets.only(right: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(25),
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.3),
-                      width: 1,
+                      width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -477,9 +574,9 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                       Icon(
                         Icons.stars,
                         color: Colors.white,
-                        size: 20,
+                        size: 22,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Text(
                         _isLoadingPoints ? '...' : '$_currentPoints',
                         style: const TextStyle(
@@ -675,100 +772,28 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
 
                       // Checkpoint offers section
                       if (_card != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.orange.withOpacity(0.1),
-                              width: 1,
+                        _isLoadingCheckpoints 
+                          ? SkeletonComponents.buildCheckpointOffersSkeleton()
+                          : CheckpointOffersList(
+                              merchantId: widget.merchantId,
+                              cardId: _card!.id,
+                              customerId: _card!.customerId,
+                              onCheckpointAdvanced: _refreshTransactionHistory,
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.flag,
-                                    color: Colors.orange,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Checkpoint Offers',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _isLoadingCheckpoints 
-                                ? SkeletonComponents.buildCheckpointOffersSkeleton()
-                                : CheckpointOffersList(
-                                    merchantId: widget.merchantId,
-                                    cardId: _card!.id,
-                                    customerId: _card!.customerId,
-                                    onCheckpointAdvanced: _refreshTransactionHistory,
-                                  ),
-                            ],
-                          ),
-                        ),
                       ],
 
                       // Rewards section
                       if (_card != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.green.withOpacity(0.1),
-                              width: 1,
+                        _isLoadingRewards 
+                          ? SkeletonComponents.buildRewardsSkeleton()
+                          : RewardsList(
+                              merchantId: widget.merchantId,
+                              userPoints: _currentPoints,
+                              cardId: _card!.id,
+                              card: _card,
+                              onPointsUpdated: _updatePoints,
+                              onRewardRedeemed: _refreshTransactionHistory,
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.card_giftcard,
-                                    color: Colors.green,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Rewards',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _isLoadingRewards 
-                                ? SkeletonComponents.buildRewardsSkeleton()
-                                : RewardsList(
-                                    merchantId: widget.merchantId,
-                                    userPoints: _currentPoints,
-                                    cardId: _card!.id,
-                                    card: _card,
-                                    onPointsUpdated: _updatePoints,
-                                    onRewardRedeemed: _refreshTransactionHistory,
-                                  ),
-                            ],
-                          ),
-                        ),
                       ],
 
                       // Transaction History section

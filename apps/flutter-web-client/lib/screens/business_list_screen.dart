@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
+import '../theme/text_styles.dart';
 import '../components/business_list_card.dart';
 import '../components/category_filters.dart';
 import '../screens/business_detail_screen.dart';
@@ -217,6 +218,73 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
     return filtered;
   }
 
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Filters',
+                      style: AppTextStyles.headlineSmall.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                CategoryFilters(
+                  selectedCategory: _selectedCategory,
+                  onCategorySelected: (category) {
+                    setState(() => _selectedCategory = category);
+                    Navigator.of(context).pop();
+                  },
+                  businessCategories: BUSINESS_CATEGORIES,
+                ),
+                const SizedBox(height: 20),
+                if (_selectedCategory != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() => _selectedCategory = null);
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[200],
+                            foregroundColor: AppColors.textSecondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Clear filters'),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -246,7 +314,7 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                         child: TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
-                            hintText: 'Cerca business...',
+                            hintText: 'Search businesses...',
                             prefixIcon: Padding(
                               padding: const EdgeInsets.only(left: 16, right: 8),
                               child: Icon(Icons.search, color: AppColors.primary),
@@ -275,18 +343,12 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                     IconButton(
                       icon: const Icon(Icons.filter_list, color: AppColors.primary),
                       onPressed: () {
-                        // TODO: Implementa il filtro avanzato
+                        _showFilterDialog();
                       },
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                // Filtri categoria
-                CategoryFilters(
-                  selectedCategory: _selectedCategory,
-                  onCategorySelected: (category) => setState(() => _selectedCategory = category),
-                  businessCategories: BUSINESS_CATEGORIES,
-                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -302,10 +364,10 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                               children: [
                                 Text(
                                   _searchController.text.isNotEmpty
-                                      ? 'Nessun business trovato per "${_searchController.text}"'
+                                      ? 'No businesses found for "${_searchController.text}"'
                                       : _selectedCategory != null
-                                          ? 'Nessun business trovato nella categoria ${_selectedCategory}'
-                                          : 'Nessun business disponibile',
+                                          ? 'No businesses found in category ${_selectedCategory}'
+                                          : 'No businesses available',
                                   style: const TextStyle(color: Colors.grey),
                                   textAlign: TextAlign.center,
                                 ),
@@ -318,7 +380,7 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                                         _selectedCategory = null;
                                       });
                                     },
-                                    child: const Text('Rimuovi filtri'),
+                                    child: const Text('Clear filters'),
                                   ),
                                 ],
                               ],

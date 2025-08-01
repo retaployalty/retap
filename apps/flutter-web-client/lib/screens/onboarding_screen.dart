@@ -22,13 +22,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingPage(
       title: 'How it works',
-      description: 'Use a single NFC card or your digital wallet in all affiliated stores',
+      description: 'Use a single NFC card or your digital wallet in all affiliated stores. Adding to your wallet is required.',
       image: 'assets/images/nfc.png',
       color: Color(0xFF00A699), // Airbnb teal
     ),
     OnboardingPage(
       title: 'Earn points',
-      description: 'Collect points in every store and redeem exclusive rewards',
+      description: 'Collect points in every store and redeem exclusive rewards. Your wallet card is your key to all features.',
       image: 'assets/images/monete.png',
       color: Color(0xFFFFB400), // Airbnb yellow
     ),

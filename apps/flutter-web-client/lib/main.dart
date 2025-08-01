@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 import 'theme/app_theme.dart';
 import 'providers/location_provider.dart';
 import 'widgets/location_initializer.dart';
@@ -20,6 +21,9 @@ import 'components/custom_bottom_nav_bar.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Aggiorna la posizione IMMEDIATAMENTE all'avvio
+  await _updateLocationSilently();
+  
   // Initialize Supabase
   await Supabase.initialize(
     url: 'https://egmizgydnmvpfpbzmbnj.supabase.co',
@@ -34,8 +38,56 @@ void main() async {
   runApp(const ReTapWeb());
 }
 
-class ReTapWeb extends StatelessWidget {
+// Funzione per aggiornare automaticamente la posizione
+Future<void> _updateLocationSilently() async {
+  try {
+    // Verifica se i servizi di localizzazione sono abilitati
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print('📍 Location services disabled');
+      return;
+    }
+
+    // Controlla i permessi attuali
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      // Richiedi permessi silenziosamente
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print('📍 Location permission denied');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print('📍 Location permissions permanently denied');
+      return;
+    }
+
+    // Ottieni la posizione corrente
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Salva la posizione nelle SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('saved_latitude', position.latitude);
+    await prefs.setDouble('saved_longitude', position.longitude);
+
+    print('📍 Location updated silently: ${position.latitude}, ${position.longitude}');
+  } catch (e) {
+    print('📍 Error updating location silently: $e');
+  }
+}
+
+class ReTapWeb extends StatefulWidget {
   const ReTapWeb({super.key});
+
+  @override
+  State<ReTapWeb> createState() => _ReTapWebState();
+}
+
+class _ReTapWebState extends State<ReTapWeb> {
 
   Future<String> _getInitialRoute() async {
     print('Starting _getInitialRoute check...'); // Debug log

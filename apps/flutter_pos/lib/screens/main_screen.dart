@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: 'Impostazioni',
+            label: 'Settings',
           ),
         ],
       ),
