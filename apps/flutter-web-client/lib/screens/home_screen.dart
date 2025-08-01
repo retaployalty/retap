@@ -228,8 +228,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   List<dynamic> get _sortedMerchantBalances {
-    final locationState = ref.read(locationProvider);
-    if (locationState.latitude == null || locationState.longitude == null) {
+    final locationState = ref.watch(locationProvider);
+    
+    // Se la posizione non è ancora disponibile, mostra i business non ordinati
+    if (locationState.status == LocationStatus.loading || 
+        locationState.latitude == null || 
+        locationState.longitude == null) {
       return _filteredMerchantBalances;
     }
     
@@ -410,63 +414,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ],
                               ),
                             )
-                          : SingleChildScrollView(
-                              child: ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _sortedMerchantBalances.length,
-                                itemBuilder: (context, index) {
-                                  final business = _sortedMerchantBalances[index];
-                                  final category = business['industry'] ?? 'Other';
-                                  final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
-                                  final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
-                                  final name = business['merchant_name'] ?? '';
-                                  final hours = business['hours'];
-                                  final isOpen = isBusinessOpen(hours);
-                                  final checkpointsCurrent = business['checkpoints_current'] ?? 0;
-                                  final checkpointsTotal = business['checkpoints_total'] ?? 0;
-                                  final points = business['balance'] ?? 0;
-                                  final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
-                                  final currentRewardName = business['current_reward_name'] as String?;
-                                  final isRedeemable = business['is_redeemable'] as bool?;
-                                  print('DEBUG: Business ${business['merchant_name']} - current_reward_name: $currentRewardName, is_redeemable: $isRedeemable');
-                                  final distance = _getDistanceText(business);
-                                  return BusinessCard(
-                                    category: category,
-                                    categoryIcon: categoryIcon,
-                                    logoUrl: logoUrl,
-                                    name: name,
-                                    isOpen: isOpen,
-                                    checkpointsCurrent: checkpointsCurrent,
-                                    checkpointsTotal: checkpointsTotal,
-                                    points: points,
-                                    rewardSteps: rewardSteps,
-                                    currentRewardName: currentRewardName,
-                                    isRedeemable: isRedeemable,
-                                    distance: distance,
-                                    hours: hours,
-                                    onTap: () {
-                                      print('HomeScreen - Business data: $business'); // Debug log
-                                      print('HomeScreen - Cover images: ${business['cover_image_url']}'); // Debug log
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => BusinessDetailScreen(
-                                            businessName: name,
-                                            points: points,
-                                            logoUrl: logoUrl,
-                                            coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
-                                            isOpen: isOpen,
-                                            hours: hours,
-                                            merchantId: business['merchant_id'],
-                                            cardId: cardId!,
-                                            distance: distance,
-                                          ),
+                          : Consumer(
+                              builder: (context, ref, child) {
+                                final locationState = ref.watch(locationProvider);
+                                
+                                // Se la posizione sta caricando, mostra un indicatore
+                                if (locationState.status == LocationStatus.loading) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        CircularProgressIndicator(),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          'Caricamento posizione...',
+                                          style: TextStyle(color: Colors.grey),
                                         ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                
+                                return SingleChildScrollView(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: _sortedMerchantBalances.length,
+                                    itemBuilder: (context, index) {
+                                      final business = _sortedMerchantBalances[index];
+                                      final category = business['industry'] ?? 'Other';
+                                      final categoryIcon = BUSINESS_CATEGORIES[category] ?? Icons.store;
+                                      final logoUrl = business['logo_url'] ?? _imageUrls[index % _imageUrls.length];
+                                      final name = business['merchant_name'] ?? '';
+                                      final hours = business['hours'];
+                                      final isOpen = isBusinessOpen(hours);
+                                      final checkpointsCurrent = business['checkpoints_current'] ?? 0;
+                                      final checkpointsTotal = business['checkpoints_total'] ?? 0;
+                                      final points = business['balance'] ?? 0;
+                                      final rewardSteps = (business['reward_steps'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+                                      final currentRewardName = business['current_reward_name'] as String?;
+                                      final isRedeemable = business['is_redeemable'] as bool?;
+                                      print('DEBUG: Business ${business['merchant_name']} - current_reward_name: $currentRewardName, is_redeemable: $isRedeemable');
+                                      final distance = _getDistanceText(business);
+                                      return BusinessCard(
+                                        category: category,
+                                        categoryIcon: categoryIcon,
+                                        logoUrl: logoUrl,
+                                        name: name,
+                                        isOpen: isOpen,
+                                        checkpointsCurrent: checkpointsCurrent,
+                                        checkpointsTotal: checkpointsTotal,
+                                        points: points,
+                                        rewardSteps: rewardSteps,
+                                        currentRewardName: currentRewardName,
+                                        isRedeemable: isRedeemable,
+                                        distance: distance,
+                                        hours: hours,
+                                        onTap: () {
+                                          print('HomeScreen - Business data: $business'); // Debug log
+                                          print('HomeScreen - Cover images: ${business['cover_image_url']}'); // Debug log
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => BusinessDetailScreen(
+                                                businessName: name,
+                                                points: points,
+                                                logoUrl: logoUrl,
+                                                coverImageUrls: (business['cover_image_url'] is List) ? List<String>.from(business['cover_image_url']) : [],
+                                                isOpen: isOpen,
+                                                hours: hours,
+                                                merchantId: business['merchant_id'],
+                                                cardId: cardId!,
+                                                distance: distance,
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       );
                                     },
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              },
                             ),
             ),
           ],

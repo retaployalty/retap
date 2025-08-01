@@ -1210,17 +1210,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
         throw Exception('Location services are disabled. Please enable them in your device settings.');
       }
 
-      // Richiedi i permessi
+      // Forza sempre la richiesta dei permessi, anche se già negati prima
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
+      
+      // Se i permessi sono negati o mai richiesti, richiedili di nuovo
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        print('📍 Requesting location permission again...');
         permission = await Geolocator.requestPermission();
+        
         if (permission == LocationPermission.denied) {
-          throw Exception('Location permission denied');
+          throw Exception('Location permission denied. Please enable location access to find businesses near you.');
         }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied. Please enable them in your device settings.');
+        
+        if (permission == LocationPermission.deniedForever) {
+          throw Exception('Location permissions are permanently denied. Please enable them in your device settings to find businesses near you.');
+        }
       }
 
       // Ottieni la posizione corrente
