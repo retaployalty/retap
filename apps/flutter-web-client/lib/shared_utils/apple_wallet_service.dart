@@ -54,45 +54,14 @@ class AppleWalletService {
             print('✅ Pass Apple Wallet generato con successo');
             print('📋 Dati pass: ${data['passData']}');
             
-            // Mostra messaggio di successo
-            html.window.alert('''
-Pass Apple Wallet generato con successo!
-
-Dati carta:
-- ID: ${data['passData']['cardId']}
-- Nome: ${data['passData']['customerName']}
-- UID: ${data['passData']['cardUid']}
-- Organizzazione: ${data['passData']['organizationName']}
-- Saldo: ${data['passData']['balance']} punti
-
-Status: ${data['passData']['status']}
-Messaggio: ${data['passData']['message']}
-
-Prossimi passi:
-${data['passData']['nextSteps'].join('\n')}
-
-Nota: ${data['note']}
-            ''');
-            
+            // Non mostrare alert, lascia che il flusso Apple Wallet proceda naturalmente
             return;
           }
           
           // Modalità test - certificati non configurati
           print('Modalità test attivata: ${data['message']}');
           
-          // Mostra messaggio informativo
-          html.window.alert('''
-Certificati Apple Wallet non configurati.
-
-Per completare l'integrazione:
-${data['instructions'].join('\n')}
-
-Dati carta per test:
-- ID: $cardId
-- Nome: $customerName
-- UID: $cardUid
-          ''');
-          
+          // Non mostrare alert, lascia che il flusso proceda naturalmente
           return;
         } else if (contentType.contains('application/vnd.apple.pkpass')) {
           // Modalità normale - certificati configurati e file .pkpass generato
@@ -112,20 +81,7 @@ Dati carta per test:
           
           print('✅ Pass Apple Wallet scaricato con successo');
           
-          // Mostra messaggio di successo
-          html.window.alert('''
-Pass Apple Wallet scaricato con successo!
-
-Il file .pkpass è stato scaricato. Per aggiungerlo al Wallet:
-1. Apri il file scaricato
-2. Tocca "Aggiungi" quando richiesto
-3. La carta sarà disponibile nel tuo Apple Wallet
-
-Dati carta:
-- ID: $cardId
-- Nome: $customerName
-- UID: $cardUid
-          ''');
+          // Non mostrare alert, lascia che il download proceda naturalmente
         }
       } else {
         print('Errore nella risposta del server: ${response.statusCode}');
