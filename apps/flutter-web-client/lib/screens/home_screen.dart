@@ -395,9 +395,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 children: [
                                   Text(
                                     _selectedCategory != null 
-                                        ? 'Nessun business trovato nella categoria ${_selectedCategory}'
-                                        : 'Nessun business visitato',
+                                        ? 'No businesses visited in ${_selectedCategory} category'
+                                        : 'You haven\'t visited any businesses yet, explore on the map!',
                                     style: const TextStyle(color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Go to an affiliated store and use your ReTap card to start earning points!',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 14),
                                     textAlign: TextAlign.center,
                                   ),
                                   if (_selectedCategory != null) ...[
@@ -408,7 +414,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           _selectedCategory = null;
                                         });
                                       },
-                                      child: const Text('Rimuovi filtro'),
+                                      child: const Text('Remove filter'),
                                     ),
                                   ],
                                 ],
@@ -427,7 +433,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         CircularProgressIndicator(),
                                         SizedBox(height: 16),
                                         Text(
-                                          'Caricamento posizione...',
+                                          'Loading location...',
                                           style: TextStyle(color: Colors.grey),
                                         ),
                                       ],

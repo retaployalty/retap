@@ -16,19 +16,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingPage> _pages = const [
     OnboardingPage(
       title: 'Welcome to ReTap',
-      description: 'Your universal loyalty card for every store',
+      description: 'The loyalty card for get rewards in all your stores',
       image: 'assets/images/card.png',
       color: Color(0xFFFF5A5F), // Airbnb red
     ),
     OnboardingPage(
-      title: 'How it works',
-      description: 'Use a single NFC card or your digital wallet in all affiliated stores. Adding to your wallet is required.',
+      title: 'Collect points',
+      description: 'Use the NFC card or your digital wallet in all affiliated stores for collecting points',
       image: 'assets/images/nfc.png',
       color: Color(0xFF00A699), // Airbnb teal
     ),
     OnboardingPage(
-      title: 'Earn points',
-      description: 'Collect points in every store and redeem exclusive rewards. Your wallet card is your key to all features.',
+      title: 'Get rewards',
+      description: 'Collect points in every store and redeem Rewards!',
       image: 'assets/images/monete.png',
       color: Color(0xFFFFB400), // Airbnb yellow
     ),
