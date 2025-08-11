@@ -505,7 +505,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                     ),
                     const SizedBox(height: 48),
                     const Text(
-                      'Add to Wallet',
+                      'Add the card to your Wallet',
                       style: TextStyle(
                         fontSize: 28,
                         fontFamily: 'Fredoka',
@@ -751,7 +751,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                                   ),
                                   const SizedBox(width: 12),
                                   const Text(
-                                    '1. Go to Home',
+                                    '1. Click continue',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontFamily: 'Fredoka',
@@ -1052,7 +1052,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with SingleTick
                     ),
                     const SizedBox(height: 48),
                     const Text(
-                      'Enable Location',
+                      'See businesses near you',
                       style: TextStyle(
                         fontSize: 28,
                         fontFamily: 'Fredoka',
